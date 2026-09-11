@@ -33,7 +33,7 @@ scrolls is far away, and walking reads as standing still on a moving backdrop.
 | --- | --- | --- |
 | 1 | Project, Flame, skeleton on all targets | done |
 | 2 | Parallax background from real photographs | bands and palms in, foreground left |
-| 3 | Character sprite + camera follow | jump and gravity in |
+| 3 | Character sprite + camera follow | walking silhouette in |
 | 4 | Atmosphere without shaders (particles, god rays, fog, vignette) | |
 | 5 | Polish, web hardening, optional shaders | |
 
@@ -62,6 +62,20 @@ Jumping clears about 136 units — a little over the walker's own height — and
 lasts roughly 0.8s. A jump only launches from the ground, so holding the key
 does not climb.
 
+### The character is posed, not animated
+
+`character/figure.dart` solves a pose from a stride phase instead of playing a
+sprite sheet. This is a silhouette game, so a sheet would carry no texture or
+shading this cannot, and a solved pose buys two things a sheet does not: the
+phase advances with **distance covered** rather than with time, so the feet stay
+planted at any walk speed and any frame rate, and the legs come from two-bone
+inverse kinematics against a foot tracing a flattened ellipse, which is what
+stops a walk cycle looking like two sticks rotating about a hip.
+
+Proportions are fractions of body height, so the whole figure scales from one
+number. Far limbs draw, then the torso, then near limbs — drawing both arms
+before the body hid them behind it and left the figure looking one-armed.
+
 ## Layout
 
 ```
@@ -74,7 +88,8 @@ lib/
     photo_band.dart              a photographed band, tiled and parallaxed
     power_line.dart              drawn poles and catenary wire
     ground.dart                  graded road, ruts, roadside weeds
-    probe_walker.dart            stand-in character       → Friday 3
+    probe_walker.dart            the character: physics and input
+    character/figure.dart        the silhouette, posed from a stride phase
   input/
     input.dart                   InputIntent + InputSource
     input_controller.dart        per-frame merge

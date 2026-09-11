@@ -1,14 +1,19 @@
+import 'dart:math';
+
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../input/input_controller.dart';
+import 'character/figure.dart';
 import 'config.dart';
 
-/// A featureless block that walks where the input abstraction tells it to.
+/// The character: a silhouette that walks, jumps and falls where the input
+/// abstraction tells it to.
 ///
-/// PLACEHOLDER for Friday 3's animated silhouette character. Its only job in
-/// Friday 1 is to prove, on each target device, that keyboard and touch both
-/// arrive as the same [InputIntent] and that camera-follow tracks it.
+/// The physics live here and the pose lives in [Figure], which is solved from a
+/// stride phase rather than played back from a sprite sheet. The phase advances
+/// with distance covered, not with time, so the feet stay planted at any walk
+/// speed and any frame rate.
 class ProbeWalker extends PositionComponent {
   ProbeWalker({required this.input})
     : super(
@@ -31,14 +36,17 @@ class ProbeWalker extends PositionComponent {
   bool get isGrounded =>
       y >= WarayaConfig.horizonY - 0.001 && verticalVelocity >= 0;
 
-  final Paint _fill = Paint()..color = const Color(0xFF0A070E);
+  late final Figure _figure = Figure(
+    height: size.y,
+    color: const Color(0xFF0A070E),
+  );
 
-  /// A warm hairline so the probe stays legible against the dark
-  /// foreground bands. Friday 3's real silhouette drops this.
-  final Paint _outline = Paint()
-    ..color = const Color(0xFFF0C27B)
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 2;
+  /// How far through the current stride the legs are, in radians.
+  double _stridePhase = 0;
+
+  /// World units covered per full stride. Tied to distance rather than time so
+  /// the feet never slide.
+  static const double _strideLength = 105;
 
   @override
   void update(double dt) {
@@ -47,7 +55,10 @@ class ProbeWalker extends PositionComponent {
     final axis = input.intent.moveAxis;
     if (axis != 0) {
       facing = axis.sign;
-      position.x += axis * WarayaConfig.walkSpeed * dt;
+      final step = axis * WarayaConfig.walkSpeed * dt;
+      position.x += step;
+      _stridePhase =
+          (_stridePhase + step.abs() / _strideLength * 2 * pi) % (2 * pi);
     }
 
     // The jump is read before gravity is applied, so a jump requested on the
@@ -67,7 +78,17 @@ class ProbeWalker extends PositionComponent {
 
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(size.toRect(), _fill);
-    canvas.drawRect(size.toRect(), _outline);
+    // The component is anchored bottom-centre, so the figure's origin -- its
+    // soles -- is at the bottom middle of the local box.
+    canvas.save();
+    canvas.translate(size.x / 2, size.y);
+    _figure.render(
+      canvas,
+      phase: _stridePhase,
+      moving: input.intent.moveAxis != 0,
+      airborne: !isGrounded,
+      facing: facing,
+    );
+    canvas.restore();
   }
 }
