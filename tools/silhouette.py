@@ -136,6 +136,20 @@ def parse_crop(spec: str) -> tuple[float, float]:
     return top, bottom
 
 
+def parse_haze(spec: str) -> tuple[tuple[int, int, int], float]:
+    """Parse `RRGGBB:amount` for aerial perspective."""
+    colour, _, amount = spec.partition(":")
+    if not amount:
+        raise argparse.ArgumentTypeError("--haze wants COLOUR:AMOUNT, e.g. e8b274:0.5")
+    try:
+        strength = float(amount)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"--haze amount is not a number: {amount}") from exc
+    if not 0.0 <= strength <= 1.0:
+        raise argparse.ArgumentTypeError("--haze amount must be between 0 and 1")
+    return parse_color(colour), strength
+
+
 def parse_color(spec: str) -> tuple[int, int, int]:
     text = spec.lstrip("#")
     if len(text) != 6:
@@ -220,6 +234,13 @@ def main(argv: list[str] | None = None) -> int:
         help="divide out the sky gradient before thresholding; try 0.15 on a "
         "sunset sky whose zenith is darker than the buildings (0 disables)",
     )
+    parser.add_argument(
+        "--haze",
+        type=parse_haze,
+        help="aerial perspective as COLOUR:AMOUNT, e.g. e8b274:0.55 -- mixes the "
+        "layer toward the sky colour so distance reads as lost contrast. Use a "
+        "larger amount the further back the layer sits.",
+    )
     parser.add_argument("--invert", action="store_true", help="keep the bright side instead")
     parser.add_argument(
         "--crop",
@@ -273,6 +294,11 @@ def main(argv: list[str] | None = None) -> int:
         fill = np.broadcast_to(
             np.asarray(args.color, dtype=np.float32) / 255.0, rgb.shape
         )
+
+    if args.haze:
+        haze_rgb, strength = args.haze
+        target = np.asarray(haze_rgb, dtype=np.float32) / 255.0
+        fill = fill * (1.0 - strength) + target * strength
 
     rgba = np.dstack([fill, alpha])
     rgba = (np.clip(rgba, 0.0, 1.0) * 255.0).round().astype(np.uint8)

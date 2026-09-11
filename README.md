@@ -130,6 +130,28 @@ frame:
 `--softness` (default 0.07) is the width of the alpha ramp and is what keeps
 wires, antennas and palm fronds alive; a hard threshold deletes them.
 
+### How photographic to make the layers
+
+`--keep-texture --texture-gain 1.0` keeps the photograph's own colour and
+detail instead of a flat fill, and `--haze <colour>:<amount>` mixes a layer
+toward the sky so distance reads as lost contrast. Use a larger haze amount the
+further back a layer sits — that is what makes depth read once the layers are
+no longer flat shapes.
+
+**The matte is a brightness cut, so it can only keep things darker than the
+sky.** A backlit palm, pole or parapet comes out cleanly. A sunlit red brick
+wall at midday is *brighter* than parts of the sky, so it is classified as sky
+and cut away. Photographic realism therefore only works on frames shot against
+the light; a full-colour daylight scene needs real masking (pen tool or
+segmentation), which is a different order of work per layer.
+
+Two further costs, both measured on a textured test frame: keeping texture
+roughly doubled the file (57 KB flat, 123 KB textured, 110 KB textured+hazed),
+and a textured layer makes the horizontal repeat obvious where a flat
+silhouette hides it. Since web download size is the plan's main risk, prefer
+texture on near layers, where it is most visible, and flatter, hazier art
+further back.
+
 ## Verified so far
 
 - Flutter 3.47.3 / Dart 3.13.3, flame 1.38.2 — matches the plan's minimums.
