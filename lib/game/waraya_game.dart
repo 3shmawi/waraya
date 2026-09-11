@@ -10,8 +10,7 @@ import '../input/keyboard_input_source.dart';
 import '../input/touch_input_source.dart';
 import '../ui/debug_hud.dart';
 import 'config.dart';
-import 'placeholder_ground.dart';
-import 'placeholder_skyline.dart';
+import 'placeholder_village.dart';
 import 'probe_walker.dart';
 import 'sky_backdrop.dart';
 
@@ -54,50 +53,24 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
       DebugHud(input: input, visibleWorldRect: () => camera.visibleWorldRect),
     );
 
-    // Three depth bands standing in for Friday 2's parallax layers, plus the
+    // Four depth bands standing in for Friday 2's parallax layers, plus the
     // surface under them. Values run light-to-dark with distance so the depth
-    // reads before any real parallax motion exists. Spans are generous so no
-    // edge enters view on an ultrawide desktop.
-    await world.add(
-      PlaceholderSkyline(
+    // reads before any real parallax motion exists.
+    await world.addAll([
+      PlaceholderTreeline(
         color: const Color(0xFF8C6472),
-        span: 12000,
-        minHeight: 90,
-        maxHeight: 220,
-        blockWidth: 130,
         seed: 1,
         priority: -30,
       ),
-    );
-    await world.add(
-      PlaceholderSkyline(
-        color: const Color(0xFF4E3A4C),
-        span: 12000,
-        minHeight: 180,
-        maxHeight: 380,
-        blockWidth: 210,
+      PlaceholderVillageRow(
+        color: const Color(0xFF5E4552),
         seed: 2,
-        priority: -20,
+        priority: -25,
       ),
-    );
-    await world.add(
-      PlaceholderGround(
-        color: const Color(0xFF16101E),
-        span: 12000,
-        priority: -15,
-      ),
-    );
-    await world.add(
-      PlaceholderSkyline(
-        color: const Color(0xFF2A1F30),
-        span: 12000,
-        minHeight: 40,
-        maxHeight: 120,
-        blockWidth: 90,
-        seed: 3,
-        priority: -10,
-      ),
-    );
+      PlaceholderPalms(color: const Color(0xFF3A2B3B), seed: 3, priority: -20),
+      PlaceholderGround(color: const Color(0xFF16101E), priority: -15),
+      PlaceholderPoles(color: const Color(0xFF120D18), seed: 4, priority: -8),
+    ]);
 
     walker = ProbeWalker(input: input);
     await world.add(walker);

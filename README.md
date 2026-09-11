@@ -57,8 +57,7 @@ lib/
     config.dart                  world height, horizon, speeds
     waraya_game.dart             scene assembly, camera, input wiring
     sky_backdrop.dart            sunset gradient (camera backdrop)
-    placeholder_skyline.dart     stand-in depth band      → Friday 2
-    placeholder_ground.dart      stand-in surface         → Friday 2
+    placeholder_village.dart     stand-in village bands   → Friday 2
     probe_walker.dart            stand-in character       → Friday 3
   input/
     input.dart                   InputIntent + InputSource
