@@ -46,7 +46,7 @@ class PowerLine extends PositionComponent {
   late final Paint _wire = Paint()
     ..color = color
     ..style = PaintingStyle.stroke
-    ..strokeWidth = 2.5
+    ..strokeWidth = 2.0
     ..strokeCap = StrokeCap.round;
 
   final Path _poles = Path();

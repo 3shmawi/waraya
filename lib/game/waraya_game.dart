@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/camera.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flame/sprite.dart';
 
 import '../input/input.dart';
 import '../input/input_controller.dart';
@@ -11,6 +12,7 @@ import '../input/touch_input_source.dart';
 import '../ui/debug_hud.dart';
 import 'config.dart';
 import 'ground.dart';
+import 'palm_row.dart';
 import 'photo_band.dart';
 import 'power_line.dart';
 import 'probe_walker.dart';
@@ -60,12 +62,13 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
     // far band is the same treeline as the mid one, hazed and scaled down --
     // aerial perspective from a single source frame.
     //
-    // No palms yet. Every palm in art/source is partly occluded by an awning,
-    // a tarp or a water tower, and those are as dark as the tree, so no
-    // rectangular crop separates them. Unblocking it needs either one frame of
-    // a palm standing clear against sky, or a hand mask.
+    // The palms are crowns only. Every palm in art/source has its lower trunk
+    // crossing something as dark as itself, so no brightness matte separates
+    // them -- but rendering the row behind the treeline hides exactly the part
+    // that could not be cut.
     final far = await images.load('layer_far_treeline.webp');
     final mid = await images.load('layer_mid_treeline.webp');
+    final palm = await images.load('palm_01.webp');
 
     Rect view() => camera.visibleWorldRect;
 
@@ -78,6 +81,17 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
         bottomY: WarayaConfig.horizonY - 96,
         visibleWorldRect: view,
         priority: -40,
+      ),
+      // Behind the mid band on purpose: only the crown clears the trees, which
+      // is both how a village skyline looks and why the missing trunk in the
+      // cut-out never shows.
+      PalmRow(
+        sprite: Sprite(palm),
+        span: 40000,
+        heightUnits: 215,
+        // Inside the treeline band, so the feathered cut stays hidden.
+        baseY: WarayaConfig.horizonY - 130,
+        priority: -35,
       ),
       PhotoBand(
         image: mid,

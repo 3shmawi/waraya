@@ -22,7 +22,7 @@ photographs in `art/source`; the ground is still a flat stand-in.
 | Friday | Scope | State |
 | --- | --- | --- |
 | 1 | Project, Flame, skeleton on all targets | done |
-| 2 | Parallax background from real photographs | two bands in, palms blocked |
+| 2 | Parallax background from real photographs | bands and palms in, foreground left |
 | 3 | Character sprite + camera follow | jump and gravity in |
 | 4 | Atmosphere without shaders (particles, god rays, fog, vignette) | |
 | 5 | Polish, web hardening, optional shaders | |
@@ -258,16 +258,18 @@ worth keeping, while a catenary computed between known poles is continuous
 forever, tiles by construction, and costs no download. See
 `lib/game/power_line.dart`.
 
-**No palms yet, and not for want of trying.** Every palm in the fourteen source
-frames is partly occluded by something as dark as it is — a balcony awning in
-`src_12`, a tarp in `src_13`, a water tower beside the trunk. Dark-on-dark
-cannot be separated by a brightness cut, and the occluders overlap the crowns
-in both axes so no rectangular crop divides them either. Unblocking it takes
-one of:
+**The palms are crowns, and that is deliberate.** Every palm in `art/source` has
+its lower trunk crossing something as dark as itself — a balcony awning, a tarp,
+a water tower, a row of houses — and dark-on-dark cannot be separated by a
+brightness cut, nor by any rectangular crop, since the occluders overlap the
+crowns in both axes.
 
-- one new frame of a single palm standing clear against sky, shot in the same
-  light as the bands; or
-- a hand mask in Photopea, roughly five minutes per palm.
+The fix was not a better matte but a better place to stand it: `PalmRow` renders
+*behind* the mid treeline band, with each crown's feathered lower edge sunk
+inside it. Only the part that cut cleanly is ever on screen, and a palm showing
+just its head above the trees is what a village skyline actually looks like. The
+crown itself comes from `src_04.jpg` as a flat dark silhouette, so it carries no
+light of its own to clash with the dust-storm bands.
 
 `src_13` (the sunset) is a beautiful photograph and a poor layer source: its
 subjects are discrete objects rather than continuous bands, and its sky is a
