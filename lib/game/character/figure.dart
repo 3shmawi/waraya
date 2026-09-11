@@ -69,13 +69,13 @@ class Figure {
     // one-armed.
     if (airborne) {
       _leg(canvas, paint, h, hip, -0.12, 0.55, front: false);
-      _arm(canvas, paint, h, shoulder, -0.55, 0.9);
+      _arm(canvas, paint, h, shoulder, -0.55, 0.8);
     } else if (moving) {
       _gaitLeg(canvas, paint, h, hip, phase + pi, front: false);
-      _arm(canvas, paint, h, shoulder, 0.72 * sin(phase), 0.75);
+      _arm(canvas, paint, h, shoulder, 0.72 * sin(phase), 0.72);
     } else {
       _leg(canvas, paint, h, hip, -0.03, 0.02, front: false);
-      _arm(canvas, paint, h, shoulder, -0.08, 0.14);
+      _arm(canvas, paint, h, shoulder, -0.08, 0.6);
     }
 
     // Torso: a tapered trunk rather than a stick, so the body has mass.
@@ -109,24 +109,37 @@ class Figure {
     // Near limbs, in front of the body.
     if (airborne) {
       _leg(canvas, paint, h, hip, 0.30, 1.35, front: true);
-      _arm(canvas, paint, h, shoulder, -1.25, 0.5);
+      _arm(canvas, paint, h, shoulder, -1.25, 0.8);
     } else if (moving) {
       _gaitLeg(canvas, paint, h, hip, phase, front: true);
-      _arm(canvas, paint, h, shoulder, 0.72 * sin(phase + pi), 0.75);
+      _arm(canvas, paint, h, shoulder, 0.72 * sin(phase + pi), 0.72);
     } else {
       _leg(canvas, paint, h, hip, 0.03, 0.02, front: true);
-      _arm(canvas, paint, h, shoulder, 0.10, 0.18);
+      _arm(canvas, paint, h, shoulder, 0.10, 0.6);
     }
 
     canvas.restore();
   }
 
-  /// Solves the leg for the foot position this phase calls for.
+  /// Where the foot is at this point in the stride, relative to the hip, for a
+  /// figure of height [height] facing +x.
   ///
-  /// The foot traces a flattened ellipse: back along the ground through the
-  /// stance, lifted and swung forward through the swing. The knee then follows
-  /// from two-bone inverse kinematics, which is what keeps the gait from
-  /// looking like two sticks rotating.
+  /// The foot traces a flattened ellipse. The half of the cycle where it is
+  /// lifted is the half where it travels **forward**; the half where it is on
+  /// the ground is the half where it travels **backward**, because a planted
+  /// foot stays put while the body passes over it.
+  ///
+  /// Getting that backwards is not subtle to look at and is invisible in the
+  /// code: the legs simply moonwalk. `figure_test.dart` pins it.
+  static Offset footOffset(double phase, double height) {
+    const stride = 0.20;
+    const lift = 0.085;
+    return Offset(
+      -stride * height * cos(phase),
+      -lift * height * max(0.0, sin(phase)),
+    );
+  }
+
   void _gaitLeg(
     Canvas canvas,
     Paint paint,
@@ -135,13 +148,7 @@ class Figure {
     double phase, {
     required bool front,
   }) {
-    const stride = 0.20;
-    const lift = 0.085;
-
-    final footX = stride * h * cos(phase);
-    final swing = sin(phase);
-    final footY = -lift * h * max(0.0, swing);
-    _legToFoot(canvas, paint, h, hip, Offset(footX, footY), front: front);
+    _legToFoot(canvas, paint, h, hip, footOffset(phase, h), front: front);
   }
 
   void _legToFoot(
@@ -205,19 +212,30 @@ class Figure {
       );
   }
 
+  /// One arm. [shoulderAngle] is positive swinging backward.
+  ///
+  /// The elbow flexes toward the front of the body, which is the opposite
+  /// rotation to the one the first version used — that one curled the leading
+  /// arm's forearm back inside the torso, where a silhouette swallows it, and
+  /// left the figure looking one-armed however wide the shoulders swung. The
+  /// leading arm also bends much more than the trailing one, as a real arm
+  /// does.
   void _arm(
     Canvas canvas,
     Paint paint,
     double h,
     Offset shoulder,
     double shoulderAngle,
-    double elbowBend,
+    double swingAmplitude,
   ) {
     final upper = _upperArm * h;
     final fore = _foreArm * h;
+    final elbowBend = swingAmplitude <= 0
+        ? 0.5
+        : (0.5 - 0.45 * (shoulderAngle / swingAmplitude)).clamp(0.05, 1.1);
     final a = pi / 2 + shoulderAngle;
     final elbow = shoulder + Offset(cos(a), sin(a)) * upper;
-    final b = a + elbowBend;
+    final b = a - elbowBend;
     final hand = elbow + Offset(cos(b), sin(b)) * fore;
 
     paint.strokeWidth = 0.048 * h;

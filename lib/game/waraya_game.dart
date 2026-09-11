@@ -10,6 +10,8 @@ import '../input/input_controller.dart';
 import '../input/keyboard_input_source.dart';
 import '../input/touch_input_source.dart';
 import '../ui/debug_hud.dart';
+import 'atmosphere/dust_field.dart';
+import 'atmosphere/vignette.dart';
 import 'config.dart';
 import 'ground.dart';
 import 'palm_row.dart';
@@ -53,6 +55,15 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
     // whole scene.
     await camera.backdrop.add(SkyBackdrop());
     await camera.viewport.add(touch);
+    // Atmosphere, over the world and under the debug readout. Both are the
+    // plan's shader-free tricks: nothing here compiles a fragment program, so
+    // nothing here can break on a web build.
+    await camera.viewport.add(
+      DustField(color: const Color(0xFFF6D79A), priority: 100),
+    );
+    await camera.viewport.add(
+      Vignette(color: const Color(0xFF120A04), priority: 110),
+    );
     await camera.viewport.add(
       DebugHud(input: input, visibleWorldRect: () => camera.visibleWorldRect),
     );
@@ -87,7 +98,7 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
       // cut-out never shows.
       PalmRow(
         sprite: Sprite(palm),
-        span: 40000,
+        visibleWorldRect: view,
         heightUnits: 215,
         // Inside the treeline band, so the feathered cut stays hidden.
         baseY: WarayaConfig.horizonY - 130,
@@ -106,15 +117,15 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
         // end is the shadow the road sits in right under the camera.
         horizonColor: const Color(0xFF3D2609),
         nearColor: const Color(0xFF0E0805),
-        span: 40000,
+        visibleWorldRect: view,
         priority: -20,
       ),
       // Behind the walker, at the character's own depth.
       GroundDetail(
         color: const Color(0xFF1A1009),
-        span: 40000,
+        visibleWorldRect: view,
         baseY: WarayaConfig.horizonY + 14,
-        density: 300,
+        spacing: 110,
         seed: 29,
         priority: -18,
       ),
@@ -122,16 +133,15 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
       // the speed of everything behind it.
       GroundDetail(
         color: const Color(0xFF0D0705),
-        span: 40000,
+        visibleWorldRect: view,
         baseY: WarayaConfig.horizonY + 178,
-        scale2: 3.4,
-        density: 230,
+        sizeScale: 3.4,
+        spacing: 240,
         seed: 31,
         priority: 200,
       ),
       PowerLine(
         color: const Color(0xFF1B1119),
-        span: 40000,
         visibleWorldRect: view,
         priority: -5,
       ),

@@ -34,7 +34,7 @@ scrolls is far away, and walking reads as standing still on a moving backdrop.
 | 1 | Project, Flame, skeleton on all targets | done |
 | 2 | Parallax background from real photographs | bands and palms in, foreground left |
 | 3 | Character sprite + camera follow | walking silhouette in |
-| 4 | Atmosphere without shaders (particles, god rays, fog, vignette) | |
+| 4 | Atmosphere without shaders (particles, god rays, fog, vignette) | dust and vignette in |
 | 5 | Polish, web hardening, optional shaders | |
 
 ## Two decisions worth not re-litigating
@@ -62,6 +62,22 @@ Jumping clears about 136 units — a little over the walker's own height — and
 lasts roughly 0.8s. A jump only launches from the ground, so holding the key
 does not climb.
 
+### The road has no end
+
+Every generator used to build its contents once, over a fixed 40000-unit span.
+Walking past about 20000 units ran off the world: the poles, palms, weeds and
+road all stopped and only the camera-relative bands carried on.
+`endless.dart` derives each item from its own index instead, so any stretch can
+be produced on demand, identically every time, with nothing stored and no seam
+where a period repeats. Only the indices overlapping the view are built, and
+they are cached.
+
+Its hash is deliberately double arithmetic rather than integer mixing. On the
+web an `int` is a double and bitwise operations are 32-bit, so the first
+version's 54-bit mask did not merely run slowly there — dart2js refused to
+compile the literal, and the build passed everywhere else. `endless_test.dart`
+pins generation at ±400000 units.
+
 ### The character is posed, not animated
 
 `character/figure.dart` solves a pose from a stride phase instead of playing a
@@ -85,8 +101,12 @@ lib/
     config.dart                  world height, horizon, speeds
     waraya_game.dart             scene assembly, camera, input wiring
     sky_backdrop.dart            sunset gradient (camera backdrop)
+    endless.dart                 per-index scenery, so the road has no end
     photo_band.dart              a photographed band, tiled and parallaxed
     power_line.dart              drawn poles and catenary wire
+    palm_row.dart                photographed crowns, placed
+    atmosphere/dust_field.dart   wind-blown motes
+    atmosphere/vignette.dart     edge darkening
     ground.dart                  graded road, ruts, roadside weeds
     probe_walker.dart            the character: physics and input
     character/figure.dart        the silhouette, posed from a stride phase

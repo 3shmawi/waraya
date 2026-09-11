@@ -6,26 +6,25 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import 'config.dart';
+import 'endless.dart';
 
 /// The road surface, from the horizon down.
 ///
 /// Graded rather than filled flat: near the horizon it carries the haze the
 /// bands fade into, and it darkens toward the bottom of the screen, where the
-/// ground is closest and deepest in its own shadow. Tyre ruts run along it
-/// because a dirt road in the source photographs always has them.
+/// ground is closest and deepest in its own shadow.
 ///
-/// A clean gradient is what gives drawn ground away, so three things break it
-/// up: a grain texture baked once and tiled as a shader, soft tonal patches so
-/// the dirt is not uniformly one colour, and a ragged verge instead of the
-/// ruled line a rectangle would leave along the horizon.
+/// A clean gradient is what gives drawn ground away, so two things break it up:
+/// a grain texture baked once and tiled as a shader, and a ragged verge instead
+/// of the ruled line a rectangle would leave along the horizon. Both the rect
+/// and the verge follow the camera, so the road has no end.
 class GroundPlane extends PositionComponent {
   GroundPlane({
     required this.horizonColor,
     required this.nearColor,
-    required this.span,
-    int seed = 23,
+    required this.visibleWorldRect,
     super.priority,
-  }) : _random = Random(seed);
+  });
 
   /// Colour where the ground meets the horizon; match it to the haze.
   final Color horizonColor;
@@ -33,17 +32,9 @@ class GroundPlane extends PositionComponent {
   /// Colour at the bottom of the screen, where the ground is nearest.
   final Color nearColor;
 
-  final double span;
-  final Random _random;
+  final ValueGetter<Rect> visibleWorldRect;
 
   static const double _bottom = WarayaConfig.worldHeight * 2;
-
-  late final Rect _rect = Rect.fromLTRB(
-    -span / 2,
-    WarayaConfig.horizonY,
-    span / 2,
-    _bottom,
-  );
 
   late final Paint _paint = Paint()
     ..shader = ui.Gradient.linear(
@@ -52,11 +43,6 @@ class GroundPlane extends PositionComponent {
       [horizonColor, nearColor],
     );
 
-  final Path _ruts = Path();
-  late final Paint _rutPaint = Paint()
-    ..color = nearColor.withValues(alpha: 0.30);
-
-  final Path _verge = Path();
   late final Paint _vergePaint = Paint()..color = horizonColor;
 
   ui.Image? _grain;
@@ -72,8 +58,7 @@ class GroundPlane extends PositionComponent {
   /// The tile is wide rather than square for one reason: at 512 units its
   /// repeat was plainly visible as a grid of blocks across the road. At 2048 a
   /// screen holds well under one tile, and the non-repeating ruts, weeds and
-  /// stones drawn over it break up what is left. Only [_height] units of it are
-  /// ever on screen, so the patches are kept to the top of the tile.
+  /// stones drawn over it break up what is left.
   Future<ui.Image> _bakeGrain() {
     const width = 2048;
     const height = 512;
@@ -112,29 +97,6 @@ class GroundPlane extends PositionComponent {
 
   @override
   Future<void> onLoad() async {
-    // Long shallow ruts, thinner and shorter further back so they read as
-    // receding rather than as stripes.
-    for (var i = 0; i < 260; i++) {
-      final depth = _random.nextDouble();
-      final y = WarayaConfig.horizonY + depth * 140;
-      final length = 120 + depth * 620 * _random.nextDouble();
-      final thickness = 1.5 + depth * 6;
-      final x = -span / 2 + _random.nextDouble() * span;
-      _ruts.addOval(
-        Rect.fromCenter(center: Offset(x, y), width: length, height: thickness),
-      );
-    }
-
-    // A ragged verge: small humps of dirt along the horizon so the ground does
-    // not meet the treeline along a ruled line.
-    _verge.moveTo(-span / 2, WarayaConfig.horizonY + 12);
-    for (var x = -span / 2; x < span / 2; x += 14 + _random.nextDouble() * 26) {
-      _verge.lineTo(x, WarayaConfig.horizonY - _random.nextDouble() * 7);
-    }
-    _verge
-      ..lineTo(span / 2, WarayaConfig.horizonY + 12)
-      ..close();
-
     _grain = await _bakeGrain();
     _grainPaint = Paint()
       ..filterQuality = FilterQuality.low
@@ -143,98 +105,101 @@ class GroundPlane extends PositionComponent {
         TileMode.repeated,
         TileMode.repeated,
         Float64List.fromList(<double>[
-          1,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-          0,
-          0,
-          0,
-          1,
+          1, 0, 0, 0, //
+          0, 1, 0, 0, //
+          0, 0, 1, 0, //
+          0, 0, 0, 1, //
         ]),
       );
   }
 
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(_rect, _paint);
-    canvas.drawPath(_ruts, _rutPaint);
-    canvas.drawPath(_verge, _vergePaint);
-    final grain = _grainPaint;
-    if (grain != null) {
-      canvas.drawRect(_rect, grain);
+    final view = visibleWorldRect();
+    final rect = Rect.fromLTRB(
+      view.left - 200,
+      WarayaConfig.horizonY,
+      view.right + 200,
+      _bottom,
+    );
+    canvas.drawRect(rect, _paint);
+
+    // A ragged verge, rebuilt across whatever the camera is looking at. The
+    // hump heights come from the slot index, so the same stretch of road always
+    // has the same edge.
+    const step = 18.0;
+    final first = (rect.left / step).floor();
+    final last = (rect.right / step).ceil();
+    final verge = Path()..moveTo(first * step, WarayaConfig.horizonY + 12);
+    for (var i = first; i <= last; i++) {
+      verge.lineTo(i * step, WarayaConfig.horizonY - noise(i, 0x3B) * 7);
     }
+    verge
+      ..lineTo(last * step, WarayaConfig.horizonY + 12)
+      ..close();
+    canvas.drawPath(verge, _vergePaint);
+
+    final grain = _grainPaint;
+    if (grain != null) canvas.drawRect(rect, grain);
   }
 }
 
-/// Weeds, tufts and stones scattered along the roadside.
+/// Everything loose on the road: weeds, stones, twigs, pebble scatters and the
+/// ruts worn along it.
 ///
-/// These are the only things in the scene at the character's own depth, so
-/// they are the only ones that move at the character's own speed. Without them
-/// everything that scrolls is far away and walking reads as standing still on
-/// a moving backdrop.
-class GroundDetail extends PositionComponent {
+/// These are the only things in the scene at the character's own depth, so they
+/// are the only ones that move at the character's own speed. Without them
+/// everything that scrolls is far away and walking reads as standing still on a
+/// moving backdrop.
+class GroundDetail extends EndlessRow {
   GroundDetail({
     required this.color,
-    required this.span,
+    required super.visibleWorldRect,
     required this.baseY,
-    this.scale2 = 1.0,
-    this.density = 340,
-    int seed = 29,
+    this.sizeScale = 1.0,
+    super.spacing = 120,
+    super.seed = 29,
     super.priority,
-  }) : _random = Random(seed);
+  });
 
   final Color color;
-  final double span;
 
   /// World y the clumps stand on.
   final double baseY;
 
   /// Overall size multiplier; the nearest row is drawn larger.
-  final double scale2;
-
-  /// Average world units between clumps.
-  final double density;
-
-  final Random _random;
-
-  late final Paint _paint = Paint()..color = color;
-  final Path _path = Path();
-
-  double _between(double a, double b) => a + _random.nextDouble() * (b - a);
+  final double sizeScale;
 
   @override
-  void onLoad() {
-    for (
-      var x = -span / 2;
-      x < span / 2;
-      x += _between(density * 0.4, density * 1.6)
-    ) {
-      if (_random.nextDouble() < 0.25) {
-        _stone(x, _between(4, 11) * scale2);
-      } else {
-        _tuft(x, _between(14, 34) * scale2);
-      }
+  late final Paint fillPaint = Paint()..color = color;
+
+  double _n(int index, int salt) => noise(index, seed ^ salt);
+
+  @override
+  void buildItem(EndlessItem item, int index, double x) {
+    final kind = _n(index, 0x11);
+    if (kind < 0.42) {
+      _tuft(item.fill, index, x, (14 + _n(index, 0x21) * 22) * sizeScale);
+    } else if (kind < 0.60) {
+      _stone(item.fill, index, x, (4 + _n(index, 0x31) * 8) * sizeScale);
+    } else if (kind < 0.76) {
+      _scatter(item.fill, index, x);
+    } else if (kind < 0.90) {
+      _twig(item.fill, index, x, (18 + _n(index, 0x41) * 26) * sizeScale);
+    } else {
+      _rut(item.fill, index, x);
     }
   }
 
   /// A clump of weeds: blades fanning up and outward from one point.
-  void _tuft(double x, double height) {
-    final blades = 5 + _random.nextInt(6);
+  void _tuft(Path path, int index, double x, double height) {
+    final blades = 5 + (_n(index, 0x51) * 6).floor();
     for (var i = 0; i < blades; i++) {
-      final lean = _between(-0.9, 0.9);
-      final h = height * _between(0.55, 1.0);
+      final lean = (_n(index * 31 + i, 0x61) - 0.5) * 1.8;
+      final h = height * (0.55 + _n(index * 31 + i, 0x71) * 0.45);
       final tipX = x + lean * h;
       final half = max(0.7, h * 0.07);
-      _path
+      path
         ..moveTo(x - half, baseY)
         ..quadraticBezierTo(
           x + lean * h * 0.3,
@@ -252,16 +217,64 @@ class GroundDetail extends PositionComponent {
     }
   }
 
-  void _stone(double x, double size) {
-    _path.addOval(
+  void _stone(Path path, int index, double x, double size) {
+    path.addOval(
       Rect.fromCenter(
         center: Offset(x, baseY - size * 0.35),
-        width: size * _between(1.4, 2.4),
+        width: size * (1.4 + _n(index, 0x81)),
         height: size,
       ),
     );
   }
 
-  @override
-  void render(Canvas canvas) => canvas.drawPath(_path, _paint);
+  /// A handful of pebbles rather than one stone; roads are mostly this.
+  void _scatter(Path path, int index, double x) {
+    final count = 4 + (_n(index, 0x91) * 7).floor();
+    for (var i = 0; i < count; i++) {
+      final dx = (_n(index * 17 + i, 0xA1) - 0.5) * 70 * sizeScale;
+      final dy = _n(index * 17 + i, 0xB1) * 10 * sizeScale;
+      final r = (0.9 + _n(index * 17 + i, 0xC1) * 2.4) * sizeScale;
+      path.addOval(
+        Rect.fromCenter(
+          center: Offset(x + dx, baseY + dy),
+          width: r * 2.2,
+          height: r * 1.3,
+        ),
+      );
+    }
+  }
+
+  /// A dry twig or a broken palm frond lying where it fell.
+  void _twig(Path path, int index, double x, double length) {
+    final tilt = (_n(index, 0xD1) - 0.5) * 0.5;
+    final thickness = max(0.9, length * 0.035);
+    final dx = cos(tilt) * length;
+    final dy = sin(tilt) * length * 0.35;
+    path
+      ..moveTo(x, baseY - thickness)
+      ..lineTo(x + dx, baseY + dy - thickness * 0.4)
+      ..lineTo(x + dx, baseY + dy + thickness * 0.4)
+      ..lineTo(x, baseY + thickness)
+      ..close();
+    // A side branch, which is what makes it read as a twig and not a nail.
+    final bx = x + dx * (0.4 + _n(index, 0xE1) * 0.3);
+    path
+      ..moveTo(bx, baseY)
+      ..lineTo(bx + dx * 0.22, baseY - length * 0.16)
+      ..lineTo(bx + dx * 0.26, baseY - length * 0.15)
+      ..close();
+  }
+
+  /// A wheel rut: long, shallow, and lying flat on the surface.
+  void _rut(Path path, int index, double x) {
+    final length = (180 + _n(index, 0xF1) * 520) * sizeScale;
+    final thickness = (2 + _n(index, 0x13) * 5) * sizeScale;
+    path.addOval(
+      Rect.fromCenter(
+        center: Offset(x, baseY + _n(index, 0x17) * 26 * sizeScale),
+        width: length,
+        height: thickness,
+      ),
+    );
+  }
 }
