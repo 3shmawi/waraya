@@ -74,19 +74,50 @@ in `camera.backdrop`; a sky in the viewport paints over the entire scene.
 
 ## Running
 
+The Flutter version is pinned in `.fvmrc`. Install [FVM](https://fvm.app), then:
+
 ```bash
-flutter pub get
-flutter run -d macos        # or windows, linux
-flutter run -d chrome
-flutter run                 # attached phone
+fvm install                     # fetches the pinned SDK on a new machine
+fvm flutter pub get
+fvm flutter run -d macos        # or windows, linux
+fvm flutter run -d chrome
+fvm flutter run                 # attached phone
 ```
 
 Checks:
 
 ```bash
-flutter analyze
-flutter test
+fvm flutter analyze
+fvm flutter test
 ```
+
+`.fvmrc` is committed and `.fvm/` is not, so everyone resolves the same SDK
+without the download living in the repository. `.vscode/settings.json` points
+the Dart extension at `.fvm/flutter_sdk` so the editor and the CLI agree.
+
+Plain `flutter` still works if your global SDK happens to match, but only
+`fvm flutter` is guaranteed to be the pinned one.
+
+`pubspec.yaml` asks for Dart `^3.12.0`, which is what 3.44.9 ships (3.12.2).
+`flutter create` had written `^3.13.3` from the newer SDK it was generated
+with, and that will not resolve on the pinned version.
+
+### Known: the pinned SDK fetches Roboto at runtime on web
+
+A web build from 3.44.9 requests
+`https://fonts.gstatic.com/s/roboto/v32/...woff2` while starting, and
+`--no-web-resources-cdn` does not cover it. On a normal network it succeeds and
+text renders. Behind a blocked or offline network it fails and **all text
+disappears** — the debug HUD draws its panel and nothing else.
+
+This was measured, not assumed: the same commit built on 3.47.3 makes no such
+request and renders the HUD; built on 3.44.9 it makes the request and the HUD
+text is blank.
+
+It matters beyond the debug HUD, because every string the game ever draws goes
+through the same fallback. Removing it means bundling a font in `pubspec.yaml`
+rather than relying on the CDN — not done here, since that adds a third-party
+asset and its licence to the repository.
 
 ### Web builds
 
