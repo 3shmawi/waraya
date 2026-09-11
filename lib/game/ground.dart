@@ -178,16 +178,20 @@ class GroundDetail extends EndlessRow {
   @override
   void buildItem(EndlessItem item, int index, double x) {
     final kind = _n(index, 0x11);
-    if (kind < 0.42) {
+    if (kind < 0.34) {
       _tuft(item.fill, index, x, (14 + _n(index, 0x21) * 22) * sizeScale);
-    } else if (kind < 0.60) {
+    } else if (kind < 0.48) {
       _stone(item.fill, index, x, (4 + _n(index, 0x31) * 8) * sizeScale);
-    } else if (kind < 0.76) {
+    } else if (kind < 0.62) {
       _scatter(item.fill, index, x);
-    } else if (kind < 0.90) {
+    } else if (kind < 0.74) {
       _twig(item.fill, index, x, (18 + _n(index, 0x41) * 26) * sizeScale);
-    } else {
+    } else if (kind < 0.84) {
       _rut(item.fill, index, x);
+    } else if (kind < 0.93) {
+      _tyrePair(item.fill, index, x);
+    } else {
+      _scrap(item.fill, index, x, (7 + _n(index, 0x19) * 11) * sizeScale);
     }
   }
 
@@ -263,6 +267,42 @@ class GroundDetail extends EndlessRow {
       ..lineTo(bx + dx * 0.22, baseY - length * 0.16)
       ..lineTo(bx + dx * 0.26, baseY - length * 0.15)
       ..close();
+  }
+
+  /// The pair of tracks a tuk-tuk or a motorbike leaves, close together and
+  /// running the length of the road.
+  void _tyrePair(Path path, int index, double x) {
+    final length = (260 + _n(index, 0x23) * 620) * sizeScale;
+    final gap = (7 + _n(index, 0x29) * 13) * sizeScale;
+    final y = baseY + _n(index, 0x2B) * 22 * sizeScale;
+    for (final dy in [-gap / 2, gap / 2]) {
+      path.addOval(
+        Rect.fromCenter(
+          center: Offset(x, y + dy),
+          width: length,
+          height: (1.6 + _n(index, 0x2F) * 2.4) * sizeScale,
+        ),
+      );
+    }
+  }
+
+  /// A scrap of cloth or plastic, flattened into the dirt. There is one every
+  /// few metres of every road in the source photographs.
+  void _scrap(Path path, int index, double x, double size) {
+    final y = baseY + _n(index, 0x37) * 16 * sizeScale;
+    const points = 7;
+    for (var i = 0; i <= points; i++) {
+      final a = i / points * pi * 2;
+      final r = size * (0.45 + _n(index * 13 + i, 0x3D) * 0.75);
+      final px = x + cos(a) * r * 1.9;
+      final py = y + sin(a) * r * 0.45;
+      if (i == 0) {
+        path.moveTo(px, py);
+      } else {
+        path.lineTo(px, py);
+      }
+    }
+    path.close();
   }
 
   /// A wheel rut: long, shallow, and lying flat on the surface.

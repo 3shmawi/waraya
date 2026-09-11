@@ -11,6 +11,8 @@ import '../input/keyboard_input_source.dart';
 import '../input/touch_input_source.dart';
 import '../ui/debug_hud.dart';
 import 'atmosphere/dust_field.dart';
+import 'atmosphere/god_rays.dart';
+import 'atmosphere/haze_veils.dart';
 import 'atmosphere/vignette.dart';
 import 'config.dart';
 import 'ground.dart';
@@ -58,6 +60,12 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
     // Atmosphere, over the world and under the debug readout. Both are the
     // plan's shader-free tricks: nothing here compiles a fragment program, so
     // nothing here can break on a web build.
+    await camera.viewport.add(
+      GodRays(color: const Color(0xFFFFE7B0), priority: 90),
+    );
+    await camera.viewport.add(
+      HazeVeils(color: const Color(0xFFE8B55E), priority: 95),
+    );
     await camera.viewport.add(
       DustField(color: const Color(0xFFF6D79A), priority: 100),
     );

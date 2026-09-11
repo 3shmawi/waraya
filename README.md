@@ -34,7 +34,7 @@ scrolls is far away, and walking reads as standing still on a moving backdrop.
 | 1 | Project, Flame, skeleton on all targets | done |
 | 2 | Parallax background from real photographs | bands and palms in, foreground left |
 | 3 | Character sprite + camera follow | walking silhouette in |
-| 4 | Atmosphere without shaders (particles, god rays, fog, vignette) | dust and vignette in |
+| 4 | Atmosphere without shaders (particles, god rays, fog, vignette) | all four in |
 | 5 | Polish, web hardening, optional shaders | |
 
 ## Two decisions worth not re-litigating
@@ -61,6 +61,32 @@ tablet with a keyboard gets both. Adding a gamepad means adding one list entry.
 Jumping clears about 136 units — a little over the walker's own height — and
 lasts roughly 0.8s. A jump only launches from the ground, so holding the key
 does not climb.
+
+### Atmosphere
+
+Four layers, none of them a shader, so none of them can break on a web build the
+way the plan warns fragment programs do.
+
+`haze_veils.dart` is the one doing the work: a dust storm is mostly air thick
+enough to hide the middle distance and then let it back. One soft blob is baked
+at load and drawn a dozen times at different sizes, speeds and opacities.
+
+`god_rays.dart` bakes its whole fan into one blurred image and draws it once per
+frame. Drawing the wedges directly gave them hard geometric edges that read as
+cones rather than light, and softening them per frame would have meant blurring
+every frame. **A dust storm scatters light rather than beaming it**, so there is
+no sun disc here to justify strong shafts: `strength` defaults to 0.07 and
+setting it to 0 is a defensible call for this scene, not a missing feature.
+
+`dust_field.dart` puts motes in the viewport rather than the world, because
+airborne dust is carried by the wind and should not slide past at the camera's
+speed. Each depth layer is one `drawRawPoints` call.
+
+**Unmeasured:** all of this is full-screen overdraw, which is the thing most
+likely to cost frames on mid-range mobile, and the frame rates in this
+repository's screenshots come from a software renderer and mean nothing. The
+dials to turn down first are `HazeVeils.count` and `maxOpacity`, then
+`GodRays.strength`, then `DustField.motesPerLayer`.
 
 ### The road has no end
 
@@ -106,6 +132,8 @@ lib/
     power_line.dart              drawn poles and catenary wire
     palm_row.dart                photographed crowns, placed
     atmosphere/dust_field.dart   wind-blown motes
+    atmosphere/haze_veils.dart   drifting veils of hanging dust
+    atmosphere/god_rays.dart     light shafts, baked and blurred
     atmosphere/vignette.dart     edge darkening
     ground.dart                  graded road, ruts, roadside weeds
     probe_walker.dart            the character: physics and input
