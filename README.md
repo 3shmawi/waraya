@@ -249,6 +249,14 @@ copied in as `src_01`–`src_05` and overwrote the numbered files, including the
 frame these layers were cut from; it was recovered from git history and given a
 name no numbered batch will claim.
 
+**The bands are cut above the source's own wires.** `duststorm.jpg` has two
+long horizontal wires at about 0.66 of frame height and a diagonal fan from a
+pole at the right edge. The first crop started at 0.66 and took the lower edge
+of both, so the bands carried photographed wire that broke at every tile
+boundary — which read as the drawn wires being cut, when they never were. The
+crops now start at 0.715 and stop at 0.76 of the width, above the horizontals
+and left of the fan.
+
 **Wires are drawn, not photographed.** They were a band cut from the same frame,
 but the wires run diagonally across it, so every tile boundary chopped them
 mid-span and the repeat read as broken cable — no seam blend fixes a wire that
