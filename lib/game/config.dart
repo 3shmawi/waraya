@@ -20,6 +20,15 @@ abstract final class WarayaConfig {
   /// How fast the probe walker moves, in world units per second.
   static const double walkSpeed = 220;
 
+  /// Upward speed at the moment of a jump, in world units per second.
+  ///
+  /// With [gravity] this clears about 136 units, a little over the walker's own
+  /// height, and stays in the air for roughly 0.8s.
+  static const double jumpSpeed = 700;
+
+  /// Downward acceleration, in world units per second squared.
+  static const double gravity = 1800;
+
   /// Taps landing in the top fraction of the screen mean "jump" rather than
   /// "walk", so a thumb resting low never fires a jump by accident.
   static const double touchJumpBandFraction = 0.45;

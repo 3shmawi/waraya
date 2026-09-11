@@ -23,6 +23,14 @@ class ProbeWalker extends PositionComponent {
   /// Facing direction, kept so Friday 3 can flip the sprite.
   double facing = 1;
 
+  /// Vertical speed, positive downward to match the world's y axis.
+  double verticalVelocity = 0;
+
+  /// True while standing on the ground, which is also the only time a jump is
+  /// allowed -- otherwise a held jump key climbs the sky.
+  bool get isGrounded =>
+      y >= WarayaConfig.horizonY - 0.001 && verticalVelocity >= 0;
+
   final Paint _fill = Paint()..color = const Color(0xFF0A070E);
 
   /// A warm hairline so the probe stays legible against the dark
@@ -35,10 +43,25 @@ class ProbeWalker extends PositionComponent {
   @override
   void update(double dt) {
     super.update(dt);
+
     final axis = input.intent.moveAxis;
     if (axis != 0) {
       facing = axis.sign;
       position.x += axis * WarayaConfig.walkSpeed * dt;
+    }
+
+    // The jump is read before gravity is applied, so a jump requested on the
+    // frame of landing still takes effect.
+    if (input.intent.jump && isGrounded) {
+      verticalVelocity = -WarayaConfig.jumpSpeed;
+    }
+
+    verticalVelocity += WarayaConfig.gravity * dt;
+    position.y += verticalVelocity * dt;
+
+    if (position.y >= WarayaConfig.horizonY) {
+      position.y = WarayaConfig.horizonY;
+      verticalVelocity = 0;
     }
   }
 

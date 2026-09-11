@@ -12,6 +12,7 @@ import '../ui/debug_hud.dart';
 import 'config.dart';
 import 'ground.dart';
 import 'photo_band.dart';
+import 'power_line.dart';
 import 'probe_walker.dart';
 import 'sky_backdrop.dart';
 
@@ -65,7 +66,6 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
     // a palm standing clear against sky, or a hand mask.
     final far = await images.load('layer_far_treeline.webp');
     final mid = await images.load('layer_mid_treeline.webp');
-    final wires = await images.load('layer_near_wires.webp');
 
     Rect view() => camera.visibleWorldRect;
 
@@ -88,11 +88,9 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
         priority: -30,
       ),
       GroundPlane(color: const Color(0xFF2A1A10), span: 40000, priority: -20),
-      PhotoBand(
-        image: wires,
-        depth: 0.85,
-        heightUnits: 190,
-        bottomY: WarayaConfig.horizonY - 120,
+      PowerLine(
+        color: const Color(0xFF1B1119),
+        span: 40000,
         visibleWorldRect: view,
         priority: -5,
       ),

@@ -22,8 +22,8 @@ photographs in `art/source`; the ground is still a flat stand-in.
 | Friday | Scope | State |
 | --- | --- | --- |
 | 1 | Project, Flame, skeleton on all targets | done |
-| 2 | Parallax background from real photographs | three bands in, palms blocked |
-| 3 | Character sprite + camera follow | |
+| 2 | Parallax background from real photographs | two bands in, palms blocked |
+| 3 | Character sprite + camera follow | jump and gravity in |
 | 4 | Atmosphere without shaders (particles, god rays, fog, vignette) | |
 | 5 | Polish, web hardening, optional shaders | |
 
@@ -48,6 +48,10 @@ tablet with a keyboard gets both. Adding a gamepad means adding one list entry.
 - Keyboard: arrows / WASD to walk, space / up / W to jump.
 - Touch: hold lower-left or lower-right to walk, touch the upper band to jump.
 
+Jumping clears about 136 units — a little over the walker's own height — and
+lasts roughly 0.8s. A jump only launches from the ground, so holding the key
+does not climb.
+
 ## Layout
 
 ```
@@ -58,6 +62,7 @@ lib/
     waraya_game.dart             scene assembly, camera, input wiring
     sky_backdrop.dart            sunset gradient (camera backdrop)
     photo_band.dart              a photographed band, tiled and parallaxed
+    power_line.dart              drawn poles and catenary wire
     ground.dart                  stand-in surface         → Friday 2
     probe_walker.dart            stand-in character       → Friday 3
   input/
@@ -233,11 +238,25 @@ further back.
 
 ### What the photographs actually yielded
 
-`src_01.jpg` — the dust storm — carried the scene. Its sky is flat and bright
-and its trees are dark, which is the one case a brightness matte handles
-cleanly, and all three bands come from it: a hazed far treeline, a
-full-texture mid treeline, and the wires. Because they share one frame they
-share one light, which is most of why the scene holds together.
+`duststorm.jpg` carried the scene. Its sky is flat and bright and its trees are
+dark, which is the one case a brightness matte handles cleanly, and both bands
+come from it: a hazed far treeline and a full-texture mid treeline. Because
+they share one frame they share one light, which is most of why the scene holds
+together.
+
+It is named rather than numbered on purpose. A later batch of photographs was
+copied in as `src_01`–`src_05` and overwrote the numbered files, including the
+frame these layers were cut from; it was recovered from git history and given a
+name no numbered batch will claim.
+
+**Wires are drawn, not photographed.** They were a band cut from the same frame,
+but the wires run diagonally across it, so every tile boundary chopped them
+mid-span and the repeat read as broken cable — no seam blend fixes a wire that
+enters one edge at a different height and angle than it leaves the other. A wire
+at this scale is a two-pixel dark line, so the photograph contributed no texture
+worth keeping, while a catenary computed between known poles is continuous
+forever, tiles by construction, and costs no download. See
+`lib/game/power_line.dart`.
 
 **No palms yet, and not for want of trying.** Every palm in the fourteen source
 frames is partly occluded by something as dark as it is — a balcony awning in

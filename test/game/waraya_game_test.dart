@@ -139,6 +139,57 @@ void main() {
       expect(walker.facing, -1);
     });
 
+    test('jumps, rises, and lands back on the horizon', () {
+      final source = _ScriptedSource();
+      final input = InputController([source]);
+      final walker = ProbeWalker(input: input);
+      expect(walker.isGrounded, isTrue);
+
+      source.next = const InputIntent(jump: true);
+      input.refresh();
+      walker.update(1 / 60);
+      expect(walker.verticalVelocity, lessThan(0), reason: 'should be rising');
+      expect(walker.y, lessThan(WarayaConfig.horizonY));
+      expect(walker.isGrounded, isFalse);
+
+      // Run a second of frames; the arc has to come back down and settle.
+      source.next = InputIntent.none;
+      var apex = walker.y;
+      for (var i = 0; i < 60; i++) {
+        input.refresh();
+        walker.update(1 / 60);
+        if (walker.y < apex) apex = walker.y;
+      }
+
+      expect(
+        WarayaConfig.horizonY - apex,
+        greaterThan(100),
+        reason: 'should clear about its own height',
+      );
+      expect(walker.y, closeTo(WarayaConfig.horizonY, 0.001));
+      expect(walker.verticalVelocity, 0);
+      expect(walker.isGrounded, isTrue);
+    });
+
+    test('cannot jump again in mid-air', () {
+      final source = _ScriptedSource();
+      final input = InputController([source]);
+      final walker = ProbeWalker(input: input);
+
+      source.next = const InputIntent(jump: true);
+      input.refresh();
+      walker.update(1 / 60);
+      final risingVelocity = walker.verticalVelocity;
+
+      // Hold jump while airborne: it must not re-launch.
+      for (var i = 0; i < 5; i++) {
+        source.next = const InputIntent(jump: true);
+        input.refresh();
+        walker.update(1 / 60);
+      }
+      expect(walker.verticalVelocity, greaterThan(risingVelocity));
+    });
+
     test('stands still with no intent', () {
       final input = InputController([_ScriptedSource()]);
       final walker = ProbeWalker(input: input);
@@ -148,6 +199,13 @@ void main() {
       walker.update(1.0);
 
       expect(walker.x, startX);
+      // Vector2 stores float32, so the clamped value is not bit-identical to
+      // the double it was assigned.
+      expect(
+        walker.y,
+        closeTo(WarayaConfig.horizonY, 0.001),
+        reason: 'gravity keeps it down',
+      );
     });
   });
 }
