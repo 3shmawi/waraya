@@ -93,6 +93,37 @@ either way since the plan treats web download size as the main risk. A `--wasm`
 build (skwasm, ~1.1 MB versus CanvasKit's ~1.5 MB) passes the dry run and is
 worth testing once real assets exist.
 
+## Turning photographs into layers
+
+`tools/silhouette.py` converts a backlit photo into a tileable silhouette PNG.
+It needs `pillow` and `numpy` (`pip install pillow numpy`).
+
+```bash
+python3 tools/silhouette.py photo.jpg \
+    -o assets/images/layer_far_treeline.png \
+    --crop 0.45,0.80 --height 720 --tile --verify
+```
+
+Because Flame repeats parallax layers (`ImageRepeat.repeatX`), **one ordinary
+phone photo is enough — no panorama.** `--tile` cross-fades the right edge onto
+the left so the repeat is invisible, and `--verify` writes a doubled strip so
+the seam can be checked by eye.
+
+Two knobs matter more than the rest, both verified against a gradient-sky test
+frame:
+
+- `--alpha-gamma 0.5` solidifies mid-tone objects. A grey water tank or a
+  concrete parapet sits near the brightness threshold and otherwise comes out
+  half transparent. Values below 1 also slightly thicken thin structures.
+- `--flatten 0.15` divides out the sky's vertical gradient, for a sunset frame
+  whose zenith is darker than the buildings. **It also eats large uniform dark
+  regions** — the solid ground below the horizon goes semi-transparent — so
+  prefer cropping to the horizon band and reach for `--flatten` only when a
+  crop cannot separate them.
+
+`--softness` (default 0.07) is the width of the alpha ramp and is what keeps
+wires, antennas and palm fronds alive; a hard threshold deletes them.
+
 ## Verified so far
 
 - Flutter 3.47.3 / Dart 3.13.3, flame 1.38.2 — matches the plan's minimums.
@@ -100,6 +131,10 @@ worth testing once real assets exist.
 - Web release build renders and responds to keyboard input at both 1600×900 and
   844×390, with no console errors.
 - Linux desktop release binary builds and bundles.
+- `tools/silhouette.py` on a synthetic backlit frame: seamless under repeat,
+  thin wires preserved, `--alpha-gamma` solidifies mid-tones, and `--flatten`
+  fixes a dark zenith at the documented cost above. **Not yet run on a real
+  photograph** — no source photos are in the repo yet.
 
 Not yet verified anywhere: **Android, iOS and macOS**. Those need the M1 with
 Xcode and the Android SDK — the CI container has neither. FPS numbers in the
