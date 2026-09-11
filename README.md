@@ -16,8 +16,18 @@ is Delta or Upper Egypt is still open, and the two look different.
 ## Status — Friday 1 done, Friday 2 under way
 
 A camera-following walker moves through a layered dust-storm scene, driven by a
-platform-agnostic input layer. Three of the bands are now cut from real
-photographs in `art/source`; the ground is still a flat stand-in.
+platform-agnostic input layer. The treeline bands and the palm crowns are cut
+from real photographs in `art/source`; the wires, the palm placement and the
+road are drawn.
+
+**The road is drawn, and the roadside detail is why.** Neither dust-storm frame
+has usable ground — `duststorm.jpg` looks out over foliage and rooftops,
+`src_12` looks down at a balcony floor — so the surface is a gradient from the
+haze at the horizon to the shadow it sits in under the camera, with faint ruts
+along it. The weeds and stones matter more than the gradient does: they are the
+only things in the scene standing at the character's own depth, so they are the
+only ones that move at the character's own speed. Without them everything that
+scrolls is far away, and walking reads as standing still on a moving backdrop.
 
 | Friday | Scope | State |
 | --- | --- | --- |
@@ -63,7 +73,7 @@ lib/
     sky_backdrop.dart            sunset gradient (camera backdrop)
     photo_band.dart              a photographed band, tiled and parallaxed
     power_line.dart              drawn poles and catenary wire
-    ground.dart                  stand-in surface         → Friday 2
+    ground.dart                  graded road, ruts, roadside weeds
     probe_walker.dart            stand-in character       → Friday 3
   input/
     input.dart                   InputIntent + InputSource

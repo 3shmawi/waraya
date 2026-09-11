@@ -101,7 +101,34 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
         visibleWorldRect: view,
         priority: -30,
       ),
-      GroundPlane(color: const Color(0xFF2A1A10), span: 40000, priority: -20),
+      GroundPlane(
+        // The horizon end carries the same haze the bands fade into; the near
+        // end is the shadow the road sits in right under the camera.
+        horizonColor: const Color(0xFF3D2609),
+        nearColor: const Color(0xFF0E0805),
+        span: 40000,
+        priority: -20,
+      ),
+      // Behind the walker, at the character's own depth.
+      GroundDetail(
+        color: const Color(0xFF1A1009),
+        span: 40000,
+        baseY: WarayaConfig.horizonY + 14,
+        density: 300,
+        seed: 29,
+        priority: -18,
+      ),
+      // In front of the walker: the closest thing in the scene, so it sells
+      // the speed of everything behind it.
+      GroundDetail(
+        color: const Color(0xFF0D0705),
+        span: 40000,
+        baseY: WarayaConfig.horizonY + 178,
+        scale2: 3.4,
+        density: 230,
+        seed: 31,
+        priority: 200,
+      ),
       PowerLine(
         color: const Color(0xFF1B1119),
         span: 40000,
