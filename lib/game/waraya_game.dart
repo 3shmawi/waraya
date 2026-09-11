@@ -10,7 +10,8 @@ import '../input/keyboard_input_source.dart';
 import '../input/touch_input_source.dart';
 import '../ui/debug_hud.dart';
 import 'config.dart';
-import 'placeholder_village.dart';
+import 'ground.dart';
+import 'photo_band.dart';
 import 'probe_walker.dart';
 import 'sky_backdrop.dart';
 
@@ -53,23 +54,48 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
       DebugHud(input: input, visibleWorldRect: () => camera.visibleWorldRect),
     );
 
-    // Four depth bands standing in for Friday 2's parallax layers, plus the
-    // surface under them. Values run light-to-dark with distance so the depth
-    // reads before any real parallax motion exists.
+    // The photographed bands, far to near. Depth drives the parallax: 0 is
+    // infinitely distant, 1 sits in the world plane with the character. The
+    // far band is the same treeline as the mid one, hazed and scaled down --
+    // aerial perspective from a single source frame.
+    //
+    // No palms yet. Every palm in art/source is partly occluded by an awning,
+    // a tarp or a water tower, and those are as dark as the tree, so no
+    // rectangular crop separates them. Unblocking it needs either one frame of
+    // a palm standing clear against sky, or a hand mask.
+    final far = await images.load('layer_far_treeline.webp');
+    final mid = await images.load('layer_mid_treeline.webp');
+    final wires = await images.load('layer_near_wires.webp');
+
+    Rect view() => camera.visibleWorldRect;
+
     await world.addAll([
-      PlaceholderTreeline(
-        color: const Color(0xFF8C6472),
-        seed: 1,
+      PhotoBand(
+        image: far,
+        depth: 0.15,
+        heightUnits: 120,
+        // Above the mid band's top edge, or it is hidden behind it entirely.
+        bottomY: WarayaConfig.horizonY - 96,
+        visibleWorldRect: view,
+        priority: -40,
+      ),
+      PhotoBand(
+        image: mid,
+        depth: 0.45,
+        heightUnits: 230,
+        bottomY: WarayaConfig.horizonY + 4,
+        visibleWorldRect: view,
         priority: -30,
       ),
-      PlaceholderVillageRow(
-        color: const Color(0xFF5E4552),
-        seed: 2,
-        priority: -25,
+      GroundPlane(color: const Color(0xFF2A1A10), span: 40000, priority: -20),
+      PhotoBand(
+        image: wires,
+        depth: 0.85,
+        heightUnits: 190,
+        bottomY: WarayaConfig.horizonY - 120,
+        visibleWorldRect: view,
+        priority: -5,
       ),
-      PlaceholderPalms(color: const Color(0xFF3A2B3B), seed: 3, priority: -20),
-      PlaceholderGround(color: const Color(0xFF16101E), priority: -15),
-      PlaceholderPoles(color: const Color(0xFF120D18), seed: 4, priority: -8),
     ]);
 
     walker = ProbeWalker(input: input);

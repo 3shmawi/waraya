@@ -13,16 +13,16 @@ of the plan (visual and cultural references) was rewritten for that and is
 flagged there as the least-verified part of the document. Whether the village
 is Delta or Upper Egypt is still open, and the two look different.
 
-## Status — Friday 1 of 5: setup + skeleton ✅
+## Status — Friday 1 done, Friday 2 under way
 
-A camera-following walker moves through a layered sunset scene, driven by a
-platform-agnostic input layer. Everything visual right now is a **placeholder**
-for the photographed silhouette layers that land on Friday 2.
+A camera-following walker moves through a layered dust-storm scene, driven by a
+platform-agnostic input layer. Three of the bands are now cut from real
+photographs in `art/source`; the ground is still a flat stand-in.
 
 | Friday | Scope | State |
 | --- | --- | --- |
 | 1 | Project, Flame, skeleton on all targets | done |
-| 2 | Parallax background from real photographs | next |
+| 2 | Parallax background from real photographs | three bands in, palms blocked |
 | 3 | Character sprite + camera follow | |
 | 4 | Atmosphere without shaders (particles, god rays, fog, vignette) | |
 | 5 | Polish, web hardening, optional shaders | |
@@ -57,7 +57,8 @@ lib/
     config.dart                  world height, horizon, speeds
     waraya_game.dart             scene assembly, camera, input wiring
     sky_backdrop.dart            sunset gradient (camera backdrop)
-    placeholder_village.dart     stand-in village bands   → Friday 2
+    photo_band.dart              a photographed band, tiled and parallaxed
+    ground.dart                  stand-in surface         → Friday 2
     probe_walker.dart            stand-in character       → Friday 3
   input/
     input.dart                   InputIntent + InputSource
@@ -130,6 +131,22 @@ frame:
 `--softness` (default 0.07) is the width of the alpha ramp and is what keeps
 wires, antennas and palm fronds alive; a hard threshold deletes them.
 
+Other options earned by real frames rather than guessed at:
+
+- `--x-crop left,right` cuts a foreground object out of a band that is
+  otherwise good — a tea glass sitting in the middle of a treeline, say.
+- `--trim` crops transparent margins, for a discrete cut-out that code places
+  rather than a band that tiles.
+- `--feather-bottom 0.35` fades the bottom edge. A band floating above the
+  horizon otherwise ends in a hard horizontal line straight across the screen.
+- `--threshold` beats `--threshold auto` whenever a frame holds three tonal
+  groups rather than two. Measure first: Otsu split a bright awning from
+  everything else and left the sky opaque, where a measured 0.15 separated palm
+  from sky exactly.
+- The output extension picks the format. `.webp` cut the layer set from 808 KB
+  to 320 KB; `--webp-quality 0` keeps a cut-out lossless so its alpha edges do
+  not fringe.
+
 ### How photographic to make the layers
 
 `--keep-texture --texture-gain 1.0` keeps the photograph's own colour and
@@ -159,10 +176,33 @@ further back.
 - Web release build renders and responds to keyboard input at both 1600×900 and
   844×390, with no console errors.
 - Linux desktop release binary builds and bundles.
-- `tools/silhouette.py` on a synthetic backlit frame: seamless under repeat,
-  thin wires preserved, `--alpha-gamma` solidifies mid-tones, and `--flatten`
-  fixes a dark zenith at the documented cost above. **Not yet run on a real
-  photograph** — no source photos are in the repo yet.
+- Three photographed bands render with parallax on the web build, 320 KB of
+  WebP in total.
+- `tools/silhouette.py` on the real photographs in `art/source`, not only on a
+  synthetic frame.
+
+### What the photographs actually yielded
+
+`src_01.jpg` — the dust storm — carried the scene. Its sky is flat and bright
+and its trees are dark, which is the one case a brightness matte handles
+cleanly, and all three bands come from it: a hazed far treeline, a
+full-texture mid treeline, and the wires. Because they share one frame they
+share one light, which is most of why the scene holds together.
+
+**No palms yet, and not for want of trying.** Every palm in the fourteen source
+frames is partly occluded by something as dark as it is — a balcony awning in
+`src_12`, a tarp in `src_13`, a water tower beside the trunk. Dark-on-dark
+cannot be separated by a brightness cut, and the occluders overlap the crowns
+in both axes so no rectangular crop divides them either. Unblocking it takes
+one of:
+
+- one new frame of a single palm standing clear against sky, shot in the same
+  light as the bands; or
+- a hand mask in Photopea, roughly five minutes per palm.
+
+`src_13` (the sunset) is a beautiful photograph and a poor layer source: its
+subjects are discrete objects rather than continuous bands, and its sky is a
+strong vertical gradient. Its real value was the measured sky palette.
 
 Not yet verified anywhere: **Android, iOS and macOS**. Those need the M1 with
 Xcode and the Android SDK — the CI container has neither. FPS numbers in the

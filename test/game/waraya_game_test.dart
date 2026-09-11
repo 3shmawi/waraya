@@ -22,6 +22,9 @@ class _ScriptedSource implements InputSource {
 }
 
 void main() {
+  // The game loads image assets now, and the asset bundle needs a binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('WarayaGame viewport', () {
     // flame_test sizes the game at 800x600.
     testWithGame<WarayaGame>(

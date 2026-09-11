@@ -11,18 +11,18 @@ import 'config.dart';
 /// — the correct behaviour for an infinitely distant layer, and the cheapest
 /// possible "background" on every platform including web.
 ///
-/// PLACEHOLDER: Friday 2 replaces this with the photographed silhouette layers
-/// in a `ParallaxComponent`.
+/// The stops are sampled from `art/source/src_01.jpg`, the dust-storm frame the
+/// bands were cut from, so the sky and the layers agree on one light.
 class SkyBackdrop extends PositionComponent {
   SkyBackdrop() : super(priority: -1000);
 
-  static const _stops = <double>[0.0, 0.42, 0.68, 0.86, 1.0];
+  static const _stops = <double>[0.0, 0.35, 0.62, 0.82, 1.0];
   static const _colors = <Color>[
-    Color(0xFF1B2A4A), // high indigo
-    Color(0xFF4B3F63), // dusty violet
-    Color(0xFF9C5B54), // haze over the city
-    Color(0xFFD98E4A), // sun band
-    Color(0xFFF0C27B), // horizon glow
+    Color(0xFFF7C032), // high dust
+    Color(0xFFF1AD0C), // measured at 0.30 of the frame
+    Color(0xFFE59D00), // 0.50
+    Color(0xFFDE9600), // 0.58
+    Color(0xFFD28C02), // 0.68, just above the treeline
   ];
 
   final Paint _paint = Paint();

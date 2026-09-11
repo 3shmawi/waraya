@@ -150,6 +150,19 @@ def parse_haze(spec: str) -> tuple[tuple[int, int, int], float]:
     return parse_color(colour), strength
 
 
+def parse_x_crop(spec: str) -> tuple[float, float]:
+    """Parse `left,right` fractions for a horizontal crop."""
+    try:
+        left, right = (float(part) for part in spec.split(","))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "--x-crop wants two fractions, e.g. 0.0,0.4 (left,right)"
+        ) from exc
+    if not 0.0 <= left < right <= 1.0:
+        raise argparse.ArgumentTypeError("--x-crop needs 0 <= left < right <= 1")
+    return left, right
+
+
 def parse_color(spec: str) -> tuple[int, int, int]:
     text = spec.lstrip("#")
     if len(text) != 6:
@@ -248,10 +261,37 @@ def main(argv: list[str] | None = None) -> int:
         help="vertical slice to keep as fractions, e.g. 0.35,0.8",
     )
     parser.add_argument(
+        "--x-crop",
+        type=parse_x_crop,
+        help="horizontal slice to keep as fractions, e.g. 0.0,0.4 -- use it to "
+        "cut a foreground object out of a band that is otherwise good",
+    )
+    parser.add_argument(
         "--height", type=int, default=720, help="output height in pixels (0 keeps the source)"
     )
+    parser.add_argument(
+        "--feather-bottom",
+        type=float,
+        default=0.0,
+        help="fade alpha to nothing over this fraction of the bottom edge. A "
+        "band that floats above the horizon otherwise ends in a hard "
+        "horizontal line straight across the screen.",
+    )
+    parser.add_argument(
+        "--trim",
+        action="store_true",
+        help="crop away fully transparent margins. Use it for a discrete "
+        "cut-out (a single palm, a pole, a minaret) that code will place, "
+        "rather than a continuous band that tiles.",
+    )
     parser.add_argument("--tile", action="store_true", help="make the layer seamless under repeatX")
-    parser.add_argument("--tile-blend", type=float, default=0.12, help="seam width as a fraction")
+    parser.add_argument(
+        "--tile-blend",
+        type=float,
+        default=0.06,
+        help="seam width as a fraction; a wide blend ghosts one edge over the "
+        "other, so keep it small unless the edges are plain sky",
+    )
     parser.add_argument(
         "--pot", action="store_true", help="pad width up to a power of two (atlas friendly)"
     )
@@ -260,7 +300,14 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also write a 2x-tiled strip so the seam can be eyeballed",
     )
-    parser.add_argument("--webp", action="store_true", help="also write a lossless WebP")
+    parser.add_argument(
+        "--webp-quality",
+        type=int,
+        default=90,
+        help="quality for a .webp output; 0 means lossless. Lossy is far "
+        "smaller on textured bands, but can fringe hard alpha edges, so keep "
+        "cut-out sprites lossless.",
+    )
     args = parser.parse_args(argv)
 
     if not args.input.exists():
@@ -278,6 +325,14 @@ def main(argv: list[str] | None = None) -> int:
             print("--crop removed every row", file=sys.stderr)
             return 1
 
+    if args.x_crop:
+        left, right = args.x_crop
+        width = rgb.shape[1]
+        rgb = rgb[:, int(width * left) : int(width * right)]
+        if rgb.size == 0:
+            print("--x-crop removed every column", file=sys.stderr)
+            return 1
+
     lum = luminance(rgb)
     if args.flatten > 0:
         lum = flatten(lum, args.flatten)
@@ -286,6 +341,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     alpha = matte(lum, threshold, args.softness, args.invert)
     alpha = apply_alpha_gamma(alpha, args.alpha_gamma)
+
+    if args.feather_bottom > 0:
+        rows = alpha.shape[0]
+        band = max(1, int(rows * min(args.feather_bottom, 1.0)))
+        ramp = np.linspace(1.0, 0.0, band, dtype=np.float32)[:, None]
+        alpha[rows - band :] *= ramp
 
     if args.keep_texture:
         base = np.asarray(args.color, dtype=np.float32) / 255.0
@@ -302,6 +363,14 @@ def main(argv: list[str] | None = None) -> int:
 
     rgba = np.dstack([fill, alpha])
     rgba = (np.clip(rgba, 0.0, 1.0) * 255.0).round().astype(np.uint8)
+
+    if args.trim:
+        opaque = np.argwhere(rgba[..., 3] > 8)
+        if opaque.size == 0:
+            print("--trim found nothing opaque", file=sys.stderr)
+            return 1
+        (y0, x0), (y1, x1) = opaque.min(0), opaque.max(0) + 1
+        rgba = rgba[y0:y1, x0:x1]
 
     if args.tile:
         rgba = make_tileable(rgba, args.tile_blend)
@@ -323,7 +392,16 @@ def main(argv: list[str] | None = None) -> int:
 
     output = args.output or args.input.with_name(f"{args.input.stem}_silhouette.png")
     output.parent.mkdir(parents=True, exist_ok=True)
-    out_image.save(output, optimize=True)
+    # The extension picks the format. WebP carries alpha and is much smaller on
+    # textured bands, which matters because web download size is this project's
+    # main risk.
+    if output.suffix.lower() == ".webp":
+        if args.webp_quality <= 0:
+            out_image.save(output, lossless=True, method=6)
+        else:
+            out_image.save(output, quality=args.webp_quality, method=6)
+    else:
+        out_image.save(output, optimize=True)
 
     coverage = float(np.asarray(out_image)[..., 3].mean()) / 255.0
     print(f"{output}  {out_image.width}x{out_image.height}  {output.stat().st_size / 1024:.0f} KB")
@@ -333,11 +411,6 @@ def main(argv: list[str] | None = None) -> int:
         print("  ! almost nothing was kept -- try --invert or a higher --threshold")
     elif coverage > 0.9:
         print("  ! almost everything was kept -- try a lower --threshold")
-
-    if args.webp:
-        webp = output.with_suffix(".webp")
-        out_image.save(webp, lossless=True, method=6)
-        print(f"  {webp.name}  {webp.stat().st_size / 1024:.0f} KB")
 
     if args.verify:
         strip = Image.new("RGBA", (out_image.width * 2, out_image.height), (0, 0, 0, 0))
