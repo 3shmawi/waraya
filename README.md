@@ -135,6 +135,9 @@ Other options earned by real frames rather than guessed at:
 
 - `--x-crop left,right` cuts a foreground object out of a band that is
   otherwise good — a tea glass sitting in the middle of a treeline, say.
+- `--rotate degrees` levels a frame before cropping (positive is
+  counter-clockwise). Phone frames are rarely level, and a sloped band
+  staircases when it tiles. It fixes tilt, **not perspective** — see below.
 - `--trim` crops transparent margins, for a discrete cut-out that code places
   rather than a band that tiles.
 - `--feather-bottom 0.35` fades the bottom edge. A band floating above the
@@ -203,6 +206,24 @@ one of:
 `src_13` (the sunset) is a beautiful photograph and a poor layer source: its
 subjects are discrete objects rather than continuous bands, and its sky is a
 strong vertical gradient. Its real value was the measured sky palette.
+
+**The balcony railing in `src_12` does not tile.** The ironwork itself cuts out
+well once the frame is levelled, but it was shot from above and along its
+length, so the top rail slopes and the bars crowd together toward the far end.
+Rotation levels the tilt and cannot touch the perspective, so the two ends meet
+at different heights and spacings and the repeat shows a step no seam blend
+hides. A face-on, level frame of the same railing would tile cleanly.
+
+### What one more photo session would unblock
+
+Both open items are the same shot discipline, and neither is a tooling problem:
+
+1. **A palm standing clear against sky** — nothing dark touching its crown.
+2. **A face-on foreground** — a railing, a parapet or a laundry line, camera
+   level and square to it rather than looking along it.
+
+Shoot both in the same dusty or golden light as `src_01`, since sharing one
+light is most of what makes the current bands sit together.
 
 Not yet verified anywhere: **Android, iOS and macOS**. Those need the M1 with
 Xcode and the Android SDK — the CI container has neither. FPS numbers in the

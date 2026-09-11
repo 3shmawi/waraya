@@ -256,6 +256,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--invert", action="store_true", help="keep the bright side instead")
     parser.add_argument(
+        "--rotate",
+        type=float,
+        default=0.0,
+        help="rotate the frame by this many degrees before cropping, to level "
+        "a horizon or a railing. Phone frames are rarely level, and a sloped "
+        "band staircases when it tiles.",
+    )
+    parser.add_argument(
         "--crop",
         type=parse_crop,
         help="vertical slice to keep as fractions, e.g. 0.35,0.8",
@@ -315,6 +323,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     image = Image.open(args.input).convert("RGB")
+    if args.rotate:
+        # expand=False keeps the frame, so the crop fractions still mean what
+        # they meant when they were measured on the original.
+        image = image.rotate(args.rotate, resample=Image.BICUBIC, expand=False)
     rgb = np.asarray(image, dtype=np.float32) / 255.0
 
     if args.crop:
