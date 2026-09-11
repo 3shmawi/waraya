@@ -1,10 +1,17 @@
 # waraya · ورايا
 
-An atmospheric side-scroller set in contemporary working-class Cairo, built with
+An atmospheric side-scroller set in a contemporary Egyptian village, built with
 Flutter + Flame. One codebase, shipped to mobile, desktop and web.
 
 Phase 1 is **environment and art foundation only** — no gameplay. The research
 and week-by-week plan it follows is in [`docs/phase-1-research.md`](docs/phase-1-research.md).
+
+**Setting note.** The plan was researched for a Cairo rooftop. The setting moved
+to a village once the available photographs turned out to be rural — palms,
+casuarina windbreaks, irrigation canals, red brick with exposed rebar. Section 5
+of the plan (visual and cultural references) was rewritten for that and is
+flagged there as the least-verified part of the document. Whether the village
+is Delta or Upper Egypt is still open, and the two look different.
 
 ## Status — Friday 1 of 5: setup + skeleton ✅
 
