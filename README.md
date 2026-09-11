@@ -102,22 +102,38 @@ Plain `flutter` still works if your global SDK happens to match, but only
 `flutter create` had written `^3.13.3` from the newer SDK it was generated
 with, and that will not resolve on the pinned version.
 
-### Known: the pinned SDK fetches Roboto at runtime on web
+### The bundled font, and why
 
 A web build from 3.44.9 requests
 `https://fonts.gstatic.com/s/roboto/v32/...woff2` while starting, and
-`--no-web-resources-cdn` does not cover it. On a normal network it succeeds and
-text renders. Behind a blocked or offline network it fails and **all text
-disappears** — the debug HUD draws its panel and nothing else.
+`--no-web-resources-cdn` does not cover it. Where that fetch is blocked, every
+string vanished — the debug HUD drew its panel and no text. Measured, not
+assumed: the same commit on 3.47.3 makes no such request and renders the HUD.
 
-This was measured, not assumed: the same commit built on 3.47.3 makes no such
-request and renders the HUD; built on 3.44.9 it makes the request and the HUD
-text is blank.
+**Liberation Mono is now bundled**, so text no longer depends on a CDN. With
+the font in the bundle and `fonts.gstatic.com` still blocked, the HUD renders
+identically to the 3.47.3 build. The Roboto request still happens — Flutter web
+registers it as the engine fallback regardless — but nothing visible depends on
+it any more.
 
-It matters beyond the debug HUD, because every string the game ever draws goes
-through the same fallback. Removing it means bundling a font in `pubspec.yaml`
-rather than relying on the CDN — not done here, since that adds a third-party
-asset and its licence to the repository.
+**Licence.** `assets/fonts/LiberationMono-Regular.ttf` is copyright (c) 2012
+Red Hat, Inc. with Reserved Font Name Liberation, under the SIL Open Font
+License 1.1. The full licence text is in
+`assets/fonts/LiberationMono-LICENSE.txt`, which ships inside the app bundle
+and is registered with Flutter's `LicenseRegistry` in `main.dart`, so it shows
+up wherever the app lists its open-source licences. The OFL requires the
+licence and copyright notice to travel with the font, which is what that
+arrangement is for.
+
+The file is shipped **unmodified and under its original name**, which is what
+keeps the reserved-name clause satisfied without renaming.
+
+**Size.** The font is 312 KB raw, about 174 KB gzipped, which roughly doubles
+the app's asset payload (304 KB of layers, 644 KB in total). Since web download
+size is the plan's main risk, the obvious next step is subsetting it to the
+glyphs actually used, which would take it to tens of kilobytes. That is a
+modification, so under OFL condition 3 a subset **must be renamed** before it
+can be redistributed — it could not still be called Liberation.
 
 ### Web builds
 

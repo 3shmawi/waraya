@@ -24,7 +24,8 @@ class DebugHud extends PositionComponent {
       fontSize: 13,
       height: 1.45,
       color: Color(0xFFF4ECE2),
-      fontFamily: 'monospace',
+      // Bundled, so text does not depend on a font CDN at runtime.
+      fontFamily: 'LiberationMono',
     ),
   );
 

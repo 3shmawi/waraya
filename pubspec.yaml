@@ -65,6 +65,14 @@ flutter:
   # assets/images/layer_far_treeline.png.
   assets:
     - assets/images/
+    # The OFL requires the licence to travel with the font, so it ships in the
+    # bundle and is registered in main.dart.
+    - assets/fonts/LiberationMono-LICENSE.txt
+
+  fonts:
+    - family: LiberationMono
+      fonts:
+        - asset: assets/fonts/LiberationMono-Regular.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
