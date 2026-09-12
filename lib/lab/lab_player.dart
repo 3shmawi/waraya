@@ -67,19 +67,13 @@ class LabPlayer extends PositionComponent {
   bool _walking = false;
   bool _jumpedSinceCapture = false;
 
-  static const double _strideLength = 105;
-
   /// How far above a one-way surface the previous frame's feet may have been
   /// and still count as landing on it, rather than passing through from below.
   static const double _landingTolerance = 6;
 
-  late final Figure _figure = Figure(
-    height: size.y,
-    color: LabScene.bodyColor,
-  );
+  late final Figure _figure = Figure(height: size.y, color: LabScene.bodyColor);
 
-  Rect get bounds =>
-      Rect.fromLTWH(x - size.x / 2, y - size.y, size.x, size.y);
+  Rect get bounds => Rect.fromLTWH(x - size.x / 2, y - size.y, size.x, size.y);
 
   PoseState get pose {
     if (!isGrounded) {
@@ -132,7 +126,9 @@ class LabPlayer extends PositionComponent {
     }
     if (walked != 0) {
       _stridePhase =
-          (_stridePhase + walked.abs() / _strideLength * 2 * pi) % (2 * pi);
+          (_stridePhase +
+              walked.abs() / Figure.strideLengthFor(size.y) * 2 * pi) %
+          (2 * pi);
     }
 
     // Read before gravity, so a jump asked for on the landing frame still
@@ -153,9 +149,7 @@ class LabPlayer extends PositionComponent {
   void _resolveHorizontal(LabSolids world, double step) {
     for (final rect in world.blocking) {
       if (!bounds.overlaps(rect)) continue;
-      position.x = step > 0
-          ? rect.left - size.x / 2
-          : rect.right + size.x / 2;
+      position.x = step > 0 ? rect.left - size.x / 2 : rect.right + size.x / 2;
     }
   }
 

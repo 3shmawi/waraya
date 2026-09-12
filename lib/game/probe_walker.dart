@@ -44,10 +44,6 @@ class ProbeWalker extends PositionComponent {
   /// How far through the current stride the legs are, in radians.
   double _stridePhase = 0;
 
-  /// World units covered per full stride. Tied to distance rather than time so
-  /// the feet never slide.
-  static const double _strideLength = 105;
-
   @override
   void update(double dt) {
     super.update(dt);
@@ -58,7 +54,9 @@ class ProbeWalker extends PositionComponent {
       final step = axis * WarayaConfig.walkSpeed * dt;
       position.x += step;
       _stridePhase =
-          (_stridePhase + step.abs() / _strideLength * 2 * pi) % (2 * pi);
+          (_stridePhase +
+              step.abs() / Figure.strideLengthFor(size.y) * 2 * pi) %
+          (2 * pi);
     }
 
     // The jump is read before gravity is applied, so a jump requested on the
