@@ -25,10 +25,7 @@ void main() {
 
   test('test 2: the ledge is not reachable without the shadow', () {
     // Not from the floor, and not from the low platform either.
-    expect(
-      LabScene.floorTop - LabScene.ledge.top,
-      greaterThan(jumpHeight),
-    );
+    expect(LabScene.floorTop - LabScene.ledge.top, greaterThan(jumpHeight));
     expect(
       LabScene.lowPlatform.top - LabScene.ledge.top,
       greaterThan(jumpHeight),
@@ -57,10 +54,14 @@ void main() {
     expect(walk / WarayaConfig.walkSpeed, greaterThan(1.5));
   });
 
-  test('test 3: the corridor fits a body but not a jump', () {
+  test('test 3: the corridor takes a crouched body and nothing taller', () {
     final gap = LabScene.floorTop - LabScene.corridorCeiling.bottom;
-    expect(gap, greaterThan(bodyHeight));
-    expect(gap - bodyHeight, lessThan(jumpHeight));
+    expect(
+      gap,
+      greaterThan(bodyHeight * WarayaConfig.crouchHeightFactor),
+      reason: 'ducking has to get you through',
+    );
+    expect(gap, lessThan(bodyHeight), reason: 'walking through must not');
   });
 
   test('the shadow-platform goal sits on the ledge, not floating', () {

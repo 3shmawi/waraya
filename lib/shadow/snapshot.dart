@@ -26,6 +26,7 @@ class PoseSnapshot {
     required this.facing,
     required this.state,
     required this.stridePhase,
+    this.crouch = 0,
     this.jumpPressed = false,
   });
 
@@ -37,6 +38,14 @@ class PoseSnapshot {
   final double facing;
 
   final PoseState state;
+
+  /// How folded up the body is, 0 standing to 1 fully crouched.
+  ///
+  /// A number rather than a flag because the body takes a moment to fold, and
+  /// the shadow has to replay that moment rather than snap between two
+  /// heights. It is also the collision height: the recorded body is the same
+  /// size as the body that was recorded.
+  final double crouch;
 
   /// How far through the stride the legs were, in radians.
   ///
@@ -60,7 +69,7 @@ class PoseSnapshot {
       '${state.name})';
 }
 
-/// The four poses `Figure` can draw. Kept as an enum rather than the plan's
+/// The poses `Figure` can draw. Kept as an enum rather than the plan's
 /// `String` so a typo is a compile error.
 enum PoseState {
   idle,

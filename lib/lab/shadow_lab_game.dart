@@ -35,8 +35,7 @@ import 'lab_settings.dart';
 /// 3. everything else — the plate, the door, standing on the shadow, dying to
 ///    it — is just collision against where the shadow ended up.
 class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
-  ShadowLabGame({LabSettings? settings})
-    : settings = settings ?? LabSettings();
+  ShadowLabGame({LabSettings? settings}) : settings = settings ?? LabSettings();
 
   final LabSettings settings;
 
@@ -173,9 +172,7 @@ class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
   /// What the player can collide with this frame.
   LabSolids _solids() => LabSolids(
     blocking: [...LabScene.blocking, if (door.isSolid) door.bounds],
-    oneWay: [
-      if (settings.shadowIsSolid && shadow.isActive) shadow.bounds,
-    ],
+    oneWay: [if (settings.shadowIsSolid && shadow.isActive) shadow.bounds],
   );
 
   /// The whole death-and-retry system for this phase: put everything back.

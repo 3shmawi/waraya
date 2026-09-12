@@ -31,6 +31,11 @@ class ProbeWalker extends PositionComponent {
   /// Vertical speed, positive downward to match the world's y axis.
   double verticalVelocity = 0;
 
+  /// How folded up the body is, 0 standing to 1 fully crouched. Nothing in
+  /// this scene has a ceiling to duck under, so unlike the lab there is
+  /// nothing to check before standing back up.
+  double crouch = 0;
+
   /// True while standing on the ground, which is also the only time a jump is
   /// allowed -- otherwise a held jump key climbs the sky.
   bool get isGrounded =>
@@ -48,10 +53,17 @@ class ProbeWalker extends PositionComponent {
   void update(double dt) {
     super.update(dt);
 
+    final wantsCrouch = input.intent.crouch && isGrounded;
+    crouch = (crouch + (wantsCrouch ? 1 : -1) * WarayaConfig.crouchRate * dt)
+        .clamp(0.0, 1.0);
+
     final axis = input.intent.moveAxis;
     if (axis != 0) {
       facing = axis.sign;
-      final step = axis * WarayaConfig.walkSpeed * dt;
+      final speed =
+          WarayaConfig.walkSpeed *
+          (1 - (1 - WarayaConfig.crouchSpeedFactor) * crouch);
+      final step = axis * speed * dt;
       position.x += step;
       _stridePhase =
           (_stridePhase +
@@ -61,7 +73,7 @@ class ProbeWalker extends PositionComponent {
 
     // The jump is read before gravity is applied, so a jump requested on the
     // frame of landing still takes effect.
-    if (input.intent.jump && isGrounded) {
+    if (input.intent.jump && isGrounded && crouch < 0.2) {
       verticalVelocity = -WarayaConfig.jumpSpeed;
     }
 
@@ -86,6 +98,7 @@ class ProbeWalker extends PositionComponent {
       moving: input.intent.moveAxis != 0,
       airborne: !isGrounded,
       facing: facing,
+      crouch: crouch,
     );
     canvas.restore();
   }

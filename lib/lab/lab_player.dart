@@ -54,6 +54,11 @@ class LabPlayer extends PositionComponent {
   double verticalVelocity = 0;
   bool isGrounded = false;
 
+  /// How folded up the body is, 0 standing to 1 fully crouched. Drives the
+  /// pose, the collision height and the walking speed together, so the body
+  /// on screen is the body the physics uses.
+  double crouch = 0;
+
   /// True while the thing under the feet is the shadow. The scene uses it to
   /// carry the player along when the shadow walks out from under them.
   bool isOnShadow = false;
@@ -73,7 +78,17 @@ class LabPlayer extends PositionComponent {
 
   late final Figure _figure = Figure(height: size.y, color: LabScene.bodyColor);
 
-  Rect get bounds => Rect.fromLTWH(x - size.x / 2, y - size.y, size.x, size.y);
+  /// Current standing height, shrinking as the body folds up.
+  double get bodyHeight => boxFor(crouch).height;
+
+  Rect get bounds => boxFor(crouch);
+
+  /// The box this body would occupy at a given fold. Used to ask whether
+  /// there is room to stand up before standing up.
+  Rect boxFor(double fold) {
+    final height = size.y * (1 - (1 - WarayaConfig.crouchHeightFactor) * fold);
+    return Rect.fromLTWH(x - size.x / 2, y - height, size.x, height);
+  }
 
   PoseState get pose {
     if (!isGrounded) {
@@ -90,6 +105,7 @@ class LabPlayer extends PositionComponent {
       facing: facing,
       state: pose,
       stridePhase: _stridePhase,
+      crouch: crouch,
       jumpPressed: _jumpedSinceCapture,
     );
     _jumpedSinceCapture = false;
@@ -103,6 +119,7 @@ class LabPlayer extends PositionComponent {
     isGrounded = false;
     isOnShadow = false;
     carryX = 0;
+    crouch = 0;
     _stridePhase = 0;
     _walking = false;
     _jumpedSinceCapture = false;
@@ -113,11 +130,16 @@ class LabPlayer extends PositionComponent {
     super.update(dt);
     final world = solids();
 
+    _updateCrouch(dt, world);
+
     final axis = input.intent.moveAxis;
     _walking = axis != 0;
     if (_walking) facing = axis.sign;
 
-    final walked = axis * WarayaConfig.walkSpeed * dt;
+    final speed =
+        WarayaConfig.walkSpeed *
+        (1 - (1 - WarayaConfig.crouchSpeedFactor) * crouch);
+    final walked = axis * speed * dt;
     final step = walked + carryX;
     carryX = 0;
     if (step != 0) {
@@ -132,8 +154,9 @@ class LabPlayer extends PositionComponent {
     }
 
     // Read before gravity, so a jump asked for on the landing frame still
-    // fires.
-    if (input.intent.jump && isGrounded) {
+    // fires. Not while folded up: a crouch that can be jumped out of at any
+    // moment is a dodge, and the low corridor stops being a corridor.
+    if (input.intent.jump && isGrounded && crouch < 0.2) {
       verticalVelocity = -WarayaConfig.jumpSpeed;
       isGrounded = false;
       isOnShadow = false;
@@ -144,6 +167,26 @@ class LabPlayer extends PositionComponent {
     final previousFeet = y;
     position.y += verticalVelocity * dt;
     _resolveVertical(world, previousFeet);
+  }
+
+  /// Folds and unfolds the body, and refuses to unfold into a ceiling.
+  ///
+  /// Growing is the direction that can put the body inside the world, so it is
+  /// the direction that gets checked. Crouching under something and letting go
+  /// of the key leaves you crouched until you walk out, which is what every
+  /// game that has ever had a crouch does, and the only alternative is being
+  /// shoved through the floor.
+  void _updateCrouch(double dt, LabSolids world) {
+    final wants = input.intent.crouch && isGrounded;
+    final step = WarayaConfig.crouchRate * dt;
+    if (wants) {
+      crouch = (crouch + step).clamp(0.0, 1.0);
+      return;
+    }
+    final next = (crouch - step).clamp(0.0, 1.0);
+    if (next == crouch) return;
+    final wouldFit = !world.blocking.any(boxFor(next).overlaps);
+    if (wouldFit) crouch = next;
   }
 
   void _resolveHorizontal(LabSolids world, double step) {
@@ -163,7 +206,7 @@ class LabPlayer extends PositionComponent {
         position.y = rect.top;
         isGrounded = true;
       } else {
-        position.y = rect.bottom + size.y;
+        position.y = rect.bottom + bodyHeight;
       }
       verticalVelocity = 0;
     }
@@ -191,6 +234,7 @@ class LabPlayer extends PositionComponent {
       moving: pose.isMoving,
       airborne: pose.isAirborne,
       facing: facing,
+      crouch: crouch,
     );
     canvas.restore();
   }

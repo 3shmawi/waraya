@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waraya/game/config.dart';
 import 'package:waraya/lab/lab_scene.dart';
 import 'package:waraya/lab/lab_settings.dart';
 import 'package:waraya/lab/shadow_lab_game.dart';
@@ -11,10 +12,11 @@ const double _dt = 1 / 60;
 /// Runs [frames] game frames, optionally parking the player at [x] first so
 /// the recorder sees a chosen path. Returns what the player's x was at the
 /// moment each frame was recorded.
-List<double> run(ShadowLabGame game, int frames, {double? x}) {
+List<double> run(ShadowLabGame game, int frames, {double? x, double? crouch}) {
   final history = <double>[];
   for (var i = 0; i < frames; i++) {
     if (x != null) game.player.position.x = x;
+    if (crouch != null) game.player.crouch = crouch;
     // The recorder samples at the top of update, before the world moves.
     history.add(game.player.x);
     game.update(_dt);
@@ -68,11 +70,7 @@ void main() {
           history.add(game.player.x);
           game.update(_dt);
           if (i >= delayTicks) {
-            expect(
-              game.shadow.x,
-              history[i - delayTicks],
-              reason: 'frame $i',
-            );
+            expect(game.shadow.x, history[i - delayTicks], reason: 'frame $i');
           }
         }
       },
@@ -111,15 +109,15 @@ void main() {
 
         expect(game.shadow.isActive, isTrue);
         // Drop the player onto the shadow's head.
-        game.player.position.setValues(150, game.shadow.y - game.shadow.size.y - 40);
+        game.player.position.setValues(
+          150,
+          game.shadow.y - game.shadow.size.y - 40,
+        );
         game.player.verticalVelocity = 0;
         run(game, 30, x: 150);
 
         expect(game.player.isOnShadow, isTrue);
-        expect(
-          game.player.y,
-          closeTo(game.shadow.y - game.shadow.size.y, 1),
-        );
+        expect(game.player.y, closeTo(game.shadow.y - game.shadow.size.y, 1));
       },
     );
 
@@ -129,7 +127,10 @@ void main() {
       (game) async {
         await game.ready();
         run(game, 90, x: 150);
-        game.player.position.setValues(150, game.shadow.y - game.shadow.size.y - 40);
+        game.player.position.setValues(
+          150,
+          game.shadow.y - game.shadow.size.y - 40,
+        );
         game.player.verticalVelocity = 0;
         run(game, 30, x: 150);
 
@@ -217,6 +218,35 @@ void main() {
 
         expect(game.reloads, greaterThanOrEqualTo(1));
         expect(game.player.x, LabScene.spawnX);
+      },
+    );
+
+    testWithGame<ShadowLabGame>(
+      'the shadow replays a crouch, box and all',
+      gameWith,
+      (game) async {
+        await game.ready();
+        run(game, 90, x: 150);
+        final standing = game.shadow.bounds.height;
+
+        // Spend a moment folded up. The shadow is a second behind, so it is
+        // still standing when the player has already ducked.
+        run(game, 40, x: 150, crouch: 1);
+        expect(game.shadow.bounds.height, standing, reason: 'not yet');
+
+        // Stand back up and wait for the crouch to come round.
+        run(game, 40, x: 150);
+
+        expect(game.shadow.snapshot!.crouch, 1);
+        expect(
+          game.shadow.bounds.height,
+          closeTo(standing * WarayaConfig.crouchHeightFactor, 0.001),
+        );
+        expect(
+          game.shadow.bounds.bottom,
+          closeTo(LabScene.floorTop, 0.001),
+          reason: 'a crouched shadow shrinks from the head, not the feet',
+        );
       },
     );
 

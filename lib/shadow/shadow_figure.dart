@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../game/character/figure.dart';
+import '../game/config.dart';
 import 'snapshot.dart';
 
 /// The shadow: the player's own body, replayed.
@@ -33,8 +34,13 @@ class ShadowFigure extends PositionComponent {
 
   late final Figure _figure = Figure(height: size.y, color: color);
 
-  Rect get bounds =>
-      Rect.fromLTWH(x - size.x / 2, y - size.y, size.x, size.y);
+  /// Sized from the recorded pose: a shadow that was crouching is a shorter
+  /// thing to stand on and a shorter thing to walk into.
+  Rect get bounds {
+    final fold = _snapshot?.crouch ?? 0;
+    final height = size.y * (1 - (1 - WarayaConfig.crouchHeightFactor) * fold);
+    return Rect.fromLTWH(x - size.x / 2, y - height, size.x, height);
+  }
 
   void apply(PoseSnapshot next) {
     final previous = _snapshot;
@@ -68,6 +74,7 @@ class ShadowFigure extends PositionComponent {
       moving: snapshot.state.isMoving,
       airborne: snapshot.state.isAirborne,
       facing: snapshot.facing,
+      crouch: snapshot.crouch,
     );
     canvas.restore();
   }

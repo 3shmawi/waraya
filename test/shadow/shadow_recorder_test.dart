@@ -55,8 +55,13 @@ void main() {
         recorder.record(poseAt(i.toDouble()));
       }
 
-      expect(recorder.current!.x, before, reason: 'shadow waits, it does not '
-          'jump backwards');
+      expect(
+        recorder.current!.x,
+        before,
+        reason:
+            'shadow waits, it does not '
+            'jump backwards',
+      );
       expect(recorder.secondsUntilPlaying, greaterThan(0));
     });
 

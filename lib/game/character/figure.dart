@@ -52,10 +52,25 @@ class Figure {
   /// symmetrical arc.
   static const double _tuck = 0.3;
 
-  /// How far the shoulders sit ahead of the hips while moving. A runner leans
+  /// How far the trunk tilts forward while moving, in radians. A runner leans
   /// into it; a figure that stays vertical reads as strolling however fast its
   /// legs move.
-  static const double _lean = 0.085;
+  ///
+  /// The upper body rotates about the hip rather than being sheared forward,
+  /// which is both what a body does and the only way the trunk keeps its
+  /// length: shearing the shoulders 50° ahead of the hips for a crouch made
+  /// the torso a third longer.
+  static const double _runTilt = 0.25;
+
+  /// Hip height while fully crouched. Dropping the hips and folding the trunk
+  /// together bring the head to about [WarayaConfig.crouchHeightFactor] of
+  /// standing height — the same number the collision box uses, so what ducks
+  /// under a beam on screen ducks under it in the physics.
+  static const double _crouchHipY = -0.36;
+
+  /// Trunk tilt while fully crouched, in radians — a little under a right
+  /// angle. This is a duck, not a squat: the head goes forward and down.
+  static const double _crouchTilt = 0.87;
 
   /// How far the body rises at the moment both feet are off the ground.
   ///
@@ -82,12 +97,14 @@ class Figure {
   ///
   /// [phase] advances one full stride per 2π. [airborne] overrides the gait
   /// with a tucked jump pose, and [moving] with false gives a standing pose.
+  /// [crouch] folds the body down, 0 standing to 1 fully crouched.
   void render(
     Canvas canvas, {
     required double phase,
     required bool moving,
     required bool airborne,
     required double facing,
+    double crouch = 0,
   }) {
     final paint = Paint()
       ..color = color
@@ -100,99 +117,147 @@ class Figure {
     if (facing < 0) canvas.scale(-1, 1);
 
     final h = height;
-    // Lean while running, and keep leaning through a jump — snapping upright
+    final fold = crouch.clamp(0.0, 1.0);
+    final crouching = fold > 0.02;
+
+    // Tilt while running, and keep tilting through a jump — snapping upright
     // in mid-air looks like a different character.
-    final lean = moving || airborne ? _lean * h : 0.0;
-    final hip = Offset(0, _hipY * h);
-    final shoulder = Offset(lean, _shoulderY * h);
+    final tilt =
+        (moving || airborne ? _runTilt : 0.0) * (1 - fold) + _crouchTilt * fold;
+    final hip = Offset(0, (_hipY * (1 - fold) + _crouchHipY * fold) * h);
+
+    // The upper body is rigid and pivots at the hip, so every joint above the
+    // waist is a distance along one axis.
+    final torsoLength = (_hipY - _shoulderY) * h;
+    final neckLength = (_hipY - _neckY) * h;
+    final headLength = (_hipY - _headY) * h;
+    final axis = Offset(sin(tilt), -cos(tilt));
+    final shoulder = hip + axis * torsoLength;
 
     // Twice per stride the body is thrown clear of the ground; twice it sinks
     // over a planted leg. Translating the whole figure lifts the feet with it,
     // which is the point — the flight phase is what separates a run from a
     // walk — and leaves the leg geometry untouched.
     final bob = moving && !airborne
-        ? -_flightRise * h * (1 + cos(2 * phase)) / 2
+        ? -_flightRise * h * (1 + cos(2 * phase)) / 2 * (1 - fold)
         : 0.0;
     canvas.translate(0, bob);
 
     // Far limbs first, then the torso, then near limbs on top. Drawing both
     // arms before the body hid them behind it, which left the figure looking
     // one-armed.
-    if (airborne) {
-      _leg(canvas, paint, h, hip, -0.12, 0.55, front: false);
-      _arm(canvas, paint, h, shoulder, -0.55, 0.8);
-    } else if (moving) {
-      _gaitLeg(canvas, paint, h, hip, phase + pi, front: false);
-      _arm(
-        canvas,
-        paint,
-        h,
-        shoulder,
-        _armSwing * sin(phase),
-        _armSwing,
-        elbowBase: 0.95,
-        elbowRange: 0.65,
-      );
-    } else {
-      _leg(canvas, paint, h, hip, -0.03, 0.02, front: false);
-      _arm(canvas, paint, h, shoulder, -0.08, 0.6);
-    }
+    _limbs(
+      canvas,
+      paint,
+      h,
+      hip,
+      shoulder,
+      phase,
+      moving,
+      airborne,
+      crouching,
+      front: false,
+    );
 
     // Torso: a tapered trunk rather than a stick, so the body has mass.
-    // The trunk slants: planted at the hips, carried forward at the shoulders.
+    canvas.save();
+    canvas.translate(hip.dx, hip.dy);
+    canvas.rotate(tilt);
     final torso = Path()
-      ..moveTo(-0.070 * h, hip.dy)
+      ..moveTo(-0.070 * h, 0)
       ..quadraticBezierTo(
-        -0.088 * h + lean * 0.5,
-        (hip.dy + shoulder.dy) / 2,
-        -0.098 * h + lean,
-        shoulder.dy,
+        -0.088 * h,
+        -torsoLength / 2,
+        -0.098 * h,
+        -torsoLength,
       )
-      ..lineTo(0.098 * h + lean, shoulder.dy)
-      ..quadraticBezierTo(
-        0.088 * h + lean * 0.5,
-        (hip.dy + shoulder.dy) / 2,
-        0.070 * h,
-        hip.dy,
-      )
+      ..lineTo(0.098 * h, -torsoLength)
+      ..quadraticBezierTo(0.088 * h, -torsoLength / 2, 0.070 * h, 0)
       ..close();
     canvas.drawPath(torso, fill);
     canvas.drawPath(torso, paint..strokeWidth = 0.05 * h);
 
-    // Neck and head.
+    // Neck and head, on the same axis.
     canvas.drawLine(
-      Offset(lean, shoulder.dy),
-      Offset(lean * 1.15, _neckY * h),
+      Offset(0, -torsoLength),
+      Offset(0, -neckLength),
       paint..strokeWidth = 0.055 * h,
     );
-    canvas.drawCircle(
-      Offset(lean * 1.25 + 0.012 * h, _headY * h),
-      _headR * h,
-      fill,
-    );
+    canvas.drawCircle(Offset(0.012 * h, -headLength), _headR * h, fill);
+    canvas.restore();
 
     // Near limbs, in front of the body.
+    _limbs(
+      canvas,
+      paint,
+      h,
+      hip,
+      shoulder,
+      phase,
+      moving,
+      airborne,
+      crouching,
+      front: true,
+    );
+
+    canvas.restore();
+  }
+
+  /// One side's arm and leg. Called twice: once behind the torso, once in
+  /// front of it.
+  void _limbs(
+    Canvas canvas,
+    Paint paint,
+    double h,
+    Offset hip,
+    Offset shoulder,
+    double phase,
+    bool moving,
+    bool airborne,
+    bool crouching, {
+    required bool front,
+  }) {
+    final side = front ? 1.0 : -1.0;
     if (airborne) {
-      _leg(canvas, paint, h, hip, 0.30, 1.35, front: true);
-      _arm(canvas, paint, h, shoulder, -1.25, 0.8);
+      _leg(
+        canvas,
+        paint,
+        h,
+        hip,
+        front ? 0.30 : -0.12,
+        front ? 1.35 : 0.55,
+        front: front,
+      );
+      _arm(canvas, paint, h, shoulder, front ? -1.25 : -0.55, 0.8);
     } else if (moving) {
-      _gaitLeg(canvas, paint, h, hip, phase, front: true);
+      _gaitLeg(canvas, paint, h, hip, front ? phase : phase + pi, front: front);
       _arm(
         canvas,
         paint,
         h,
         shoulder,
-        _armSwing * sin(phase + pi),
+        _armSwing * sin(front ? phase + pi : phase),
         _armSwing,
         elbowBase: 0.95,
         elbowRange: 0.65,
       );
+    } else if (crouching) {
+      // Feet planted either side of the hips: the knees have to go somewhere,
+      // and the solver puts them forward, which is where a crouching person's
+      // knees are.
+      _legToFoot(
+        canvas,
+        paint,
+        h,
+        hip,
+        Offset(side * 0.09 * h, 0),
+        front: front,
+      );
+      _arm(canvas, paint, h, shoulder, -0.5 + side * 0.15, 0.7, elbowBase: 0.9);
     } else {
-      _leg(canvas, paint, h, hip, 0.03, 0.02, front: true);
-      _arm(canvas, paint, h, shoulder, 0.10, 0.6);
+      _leg(canvas, paint, h, hip, side * 0.03, 0.02, front: front);
+      _arm(canvas, paint, h, shoulder, front ? 0.10 : -0.08, 0.6);
     }
-
-    canvas.restore();
   }
 
   /// Where the foot is at this point in the stride, relative to the hip, for a

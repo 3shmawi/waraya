@@ -24,10 +24,7 @@ class LabBlocks extends PositionComponent {
       canvas.drawRect(rect, _fill);
       // A lighter cap on the standable face, so "you can land here" reads
       // without any art.
-      canvas.drawRect(
-        Rect.fromLTWH(rect.left, rect.top, rect.width, 6),
-        _top,
-      );
+      canvas.drawRect(Rect.fromLTWH(rect.left, rect.top, rect.width, 6), _top);
       canvas.drawRect(rect, _edge);
     }
   }
@@ -147,36 +144,36 @@ class ShadowTrail extends PositionComponent {
   final ShadowRecorder recorder;
   final ValueGetter<bool> enabled;
 
-  /// Draw every Nth snapshot. At 60Hz the points are ~3 units apart while
-  /// walking; a sixth of them is still a smooth line and a sixth of the work.
-  static const int _stride = 6;
-
   final Paint _line = Paint()
     ..color = LabScene.trailColor
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
 
+  /// Every buffered position, oldest first, lifted from the feet to roughly
+  /// the body's middle so the line reads as a route rather than as scuffs on
+  /// the floor.
+  ///
+  /// Every one of them, not every sixth. Subsampling looked like a free
+  /// saving and was not: the buffer shifts by one entry per tick, so "every
+  /// sixth" picks a different six each tick and the whole line shimmers, with
+  /// the ends jumping a tenth of a second's travel back and forth. A few
+  /// hundred `lineTo`s are nothing next to that.
+  Iterable<Offset> points() =>
+      recorder.pending.map((s) => Offset(s.x, s.y - 48));
+
   @override
   void render(Canvas canvas) {
     if (!enabled()) return;
-    final pending = recorder.pending;
-    if (pending.isEmpty) return;
+    final trail = points().toList(growable: false);
+    if (trail.isEmpty) return;
 
-    final path = Path();
-    var index = 0;
-    var started = false;
-    for (final snapshot in pending) {
-      if (index++ % _stride != 0) continue;
-      // The feet, lifted to roughly the body's middle, so the line reads as a
-      // route rather than as scuffs on the floor.
-      final point = Offset(snapshot.x, snapshot.y - 48);
-      started ? path.lineTo(point.dx, point.dy) : path.moveTo(point.dx, point.dy);
-      started = true;
+    final path = Path()..moveTo(trail.first.dx, trail.first.dy);
+    for (var i = 1; i < trail.length; i++) {
+      path.lineTo(trail[i].dx, trail[i].dy);
     }
-    if (started) canvas.drawPath(path, _line);
+    canvas.drawPath(path, _line);
 
     // Where the shadow appears next, so the head of the queue is obvious.
-    final next = pending.first;
-    canvas.drawCircle(Offset(next.x, next.y - 48), 5, _line);
+    canvas.drawCircle(trail.first, 5, _line);
   }
 }

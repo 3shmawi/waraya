@@ -22,8 +22,9 @@ import 'dart:ui';
 /// * the ledge is 170 above the low platform — *not* reachable alone, and 74
 ///   above the head of a shadow standing on the low platform, which is;
 /// * the door is too tall to jump over, so the plate is the only way through;
-/// * the corridor ceiling leaves a 110-unit gap: the player fits, a jump does
-///   not, so there is nowhere to dodge when `shadowKills` is on.
+/// * the corridor ceiling leaves an 80-unit gap: a crouched body fits, a
+///   standing one does not, and a jump certainly does not — so there is
+///   nowhere to dodge when `shadowKills` is on.
 abstract final class LabScene {
   /// Top surface of the floor, in world units from the top of the screen.
   static const double floorTop = 620;
@@ -39,8 +40,10 @@ abstract final class LabScene {
   /// Test 2, step two: only a jump off the shadow's head gets you here.
   static const Rect ledge = Rect.fromLTRB(560, 330, 1000, 380);
 
-  /// Test 3: too low to jump in, so the shadow cannot be dodged.
-  static const Rect corridorCeiling = Rect.fromLTRB(-280, 450, -80, 510);
+  /// Test 3: low enough that you have to duck through it, which means you
+  /// cross it slowly and cannot jump — so there is nowhere to go when the
+  /// shadow comes the other way.
+  static const Rect corridorCeiling = Rect.fromLTRB(-280, 450, -80, 540);
 
   /// Test 1: the door, closed. Taller than the character's jump.
   static const Rect door = Rect.fromLTRB(-993, 430, -967, floorTop);

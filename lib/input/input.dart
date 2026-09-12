@@ -7,7 +7,11 @@ import 'package:flutter/foundation.dart';
 /// abstraction the Phase 1 plan asks for "from the first line of code".
 @immutable
 class InputIntent {
-  const InputIntent({this.moveAxis = 0.0, this.jump = false});
+  const InputIntent({
+    this.moveAxis = 0.0,
+    this.jump = false,
+    this.crouch = false,
+  });
 
   /// Horizontal movement in [-1, 1]; negative is left, positive is right.
   final double moveAxis;
@@ -15,20 +19,26 @@ class InputIntent {
   /// Set only on the frame the jump was requested — edge-triggered, not held.
   final bool jump;
 
+  /// True for as long as the player is holding crouch. Unlike [jump] this is
+  /// a state, not an event: you stay down until you let go.
+  final bool crouch;
+
   static const none = InputIntent();
 
-  bool get isIdle => moveAxis == 0 && !jump;
+  bool get isIdle => moveAxis == 0 && !jump && !crouch;
 
   /// Folds another intent in: the larger axis wins, and jump is sticky so a
   /// tap never gets swallowed by a source that happens to be polled later.
   InputIntent merge(InputIntent other) => InputIntent(
     moveAxis: other.moveAxis.abs() > moveAxis.abs() ? other.moveAxis : moveAxis,
     jump: jump || other.jump,
+    crouch: crouch || other.crouch,
   );
 
   @override
   String toString() =>
-      'InputIntent(moveAxis: ${moveAxis.toStringAsFixed(1)}, jump: $jump)';
+      'InputIntent(moveAxis: ${moveAxis.toStringAsFixed(1)}, jump: $jump, '
+      'crouch: $crouch)';
 }
 
 /// One way of producing an [InputIntent]: keyboard, touch, gamepad, a replay

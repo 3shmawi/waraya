@@ -158,6 +158,139 @@ void main() {
     });
   });
 
+  group('LabPlayer crouch', () {
+    test('folds up, shrinking the collision box, not the sprite', () {
+      final player = playerWith(const LabSolids(blocking: [LabScene.floor]));
+      step(player, input, source, frames: 5);
+      final standing = player.bounds.height;
+
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(crouch: true),
+        frames: 30,
+      );
+
+      expect(player.crouch, 1);
+      expect(
+        player.bounds.height,
+        closeTo(standing * WarayaConfig.crouchHeightFactor, 0.001),
+      );
+      expect(player.bounds.bottom, closeTo(LabScene.floorTop, 0.001));
+      expect(player.size.y, standing, reason: 'the figure is the same person');
+    });
+
+    test('crouched movement is slower', () {
+      final player = playerWith(const LabSolids(blocking: [LabScene.floor]));
+      step(player, input, source, frames: 30);
+
+      final start = player.x;
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(moveAxis: 1),
+        frames: 30,
+      );
+      final upright = player.x - start;
+
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(crouch: true),
+        frames: 30,
+      );
+      final crouchedStart = player.x;
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(moveAxis: 1, crouch: true),
+        frames: 30,
+      );
+
+      expect(player.x - crouchedStart, lessThan(upright * 0.6));
+    });
+
+    test('cannot jump out of a crouch', () {
+      final player = playerWith(const LabSolids(blocking: [LabScene.floor]));
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(crouch: true),
+        frames: 30,
+      );
+
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(jump: true, crouch: true),
+        frames: 5,
+      );
+
+      expect(player.y, closeTo(LabScene.floorTop, 0.001));
+      expect(player.isGrounded, isTrue);
+    });
+
+    test('stays down while there is a ceiling in the way', () {
+      // A beam with 80 units of headroom, off to the right of the spawn.
+      const beam = Rect.fromLTRB(120, 400, 400, LabScene.floorTop - 80);
+      final player = playerWith(
+        const LabSolids(blocking: [LabScene.floor, beam]),
+      );
+
+      // Standing, the beam is a wall: you get stopped at its edge.
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(moveAxis: 1),
+        frames: 120,
+      );
+      expect(player.bounds.right, closeTo(beam.left, 0.001));
+
+      // Ducked, you go under it.
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(moveAxis: 1, crouch: true),
+        frames: 120,
+      );
+      expect(player.crouch, 1);
+      expect(player.x, greaterThan(beam.left));
+      expect(player.x, lessThan(beam.right));
+      expect(player.bounds.overlaps(beam), isFalse);
+
+      // Letting go under the beam must not stand the body up through it. It
+      // unfolds as far as the headroom allows and stops there, which is both
+      // safe and what a person does.
+      step(player, input, source, frames: 30);
+      expect(player.crouch, greaterThan(0.4), reason: 'no room to stand');
+      expect(player.bounds.overlaps(beam), isFalse);
+      expect(
+        player.bounds.top,
+        greaterThan(beam.bottom),
+        reason: 'head under the beam, not through it',
+      );
+
+      // Out the far side and it comes back up on its own.
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(moveAxis: 1),
+        frames: 180,
+      );
+      expect(player.bounds.left, greaterThan(beam.right));
+      expect(player.crouch, 0);
+    });
+  });
+
   group('LabPlayer.capture', () {
     test('reports the pose the figure is drawing', () {
       final player = playerWith(const LabSolids(blocking: [LabScene.floor]));

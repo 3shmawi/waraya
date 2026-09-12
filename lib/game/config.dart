@@ -32,4 +32,21 @@ abstract final class WarayaConfig {
   /// Taps landing in the top fraction of the screen mean "jump" rather than
   /// "walk", so a thumb resting low never fires a jump by accident.
   static const double touchJumpBandFraction = 0.45;
+
+  /// Width of the crouch zone, as a fraction of the screen, centred between
+  /// the two walk halves of the lower band.
+  static const double touchCrouchBandFraction = 0.2;
+
+  /// How tall the character is while crouched, as a fraction of its standing
+  /// height. Matched to the pose `Figure` draws at full crouch, so the head
+  /// you can see clears exactly what the box you cannot see clears.
+  static const double crouchHeightFactor = 0.72;
+
+  /// How fast a crouched character moves, as a fraction of [walkSpeed].
+  static const double crouchSpeedFactor = 0.45;
+
+  /// How fast the character folds up and stands back up, in crouch fractions
+  /// per second. Fast enough to feel like a button press, slow enough that
+  /// the body does not teleport between two heights.
+  static const double crouchRate = 9;
 }

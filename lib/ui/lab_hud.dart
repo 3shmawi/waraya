@@ -10,7 +10,8 @@ import '../lab/shadow_lab_game.dart';
 /// the shadow, and **the delay number visible on screen**. A number burned
 /// into the frame needs no caption and no voiceover.
 class LabHud extends PositionComponent {
-  LabHud({required this.game}) : super(position: Vector2.all(12), priority: 1000);
+  LabHud({required this.game})
+    : super(position: Vector2.all(12), priority: 1000);
 
   final ShadowLabGame game;
 

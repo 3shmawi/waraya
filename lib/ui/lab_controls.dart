@@ -126,7 +126,7 @@ class _LabControlsState extends State<LabControls> {
       const Padding(
         padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: Text(
-          'move: A/D or arrows · jump: W/space · reload: R',
+          'move: A/D · jump: W/space · crouch: S · reload: R',
           style: TextStyle(
             color: Color(0xFF9A9A9A),
             fontFamily: 'LiberationMono',
@@ -160,12 +160,7 @@ class _LabControlsState extends State<LabControls> {
             overlayShape: SliderComponentShape.noOverlay,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
           ),
-          child: Slider(
-            value: value,
-            min: min,
-            max: max,
-            onChanged: onChanged,
-          ),
+          child: Slider(value: value, min: min, max: max, onChanged: onChanged),
         ),
       ],
     ),
