@@ -274,17 +274,20 @@ class Snapshot {
 
 ## Checklist
 
-- [ ] Fixed timestep accumulator شغال
-- [ ] `Snapshot` class
-- [ ] `Queue<Snapshot>` بيتملي كل tick
-- [ ] `ShadowComponent` بيستقبل snapshots ويحط نفسه
-- [ ] الظل مخفي أول `D` ثانية ثم يظهر
-- [ ] Debug overlay بالأربع متغيرات الأساسية
-- [ ] مشهد اختبار رمادي (أرضية + منصتين + زرار + باب)
-- [ ] `shadowIsSolid` — collision مع الظل
-- [ ] `shadowKills` — اللمس بيعمل reload
+- [x] Fixed timestep accumulator شغال
+- [x] `Snapshot` class — اسمه `PoseSnapshot` لأن Flame عنده `Snapshot` بالفعل
+- [x] `Queue<Snapshot>` بيتملي كل tick
+- [x] `ShadowComponent` بيستقبل snapshots ويحط نفسه
+- [x] الظل مخفي أول `D` ثانية ثم يظهر
+- [x] Debug overlay بالأربع متغيرات الأساسية
+- [x] مشهد اختبار رمادي (أرضية + منصتين + زرار + باب)
+- [x] `shadowIsSolid` — collision مع الظل (one-way: تقف عليه من فوق)
+- [x] `shadowKills` — اللمس بيعمل reload
 - [ ] التلات تستات اتجربوا فعلاً
 - [ ] قرار مكتوب: أكمّل ولا أسيب، وليه
+
+**التشغيل:** `flutter run -t lib/main_lab.dart` — التفاصيل وخطوات التلات
+تستات ومكان القرار في `docs/phase-2-shadow-prototype.md`.
 
 ---
 
