@@ -3,6 +3,8 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 
+import '../audio/sfx.dart';
+import '../audio/step_detector.dart';
 import '../game/config.dart';
 import '../input/input_controller.dart';
 import '../input/keyboard_input_source.dart';
@@ -36,13 +38,19 @@ import 'lab_settings.dart';
 /// 3. everything else — the plate, the door, standing on the shadow, dying to
 ///    it — is just collision against where the shadow ended up.
 class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
-  ShadowLabGame({LabSettings? settings}) : settings = settings ?? LabSettings();
+  ShadowLabGame({LabSettings? settings, this.audio = const SilentAudio()})
+    : settings = settings ?? LabSettings();
 
   final LabSettings settings;
+
+  /// Silent unless an entry point hands it a voice, so tests make no noise and
+  /// no scene depends on an audio backend existing.
+  final AudioOut audio;
 
   final ShadowRecorder recorder = ShadowRecorder();
   final FixedTicker ticker = FixedTicker();
   final ScreenShake shake = ScreenShake();
+  final StepDetector steps = StepDetector();
 
   late final InputController input;
   late final LabPlayer player;
@@ -75,6 +83,7 @@ class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
 
   @override
   Future<void> onLoad() async {
+    await audio.preload();
     final keyboard = KeyboardInputSource();
     final touch = TouchInputSource();
     input = InputController([keyboard, touch]);
@@ -136,7 +145,21 @@ class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
     // Smooth the shadow between ticks, and let the camera flinch — both after
     // the world has moved, so they use this frame's positions.
     shadow.alpha = ticker.alpha;
-    _applyLandingShake(step);
+    _reactToLanding(step);
+    _playMovementSounds();
+  }
+
+  void _playMovementSounds() {
+    final footfall = steps.advance(
+      player.stridePhase,
+      moving: player.pose.isMoving,
+      grounded: player.isGrounded,
+    );
+    if (footfall != null) {
+      // Quieter the lower the body is: a crouched body is sneaking.
+      audio.play(footfall, volume: 0.35 - 0.15 * player.crouch);
+    }
+    if (player.locomotion.jumped) audio.play(Sfx.jump, volume: 0.45);
   }
 
   /// Knocks the camera in proportion to how hard the player hit the ground,
@@ -144,13 +167,17 @@ class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
   /// viewfinder. Adding it here rather than as an effect on the viewfinder is
   /// deliberate: the follow behaviour writes that position every frame, and
   /// two things writing one position take turns instead of combining.
-  void _applyLandingShake(double dt) {
+  void _reactToLanding(double dt) {
     final impact = player.takeLandingImpact();
     if (impact > WarayaConfig.landingShakeThreshold) {
       final over = impact - WarayaConfig.landingShakeThreshold;
       final range =
           WarayaConfig.maxFallSpeed - WarayaConfig.landingShakeThreshold;
-      shake.hit(WarayaConfig.landingShakeMax * (over / range).clamp(0.0, 1.0));
+      final weight = (over / range).clamp(0.0, 1.0);
+      shake.hit(WarayaConfig.landingShakeMax * weight);
+      // The same number drives both, so what you hear and what you feel are
+      // the same landing.
+      audio.play(Sfx.land, volume: 0.35 + 0.5 * weight);
     }
     shake.advance(dt);
     if (shake.isShaking) camera.viewfinder.position += shake.offset;
@@ -167,6 +194,9 @@ class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
     if (player.isOnShadow) player.carryX += shadow.lastStepX;
   }
 
+  bool _plateWasPressed = false;
+  bool _doorWasOpening = false;
+
   void _resolveInteractions() {
     // The floor ends somewhere, and walking off the end of a test scene is a
     // dead state that looks like a crash. Put them back instead.
@@ -181,7 +211,15 @@ class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
     plate.pressedByPlayer = playerBox.overlaps(LabScene.plateTrigger);
     plate.pressedByShadow =
         shadowBox != null && shadowBox.overlaps(LabScene.plateTrigger);
+    if (plate.isPressed != _plateWasPressed) {
+      _plateWasPressed = plate.isPressed;
+      audio.play(Sfx.plate, volume: 0.5);
+    }
     door.wantsOpen = plate.isPressed;
+    if (door.wantsOpen != _doorWasOpening) {
+      _doorWasOpening = door.wantsOpen;
+      audio.play(Sfx.door, volume: 0.4);
+    }
 
     if (playerBox.overlaps(doorGoal.area)) doorGoal.reached = true;
     if (playerBox.overlaps(ledgeGoal.area)) ledgeGoal.reached = true;
@@ -216,6 +254,9 @@ class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
     doorGoal.reset();
     ledgeGoal.reset();
     shake.reset();
+    steps.reset();
+    _plateWasPressed = false;
+    _doorWasOpening = false;
     reloads++;
   }
 }

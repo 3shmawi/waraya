@@ -1,6 +1,7 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import 'audio/flame_audio_out.dart';
 import 'lab/shadow_lab_game.dart';
 import 'ui/lab_controls.dart';
 
@@ -28,7 +29,7 @@ class ShadowLabApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(useMaterial3: true),
       home: GameWidget<ShadowLabGame>.controlled(
-        gameFactory: ShadowLabGame.new,
+        gameFactory: () => ShadowLabGame(audio: FlameAudioOut()),
         overlayBuilderMap: {
           'controls': (context, game) =>
               LabControls(settings: game.settings, onReload: game.reload),

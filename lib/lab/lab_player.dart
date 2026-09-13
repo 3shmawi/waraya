@@ -74,6 +74,12 @@ class LabPlayer extends PositionComponent {
   double carryX = 0;
 
   double _stridePhase = 0;
+
+  /// How far through the current stride the legs are, in radians. Read by the
+  /// step-sound detector, which needs the exact moment a foot lands and can
+  /// get it from here rather than from a timer.
+  double get stridePhase => _stridePhase;
+
   bool _walking = false;
   bool _jumpedSinceCapture = false;
 

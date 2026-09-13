@@ -61,8 +61,12 @@ class ProbeWalker extends PositionComponent {
     color: const Color(0xFF0A070E),
   );
 
-  /// How far through the current stride the legs are, in radians.
   double _stridePhase = 0;
+
+  /// How far through the current stride the legs are, in radians. Read by the
+  /// step-sound detector, which needs the exact moment a foot lands and can
+  /// get it from here rather than from a timer.
+  double get stridePhase => _stridePhase;
 
   @override
   void update(double dt) {
