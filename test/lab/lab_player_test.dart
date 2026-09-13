@@ -101,10 +101,17 @@ void main() {
       );
       step(player, input, source, frames: 2);
 
-      step(player, input, source, intent: const InputIntent(jump: true));
+      // Held all the way up: a released jump is cut short now, and a hop does
+      // not clear this beam.
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(jump: true, jumpHeld: true),
+      );
       var apex = player.y;
       for (var i = 0; i < 24; i++) {
-        step(player, input, source);
+        step(player, input, source, intent: const InputIntent(jumpHeld: true));
         if (player.y < apex) apex = player.y;
       }
 
@@ -228,7 +235,7 @@ void main() {
         player,
         input,
         source,
-        intent: const InputIntent(jump: true, crouch: true),
+        intent: const InputIntent(jump: true, jumpHeld: true, crouch: true),
         frames: 5,
       );
 
@@ -303,11 +310,22 @@ void main() {
       expect(walking.state, PoseState.walk);
       expect(walking.facing, -1);
 
-      step(player, input, source, intent: const InputIntent(jump: true));
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(jump: true, jumpHeld: true),
+      );
       expect(player.capture().state, PoseState.jump);
 
       // Up, over the top, and on the way back down.
-      step(player, input, source, frames: 40);
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(jumpHeld: true),
+        frames: 30,
+      );
       expect(player.capture().state, PoseState.fall);
     });
 
@@ -315,7 +333,12 @@ void main() {
       final player = playerWith(const LabSolids(blocking: [LabScene.floor]));
       step(player, input, source, frames: 5);
 
-      step(player, input, source, intent: const InputIntent(jump: true));
+      step(
+        player,
+        input,
+        source,
+        intent: const InputIntent(jump: true, jumpHeld: true),
+      );
       expect(player.capture().jumpPressed, isTrue);
       expect(player.capture().jumpPressed, isFalse);
     });

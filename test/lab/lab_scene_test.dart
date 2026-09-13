@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/game/config.dart';
 import 'package:waraya/lab/lab_scene.dart';
@@ -35,11 +37,17 @@ void main() {
   test('test 2: the ledge is reachable off a shadow on the low platform', () {
     final shadowHead = LabScene.lowPlatform.top - bodyHeight;
     expect(shadowHead - LabScene.ledge.top, lessThan(jumpHeight));
-    // And the jump across has to be short enough to actually cross: a full
-    // jump is airborne for 2v/g, most of it above the ledge.
+    // And the jump across has to be short enough to actually cross. Rise and
+    // fall are no longer symmetric — Phase 3 made the way down faster — so
+    // the airtime is the sum of the two halves, not twice one of them.
     final gap = LabScene.ledge.left - LabScene.lowPlatform.right;
-    final airtime = 2 * WarayaConfig.jumpSpeed / WarayaConfig.gravity;
-    expect(gap, lessThan(WarayaConfig.walkSpeed * airtime));
+    final rise = WarayaConfig.jumpSpeed / WarayaConfig.gravity;
+    final height =
+        WarayaConfig.jumpSpeed *
+        WarayaConfig.jumpSpeed /
+        (2 * WarayaConfig.gravity);
+    final fall = sqrt(2 * height / WarayaConfig.fallGravity);
+    expect(gap, lessThan(WarayaConfig.walkSpeed * (rise + fall)));
   });
 
   test('test 1: the door cannot be jumped over', () {

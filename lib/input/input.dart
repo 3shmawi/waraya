@@ -10,6 +10,7 @@ class InputIntent {
   const InputIntent({
     this.moveAxis = 0.0,
     this.jump = false,
+    this.jumpHeld = false,
     this.crouch = false,
   });
 
@@ -19,26 +20,34 @@ class InputIntent {
   /// Set only on the frame the jump was requested — edge-triggered, not held.
   final bool jump;
 
+  /// True for as long as the jump control is held down.
+  ///
+  /// [jump] says "a jump was asked for"; this says "and they are still asking".
+  /// Variable jump height needs both: the press starts the climb and the
+  /// release ends it.
+  final bool jumpHeld;
+
   /// True for as long as the player is holding crouch. Unlike [jump] this is
   /// a state, not an event: you stay down until you let go.
   final bool crouch;
 
   static const none = InputIntent();
 
-  bool get isIdle => moveAxis == 0 && !jump && !crouch;
+  bool get isIdle => moveAxis == 0 && !jump && !jumpHeld && !crouch;
 
   /// Folds another intent in: the larger axis wins, and jump is sticky so a
   /// tap never gets swallowed by a source that happens to be polled later.
   InputIntent merge(InputIntent other) => InputIntent(
     moveAxis: other.moveAxis.abs() > moveAxis.abs() ? other.moveAxis : moveAxis,
     jump: jump || other.jump,
+    jumpHeld: jumpHeld || other.jumpHeld,
     crouch: crouch || other.crouch,
   );
 
   @override
   String toString() =>
       'InputIntent(moveAxis: ${moveAxis.toStringAsFixed(1)}, jump: $jump, '
-      'crouch: $crouch)';
+      'held: $jumpHeld, crouch: $crouch)';
 }
 
 /// One way of producing an [InputIntent]: keyboard, touch, gamepad, a replay

@@ -20,6 +20,7 @@ import 'palm_row.dart';
 import 'photo_band.dart';
 import 'power_line.dart';
 import 'probe_walker.dart';
+import 'screen_shake.dart';
 import 'sky_backdrop.dart';
 
 /// Phase 1 skeleton: one scene, one walker, no gameplay.
@@ -38,6 +39,10 @@ import 'sky_backdrop.dart';
 class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
   late final InputController input;
   late final ProbeWalker walker;
+
+  /// The camera's flinch on a hard landing. Same helper as the lab, so the
+  /// feel being tuned there is the feel that ships here.
+  final ScreenShake shake = ScreenShake();
 
   @override
   Color backgroundColor() => const Color(0xFF1B2A4A);
@@ -179,5 +184,16 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
     // component in this frame sees identical input.
     input.refresh();
     super.update(dt);
+
+    final impact = walker.takeLandingImpact();
+    if (impact > WarayaConfig.landingShakeThreshold) {
+      final over = impact - WarayaConfig.landingShakeThreshold;
+      final range =
+          WarayaConfig.maxFallSpeed - WarayaConfig.landingShakeThreshold;
+      shake.hit(WarayaConfig.landingShakeMax * (over / range).clamp(0.0, 1.0));
+    }
+    shake.advance(dt);
+    // After the follow behaviour, which writes this position every frame.
+    if (shake.isShaking) camera.viewfinder.position += shake.offset;
   }
 }

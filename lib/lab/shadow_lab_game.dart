@@ -7,6 +7,7 @@ import '../game/config.dart';
 import '../input/input_controller.dart';
 import '../input/keyboard_input_source.dart';
 import '../input/touch_input_source.dart';
+import '../game/screen_shake.dart';
 import '../shadow/fixed_ticker.dart';
 import '../shadow/shadow_figure.dart';
 import '../shadow/shadow_recorder.dart';
@@ -41,6 +42,7 @@ class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
 
   final ShadowRecorder recorder = ShadowRecorder();
   final FixedTicker ticker = FixedTicker();
+  final ScreenShake shake = ScreenShake();
 
   late final InputController input;
   late final LabPlayer player;
@@ -130,6 +132,28 @@ class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
     ticker.advance(step, _fixedTick);
     super.update(step);
     _resolveInteractions();
+
+    // Smooth the shadow between ticks, and let the camera flinch — both after
+    // the world has moved, so they use this frame's positions.
+    shadow.alpha = ticker.alpha;
+    _applyLandingShake(step);
+  }
+
+  /// Knocks the camera in proportion to how hard the player hit the ground,
+  /// then adds the offset on top of wherever the follow behaviour put the
+  /// viewfinder. Adding it here rather than as an effect on the viewfinder is
+  /// deliberate: the follow behaviour writes that position every frame, and
+  /// two things writing one position take turns instead of combining.
+  void _applyLandingShake(double dt) {
+    final impact = player.takeLandingImpact();
+    if (impact > WarayaConfig.landingShakeThreshold) {
+      final over = impact - WarayaConfig.landingShakeThreshold;
+      final range =
+          WarayaConfig.maxFallSpeed - WarayaConfig.landingShakeThreshold;
+      shake.hit(WarayaConfig.landingShakeMax * (over / range).clamp(0.0, 1.0));
+    }
+    shake.advance(dt);
+    if (shake.isShaking) camera.viewfinder.position += shake.offset;
   }
 
   void _fixedTick() {
@@ -191,6 +215,7 @@ class ShadowLabGame extends FlameGame with HasKeyboardHandlerComponents {
       ..pressedByShadow = false;
     doorGoal.reset();
     ledgeGoal.reset();
+    shake.reset();
     reloads++;
   }
 }

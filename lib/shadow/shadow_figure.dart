@@ -24,6 +24,20 @@ class ShadowFigure extends PositionComponent {
   PoseSnapshot? _snapshot;
   PoseSnapshot? get snapshot => _snapshot;
 
+  PoseSnapshot? _previous;
+
+  /// How far the game is into the current fixed tick, 0 to 1.
+  ///
+  /// The buffer only produces a new position 60 times a second; on a 120Hz
+  /// screen that is every other frame, and the shadow visibly steps. Blending
+  /// from the previous snapshot to the current one over the tick smooths it
+  /// out — the plan says to look first and only smooth if the stepping shows,
+  /// and it shows.
+  ///
+  /// Rendering only. [position] and [bounds] stay on the tick, so what the
+  /// shadow stands on and what it kills are still exactly what was recorded.
+  double alpha = 0;
+
   /// How far the shadow moved horizontally on its last placement. The scene
   /// uses it to carry a player who is standing on it.
   double lastStepX = 0;
@@ -45,13 +59,31 @@ class ShadowFigure extends PositionComponent {
   void apply(PoseSnapshot next) {
     final previous = _snapshot;
     lastStepX = previous == null ? 0 : next.x - previous.x;
+    _previous = previous ?? next;
     _snapshot = next;
     position.setValues(next.x, next.y);
   }
 
   void clear() {
     _snapshot = null;
+    _previous = null;
     lastStepX = 0;
+    alpha = 0;
+  }
+
+  /// Where the body should be drawn this frame, relative to [position].
+  ///
+  /// Behind by up to one tick — 16ms — which is the price of interpolating
+  /// between two known positions rather than guessing at a third.
+  Offset get renderOffset {
+    final previous = _previous;
+    final current = _snapshot;
+    if (previous == null || current == null) return Offset.zero;
+    final back = 1 - alpha.clamp(0.0, 1.0);
+    return Offset(
+      (previous.x - current.x) * back,
+      (previous.y - current.y) * back,
+    );
   }
 
   @override
@@ -63,6 +95,8 @@ class ShadowFigure extends PositionComponent {
     // limb: the figure's arms, legs and torso overlap, and per-stroke alpha
     // makes the overlaps darker than the rest, so the silhouette stops
     // reading as one shape.
+    final smoothing = renderOffset;
+    canvas.translate(smoothing.dx, smoothing.dy);
     canvas.saveLayer(
       Rect.fromLTWH(-size.x, -size.y * 0.4, size.x * 3, size.y * 1.6),
       Paint()..color = Color.fromRGBO(0, 0, 0, opacity),

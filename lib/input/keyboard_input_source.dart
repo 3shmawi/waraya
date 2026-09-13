@@ -28,6 +28,7 @@ class KeyboardInputSource extends Component
 
   double _axis = 0;
   bool _crouching = false;
+  bool _jumpHeld = false;
   bool _jumpQueued = false;
   bool _hasBeenUsed = false;
 
@@ -42,6 +43,7 @@ class KeyboardInputSource extends Component
     final intent = InputIntent(
       moveAxis: _axis,
       jump: _jumpQueued,
+      jumpHeld: _jumpHeld,
       crouch: _crouching,
     );
     _jumpQueued = false;
@@ -53,8 +55,9 @@ class KeyboardInputSource extends Component
     final left = keysPressed.any(_leftKeys.contains);
     final right = keysPressed.any(_rightKeys.contains);
     _axis = (right ? 1.0 : 0.0) - (left ? 1.0 : 0.0);
-    // Held, so it is read from the pressed set rather than from the event.
+    // Held, so these are read from the pressed set rather than from the event.
     _crouching = keysPressed.any(_crouchKeys.contains);
+    _jumpHeld = keysPressed.any(_jumpKeys.contains);
 
     if (event is KeyDownEvent && _jumpKeys.contains(event.logicalKey)) {
       _jumpQueued = true;

@@ -124,19 +124,31 @@ void main() {
       final walker = ProbeWalker(input: input);
       final startX = walker.x;
 
-      source.next = const InputIntent(moveAxis: 1);
-      input.refresh();
-      walker.update(0.5);
+      // Thirty frames of held right, so the ramp up to speed is over and the
+      // distance is dominated by the cruise.
+      for (var i = 0; i < 30; i++) {
+        source.next = const InputIntent(moveAxis: 1);
+        input.refresh();
+        walker.update(1 / 60);
+      }
+      final travelled = walker.x - startX;
 
-      expect(walker.x, closeTo(startX + WarayaConfig.walkSpeed * 0.5, 0.01));
+      expect(travelled, greaterThan(0));
+      expect(
+        travelled,
+        lessThan(WarayaConfig.walkSpeed * 0.5),
+        reason: 'a body with mass does not start at full speed',
+      );
       expect(walker.facing, 1);
 
-      source.next = const InputIntent(moveAxis: -1);
-      input.refresh();
-      walker.update(0.5);
+      for (var i = 0; i < 30; i++) {
+        source.next = const InputIntent(moveAxis: -1);
+        input.refresh();
+        walker.update(1 / 60);
+      }
 
-      expect(walker.x, closeTo(startX, 0.01));
       expect(walker.facing, -1);
+      expect(walker.x, lessThan(startX + travelled));
     });
 
     test('jumps, rises, and lands back on the horizon', () {
@@ -145,17 +157,18 @@ void main() {
       final walker = ProbeWalker(input: input);
       expect(walker.isGrounded, isTrue);
 
-      source.next = const InputIntent(jump: true);
+      source.next = const InputIntent(jump: true, jumpHeld: true);
       input.refresh();
       walker.update(1 / 60);
       expect(walker.verticalVelocity, lessThan(0), reason: 'should be rising');
       expect(walker.y, lessThan(WarayaConfig.horizonY));
       expect(walker.isGrounded, isFalse);
 
-      // Run a second of frames; the arc has to come back down and settle.
-      source.next = InputIntent.none;
+      // Run a second of frames with the key held; the arc has to come back
+      // down and settle. Held, because a released jump is cut short now.
       var apex = walker.y;
       for (var i = 0; i < 60; i++) {
+        source.next = const InputIntent(jumpHeld: true);
         input.refresh();
         walker.update(1 / 60);
         if (walker.y < apex) apex = walker.y;
@@ -176,14 +189,15 @@ void main() {
       final input = InputController([source]);
       final walker = ProbeWalker(input: input);
 
-      source.next = const InputIntent(jump: true);
+      source.next = const InputIntent(jump: true, jumpHeld: true);
       input.refresh();
       walker.update(1 / 60);
       final risingVelocity = walker.verticalVelocity;
 
-      // Hold jump while airborne: it must not re-launch.
+      // Hold jump while airborne: it must not re-launch, and coyote time must
+      // not hand out a second one.
       for (var i = 0; i < 5; i++) {
-        source.next = const InputIntent(jump: true);
+        source.next = const InputIntent(jump: true, jumpHeld: true);
         input.refresh();
         walker.update(1 / 60);
       }

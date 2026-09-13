@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../game/character/figure.dart';
+import '../game/character/locomotion.dart';
 import '../game/config.dart';
 import '../input/input_controller.dart';
 import '../shadow/snapshot.dart';
@@ -50,9 +51,13 @@ class LabPlayer extends PositionComponent {
   /// Read fresh every frame: the shadow's rect changes and may vanish.
   final LabSolids Function() solids;
 
+  /// Speed, jump timing and gravity — the same object the Phase 1 scene uses.
+  final Locomotion locomotion = Locomotion();
+
   double facing = 1;
-  double verticalVelocity = 0;
   bool isGrounded = false;
+
+  double get verticalVelocity => locomotion.verticalVelocity;
 
   /// How folded up the body is, 0 standing to 1 fully crouched. Drives the
   /// pose, the collision height and the walking speed together, so the body
@@ -112,9 +117,19 @@ class LabPlayer extends PositionComponent {
     return snapshot;
   }
 
+  /// Speed the body last hit the ground at, zeroed once read.
+  double takeLandingImpact() {
+    final impact = _landingImpact;
+    _landingImpact = 0;
+    return impact;
+  }
+
+  double _landingImpact = 0;
+
   void resetToSpawn() {
     position.setValues(LabScene.spawnX, LabScene.floorTop);
-    verticalVelocity = 0;
+    locomotion.reset();
+    _landingImpact = 0;
     facing = 1;
     isGrounded = false;
     isOnShadow = false;
@@ -132,14 +147,26 @@ class LabPlayer extends PositionComponent {
 
     _updateCrouch(dt, world);
 
-    final axis = input.intent.moveAxis;
-    _walking = axis != 0;
-    if (_walking) facing = axis.sign;
+    final wasGrounded = isGrounded;
+    locomotion.step(
+      dt,
+      intent: input.intent,
+      grounded: wasGrounded,
+      speedScale: 1 - (1 - WarayaConfig.crouchSpeedFactor) * crouch,
+      // Not while folded up: a crouch that can be jumped out of at any moment
+      // is a dodge, and the low corridor stops being a corridor.
+      canJump: crouch < 0.2,
+    );
+    if (locomotion.jumped) {
+      isGrounded = false;
+      isOnShadow = false;
+      _jumpedSinceCapture = true;
+    }
 
-    final speed =
-        WarayaConfig.walkSpeed *
-        (1 - (1 - WarayaConfig.crouchSpeedFactor) * crouch);
-    final walked = axis * speed * dt;
+    final walked = locomotion.horizontalVelocity * dt;
+    _walking = walked.abs() > 0.01;
+    if (_walking) facing = walked.sign;
+
     final step = walked + carryX;
     carryX = 0;
     if (step != 0) {
@@ -153,20 +180,9 @@ class LabPlayer extends PositionComponent {
           (2 * pi);
     }
 
-    // Read before gravity, so a jump asked for on the landing frame still
-    // fires. Not while folded up: a crouch that can be jumped out of at any
-    // moment is a dodge, and the low corridor stops being a corridor.
-    if (input.intent.jump && isGrounded && crouch < 0.2) {
-      verticalVelocity = -WarayaConfig.jumpSpeed;
-      isGrounded = false;
-      isOnShadow = false;
-      _jumpedSinceCapture = true;
-    }
-
-    verticalVelocity += WarayaConfig.gravity * dt;
     final previousFeet = y;
-    position.y += verticalVelocity * dt;
-    _resolveVertical(world, previousFeet);
+    position.y += locomotion.verticalVelocity * dt;
+    _resolveVertical(world, previousFeet, wasGrounded);
   }
 
   /// Folds and unfolds the body, and refuses to unfold into a ceiling.
@@ -193,10 +209,17 @@ class LabPlayer extends PositionComponent {
     for (final rect in world.blocking) {
       if (!bounds.overlaps(rect)) continue;
       position.x = step > 0 ? rect.left - size.x / 2 : rect.right + size.x / 2;
+      // Otherwise speed piles up against the wall and the body fires sideways
+      // the moment it steps clear of it.
+      locomotion.stopHorizontally();
     }
   }
 
-  void _resolveVertical(LabSolids world, double previousFeet) {
+  void _resolveVertical(
+    LabSolids world,
+    double previousFeet,
+    bool wasGrounded,
+  ) {
     isGrounded = false;
     isOnShadow = false;
 
@@ -205,10 +228,11 @@ class LabPlayer extends PositionComponent {
       if (verticalVelocity >= 0) {
         position.y = rect.top;
         isGrounded = true;
+        _recordLanding(wasGrounded);
       } else {
         position.y = rect.bottom + bodyHeight;
+        locomotion.stopRising();
       }
-      verticalVelocity = 0;
     }
 
     if (verticalVelocity < 0) return;
@@ -218,10 +242,17 @@ class LabPlayer extends PositionComponent {
       // not snap the player onto its roof.
       if (previousFeet > rect.top + _landingTolerance) continue;
       position.y = rect.top;
-      verticalVelocity = 0;
       isGrounded = true;
       isOnShadow = true;
+      _recordLanding(wasGrounded);
     }
+  }
+
+  /// Zeroes the fall and remembers how hard it was, but only for a fall that
+  /// actually ended — resting on the ground calls this every frame.
+  void _recordLanding(bool wasGrounded) {
+    final impact = locomotion.land();
+    if (!wasGrounded && impact > _landingImpact) _landingImpact = impact;
   }
 
   @override

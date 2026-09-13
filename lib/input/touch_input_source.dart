@@ -19,6 +19,7 @@ class TouchInputSource extends PositionComponent
     implements InputSource {
   double _axis = 0;
   bool _crouching = false;
+  bool _jumpHeld = false;
   bool _jumpQueued = false;
   bool _hasBeenUsed = false;
 
@@ -33,6 +34,7 @@ class TouchInputSource extends PositionComponent
     final intent = InputIntent(
       moveAxis: _axis,
       jump: _jumpQueued,
+      jumpHeld: _jumpHeld,
       crouch: _crouching,
     );
     _jumpQueued = false;
@@ -43,10 +45,13 @@ class TouchInputSource extends PositionComponent
     _hasBeenUsed = true;
     if (local.y < size.y * WarayaConfig.touchJumpBandFraction) {
       _jumpQueued = true;
+      // Keeping a finger in the jump band is how you ask for a high jump.
+      _jumpHeld = true;
       _axis = 0;
       _crouching = false;
       return;
     }
+    _jumpHeld = false;
     final fromCentre = (local.x - size.x / 2).abs();
     if (fromCentre < size.x * WarayaConfig.touchCrouchBandFraction / 2) {
       _crouching = true;
@@ -60,6 +65,7 @@ class TouchInputSource extends PositionComponent
   void _release() {
     _axis = 0;
     _crouching = false;
+    _jumpHeld = false;
   }
 
   @override

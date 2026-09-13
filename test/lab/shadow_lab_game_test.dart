@@ -113,7 +113,7 @@ void main() {
           150,
           game.shadow.y - game.shadow.size.y - 40,
         );
-        game.player.verticalVelocity = 0;
+        game.player.locomotion.reset();
         run(game, 30, x: 150);
 
         expect(game.player.isOnShadow, isTrue);
@@ -131,7 +131,7 @@ void main() {
           150,
           game.shadow.y - game.shadow.size.y - 40,
         );
-        game.player.verticalVelocity = 0;
+        game.player.locomotion.reset();
         run(game, 30, x: 150);
 
         expect(game.player.isOnShadow, isFalse);
@@ -247,6 +247,53 @@ void main() {
           closeTo(LabScene.floorTop, 0.001),
           reason: 'a crouched shadow shrinks from the head, not the feet',
         );
+      },
+    );
+
+    testWithGame<ShadowLabGame>(
+      'the shadow is smoothed between ticks without moving its hitbox',
+      gameWith,
+      (game) async {
+        await game.ready();
+        // Walk it along so successive snapshots differ.
+        for (var i = 0; i < 90; i++) {
+          game.player.position.x = i * 3.0;
+          game.update(_dt);
+        }
+        final box = game.shadow.bounds;
+
+        game.shadow.alpha = 0;
+        final lagging = game.shadow.renderOffset;
+        game.shadow.alpha = 1;
+        final caughtUp = game.shadow.renderOffset;
+
+        expect(lagging.dx, isNot(0), reason: 'start of a tick: one step back');
+        expect(caughtUp.dx, 0, reason: 'end of a tick: on the snapshot');
+        expect(
+          game.shadow.bounds,
+          box,
+          reason: 'smoothing is a drawing trick; collision stays on the tick',
+        );
+      },
+    );
+
+    testWithGame<ShadowLabGame>(
+      'a hard landing shakes the camera, a step down does not',
+      gameWith,
+      (game) async {
+        await game.ready();
+        run(game, 10);
+        expect(game.shake.isShaking, isFalse);
+
+        // Drop the player from most of the screen height.
+        game.player.position.setValues(150, 200);
+        run(game, 60, x: 150);
+
+        expect(game.shake.isShaking, isTrue);
+
+        // And it dies away rather than rattling forever.
+        run(game, 90, x: 150);
+        expect(game.shake.isShaking, isFalse);
       },
     );
 
