@@ -1,0 +1,49 @@
+name: checks
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Keep in step with .fvmrc; the guard below fails the build if it drifts.
+          flutter-version: 3.44.9
+          channel: stable
+          cache: true
+
+      - name: Flutter matches the pinned SDK
+        run: |
+          pinned=$(python3 -c "import json; print(json.load(open('.fvmrc'))['flutter'])")
+          actual=$(flutter --version | head -1 | cut -d' ' -f2)
+          if [ "$pinned" != "$actual" ]; then
+            echo "::error::.fvmrc pins $pinned but CI installed $actual"
+            exit 1
+          fi
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  web:
+    # The web build is the one that breaks on its own. dart2js has rejected
+    # code every other target compiled happily -- see the comment on `noise()`
+    # in lib/game/endless.dart -- so it gets compiled on every change rather
+    # than discovered broken on release day.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.9
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build web --no-web-resources-cdn
+      - run: flutter build web -t lib/main_lab.dart --no-web-resources-cdn
