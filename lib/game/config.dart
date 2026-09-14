@@ -26,10 +26,79 @@ abstract final class WarayaConfig {
   /// height, and stays in the air for roughly 0.8s.
   static const double jumpSpeed = 700;
 
-  /// Downward acceleration, in world units per second squared.
+  /// Upward-phase gravity, in world units per second squared.
+  ///
+  /// Deliberately unchanged by Phase 3: the reachable heights in the test
+  /// scene are measured against it, and moving it would silently redesign the
+  /// puzzles. Weight comes from the *fall*, not from the rise.
   static const double gravity = 1800;
+
+  /// Downward-phase gravity. A body that falls faster than it rose is the
+  /// oldest trick in platformers: it reads as weight without costing any of
+  /// the airtime the player uses to aim.
+  static const double fallGravity = 2900;
+
+  /// Ceiling on falling speed, so a long drop stays survivable to look at and
+  /// cannot tunnel through a floor in one frame.
+  static const double maxFallSpeed = 1700;
+
+  /// Releasing the jump key while still rising clips the climb to this
+  /// fraction of [jumpSpeed] — a tap hops, a hold clears the platform.
+  static const double jumpCutFactor = 0.4;
+
+  /// How long after walking off an edge a jump still counts.
+  ///
+  /// The player pressed it, and on their screen they were still on the ledge.
+  /// A tenth of a second is invisible and removes most "the game ate my
+  /// input" complaints.
+  static const double coyoteSeconds = 0.1;
+
+  /// How early a jump can be pressed before landing and still fire on
+  /// landing. The other half of the same complaint.
+  static const double jumpBufferSeconds = 0.12;
+
+  /// Ground acceleration, in world units per second squared: about a tenth of
+  /// a second from standing to full speed.
+  static const double groundAccel = 2400;
+
+  /// Ground deceleration when nothing is held.
+  static const double groundFriction = 3000;
+
+  /// Turning around is sharper than setting off, or a change of direction
+  /// feels like wading.
+  static const double turnAccelFactor = 1.8;
+
+  /// In the air you steer, you do not run: less authority than on the ground.
+  static const double airAccel = 1500;
+
+  /// Air drag is low, so a jump keeps the speed it launched with.
+  static const double airFriction = 700;
+
+  /// Landings softer than this do not shake the camera at all.
+  static const double landingShakeThreshold = 700;
+
+  /// How far the camera lurches on the hardest possible landing, in world
+  /// units.
+  static const double landingShakeMax = 7;
 
   /// Taps landing in the top fraction of the screen mean "jump" rather than
   /// "walk", so a thumb resting low never fires a jump by accident.
   static const double touchJumpBandFraction = 0.45;
+
+  /// Width of the crouch zone, as a fraction of the screen, centred between
+  /// the two walk halves of the lower band.
+  static const double touchCrouchBandFraction = 0.2;
+
+  /// How tall the character is while crouched, as a fraction of its standing
+  /// height. Matched to the pose `Figure` draws at full crouch, so the head
+  /// you can see clears exactly what the box you cannot see clears.
+  static const double crouchHeightFactor = 0.72;
+
+  /// How fast a crouched character moves, as a fraction of [walkSpeed].
+  static const double crouchSpeedFactor = 0.45;
+
+  /// How fast the character folds up and stands back up, in crouch fractions
+  /// per second. Fast enough to feel like a button press, slow enough that
+  /// the body does not teleport between two heights.
+  static const double crouchRate = 9;
 }

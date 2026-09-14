@@ -16,6 +16,16 @@ void main() {
       expect(tapped.merge(InputIntent.none).jump, isTrue);
     });
 
+    test('crouch survives a merge from either side', () {
+      const held = InputIntent(crouch: true);
+      expect(InputIntent.none.merge(held).crouch, isTrue);
+      expect(held.merge(InputIntent.none).crouch, isTrue);
+    });
+
+    test('a held crouch is not idle', () {
+      expect(const InputIntent(crouch: true).isIdle, isFalse);
+    });
+
     test('merging nothing stays idle', () {
       expect(InputIntent.none.merge(InputIntent.none).isIdle, isTrue);
     });

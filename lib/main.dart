@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'audio/flame_audio_out.dart';
 import 'game/waraya_game.dart';
 
 void main() {
@@ -32,6 +33,8 @@ class WarayaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // No MaterialApp: the game owns the whole surface, and skipping Material
     // keeps the web bundle a little smaller.
-    return GameWidget.controlled(gameFactory: WarayaGame.new);
+    return GameWidget.controlled(
+      gameFactory: () => WarayaGame(audio: FlameAudioOut()),
+    );
   }
 }

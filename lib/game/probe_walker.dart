@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../input/input_controller.dart';
 import 'character/figure.dart';
+import 'character/locomotion.dart';
 import 'config.dart';
 
 /// The character: a silhouette that walks, jumps and falls where the input
@@ -28,8 +29,27 @@ class ProbeWalker extends PositionComponent {
   /// Facing direction, kept so Friday 3 can flip the sprite.
   double facing = 1;
 
+  /// Speed, jump timing and gravity — shared with the lab so the two scenes
+  /// cannot drift apart as Phase 3 tunes them.
+  final Locomotion locomotion = Locomotion();
+
   /// Vertical speed, positive downward to match the world's y axis.
-  double verticalVelocity = 0;
+  double get verticalVelocity => locomotion.verticalVelocity;
+
+  /// Speed the body last hit the ground at, for the camera to react to. Zero
+  /// once read.
+  double takeLandingImpact() {
+    final impact = _landingImpact;
+    _landingImpact = 0;
+    return impact;
+  }
+
+  double _landingImpact = 0;
+
+  /// How folded up the body is, 0 standing to 1 fully crouched. Nothing in
+  /// this scene has a ceiling to duck under, so unlike the lab there is
+  /// nothing to check before standing back up.
+  double crouch = 0;
 
   /// True while standing on the ground, which is also the only time a jump is
   /// allowed -- otherwise a held jump key climbs the sky.
@@ -41,38 +61,46 @@ class ProbeWalker extends PositionComponent {
     color: const Color(0xFF0A070E),
   );
 
-  /// How far through the current stride the legs are, in radians.
   double _stridePhase = 0;
 
-  /// World units covered per full stride. Tied to distance rather than time so
-  /// the feet never slide.
-  static const double _strideLength = 105;
+  /// How far through the current stride the legs are, in radians. Read by the
+  /// step-sound detector, which needs the exact moment a foot lands and can
+  /// get it from here rather than from a timer.
+  double get stridePhase => _stridePhase;
 
   @override
   void update(double dt) {
     super.update(dt);
 
-    final axis = input.intent.moveAxis;
-    if (axis != 0) {
-      facing = axis.sign;
-      final step = axis * WarayaConfig.walkSpeed * dt;
+    final wantsCrouch = input.intent.crouch && isGrounded;
+    crouch = (crouch + (wantsCrouch ? 1 : -1) * WarayaConfig.crouchRate * dt)
+        .clamp(0.0, 1.0);
+
+    final wasGrounded = isGrounded;
+    locomotion.step(
+      dt,
+      intent: input.intent,
+      grounded: wasGrounded,
+      speedScale: 1 - (1 - WarayaConfig.crouchSpeedFactor) * crouch,
+      canJump: crouch < 0.2,
+    );
+
+    final step = locomotion.horizontalVelocity * dt;
+    if (step != 0) {
       position.x += step;
+      facing = step.sign;
       _stridePhase =
-          (_stridePhase + step.abs() / _strideLength * 2 * pi) % (2 * pi);
+          (_stridePhase +
+              step.abs() / Figure.strideLengthFor(size.y) * 2 * pi) %
+          (2 * pi);
     }
 
-    // The jump is read before gravity is applied, so a jump requested on the
-    // frame of landing still takes effect.
-    if (input.intent.jump && isGrounded) {
-      verticalVelocity = -WarayaConfig.jumpSpeed;
-    }
-
-    verticalVelocity += WarayaConfig.gravity * dt;
-    position.y += verticalVelocity * dt;
+    position.y += locomotion.verticalVelocity * dt;
 
     if (position.y >= WarayaConfig.horizonY) {
       position.y = WarayaConfig.horizonY;
-      verticalVelocity = 0;
+      final impact = locomotion.land();
+      if (!wasGrounded) _landingImpact = impact;
     }
   }
 
@@ -85,9 +113,13 @@ class ProbeWalker extends PositionComponent {
     _figure.render(
       canvas,
       phase: _stridePhase,
-      moving: input.intent.moveAxis != 0,
+      // Driven by speed, not by the key: the legs keep running for the moment
+      // it takes to slide to a stop, instead of freezing under a body that is
+      // still travelling.
+      moving: locomotion.horizontalVelocity.abs() > 1,
       airborne: !isGrounded,
       facing: facing,
+      crouch: crouch,
     );
     canvas.restore();
   }

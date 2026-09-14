@@ -35,6 +35,37 @@ void main() {
       expect(end.dx, greaterThan(start.dx), reason: 'swing carries it forward');
     });
 
+    test('the grounded foot keeps pace with the body at mid-stance', () {
+      // The other half of the moonwalk problem: the foot can travel the right
+      // *direction* and still be the wrong *speed*, which is a slide. Nobody
+      // spots that in a screenshot, and everybody feels it in motion.
+      const midStance = 3 * pi2 / 2;
+      const dPhase = 0.0001;
+      final footTravel =
+          Figure.footOffset(midStance + dPhase, h).dx -
+          Figure.footOffset(midStance, h).dx;
+      final bodyTravel = Figure.strideLengthFor(h) * dPhase / (2 * pi2);
+
+      expect(footTravel, closeTo(-bodyTravel, 1e-6));
+    });
+
+    test('the swing foot lifts highest before mid-swing, not at it', () {
+      // A run drives the knee up early and reaches forward after. A
+      // symmetrical arc is a walk.
+      var peak = 0.0;
+      var peakPhase = 0.0;
+      for (var i = 1; i < 200; i++) {
+        final phase = i / 200 * pi2;
+        final lift = -Figure.footOffset(phase, h).dy;
+        if (lift > peak) {
+          peak = lift;
+          peakPhase = phase;
+        }
+      }
+      expect(peakPhase, lessThan(pi2 / 2));
+      expect(peak, greaterThan(0.1 * h), reason: 'a run picks its feet up');
+    });
+
     test('the stride is symmetric about the hip', () {
       final back = Figure.footOffset(0, h);
       final front = Figure.footOffset(pi2, h);

@@ -5,6 +5,8 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/sprite.dart';
 
+import '../audio/sfx.dart';
+import '../audio/step_detector.dart';
 import '../input/input.dart';
 import '../input/input_controller.dart';
 import '../input/keyboard_input_source.dart';
@@ -20,6 +22,7 @@ import 'palm_row.dart';
 import 'photo_band.dart';
 import 'power_line.dart';
 import 'probe_walker.dart';
+import 'screen_shake.dart';
 import 'sky_backdrop.dart';
 
 /// Phase 1 skeleton: one scene, one walker, no gameplay.
@@ -36,14 +39,25 @@ import 'sky_backdrop.dart';
 /// 2. **All input arrives as [InputIntent].** Nothing below this class asks
 ///    what platform it is on.
 class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
+  WarayaGame({this.audio = const SilentAudio()});
+
+  /// Silent unless an entry point hands it a voice.
+  final AudioOut audio;
+
   late final InputController input;
   late final ProbeWalker walker;
+
+  /// The camera's flinch on a hard landing. Same helper as the lab, so the
+  /// feel being tuned there is the feel that ships here.
+  final ScreenShake shake = ScreenShake();
+  final StepDetector steps = StepDetector();
 
   @override
   Color backgroundColor() => const Color(0xFF1B2A4A);
 
   @override
   Future<void> onLoad() async {
+    await audio.preload();
     final keyboard = KeyboardInputSource();
     final touch = TouchInputSource();
     input = InputController([keyboard, touch]);
@@ -179,5 +193,29 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
     // component in this frame sees identical input.
     input.refresh();
     super.update(dt);
+
+    final impact = walker.takeLandingImpact();
+    if (impact > WarayaConfig.landingShakeThreshold) {
+      final over = impact - WarayaConfig.landingShakeThreshold;
+      final range =
+          WarayaConfig.maxFallSpeed - WarayaConfig.landingShakeThreshold;
+      final weight = (over / range).clamp(0.0, 1.0);
+      shake.hit(WarayaConfig.landingShakeMax * weight);
+      audio.play(Sfx.land, volume: 0.35 + 0.5 * weight);
+    }
+
+    final footfall = steps.advance(
+      walker.stridePhase,
+      moving: walker.locomotion.horizontalVelocity.abs() > 1,
+      grounded: walker.isGrounded,
+    );
+    if (footfall != null) {
+      audio.play(footfall, volume: 0.35 - 0.15 * walker.crouch);
+    }
+    if (walker.locomotion.jumped) audio.play(Sfx.jump, volume: 0.45);
+
+    shake.advance(dt);
+    // After the follow behaviour, which writes this position every frame.
+    if (shake.isShaking) camera.viewfinder.position += shake.offset;
   }
 }
