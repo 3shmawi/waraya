@@ -1,41 +1,112 @@
 # waraya · ورايا
 
-An atmospheric side-scroller set in a contemporary Egyptian village, built with
-Flutter + Flame. One codebase, shipped to mobile, desktop and web.
+A 2D atmospheric side-scroller set in contemporary Egypt, built with Flutter +
+Flame. One codebase for mobile, desktop and web.
 
-Phase 1 is **environment and art foundation only** — no gameplay. The research
-and week-by-week plan it follows is in [`docs/phase-1-research.md`](docs/phase-1-research.md).
+**You do not control your shadow. You control what your shadow will do in `D`
+seconds.** It repeats everything you did, that long ago, and it is a real thing
+in the world while it does it — something to stand on, something in your way,
+something that can catch you.
 
-**Setting note.** The plan was researched for a Cairo rooftop. The setting moved
-to a village once the available photographs turned out to be rural — palms,
-casuarina windbreaks, irrigation canals, red brick with exposed rebar. Section 5
-of the plan (visual and cultural references) was rewritten for that and is
-flagged there as the least-verified part of the document. Whether the village
-is Delta or Upper Egypt is still open, and the two look different.
+![The shadow repeating the player's run and jump, 2.6 seconds late](docs/media/shadow-repeats.gif)
 
-## Status — Friday 1 done, Friday 2 under way
+*The black figure is the player. The grey one is doing what the player did 2.6
+seconds ago — the number is on screen, top left.*
 
-A camera-following walker moves through a layered dust-storm scene, driven by a
-platform-agnostic input layer. The treeline bands and the palm crowns are cut
-from real photographs in `art/source`; the wires, the palm placement and the
-road are drawn.
+## The idea
 
-**The road is drawn, and the roadside detail is why.** Neither dust-storm frame
-has usable ground — `duststorm.jpg` looks out over foliage and rooftops,
-`src_12` looks down at a balcony floor — so the surface is a gradient from the
-haze at the horizon to the shadow it sits in under the camera, with faint ruts
-along it. The weeds and stones matter more than the gradient does: they are the
-only things in the scene standing at the character's own depth, so they are the
-only ones that move at the character's own speed. Without them everything that
-scrolls is far away, and walking reads as standing still on a moving backdrop.
+If you want a plate held down over there, you have to go and stand on it
+yourself, `D` seconds before you need it — then walk away and be somewhere else
+when your own past arrives to press it. So you spend the game doing things that
+look pointless, knowing they are the solution to a problem you have not reached
+yet.
 
-| Friday | Scope | State |
-| --- | --- | --- |
-| 1 | Project, Flame, skeleton on all targets | done |
-| 2 | Parallax background from real photographs | bands and palms in, foreground left |
-| 3 | Character sprite + camera follow | walking silhouette in |
-| 4 | Atmosphere without shaders (particles, god rays, fog, vignette) | all four in |
-| 5 | Polish, web hardening, optional shaders | |
+One rule, several uses: a button you cannot reach in time, a platform that is
+your own body, an obstacle that is where you just were, a sacrifice you make
+now so the shadow can undo it later.
+
+The delay is never under your control. There is no record button and no rewind
+— the mechanic runs whether you are ready or not, which is what makes it feel
+closer to being chased than to a quiet puzzle box.
+
+![Ducking through a low tunnel, with the shadow ducking through it behind](docs/media/crouch-tunnel.gif)
+
+## What it actually looks like
+
+![The character running through a dust storm at sunset, silhouetted against a
+layered treeline](docs/media/environment.jpg)
+
+Everything dark in that frame except the character is a photograph of a real
+place, cut to a silhouette and parallaxed. The haze between the layers, the
+dust in the air and the light shafts are all painted with ordinary blend modes
+— there is not a single shader in the project, which is why it runs the same on
+a phone, a laptop and in a browser.
+
+The shadow has not moved into this scene yet. That is Phase 4: prove the
+mechanic on grey boxes first, because a beautiful scene will flatter a boring
+idea and you will not find out until much later.
+
+## What's built
+
+| Phase | | |
+|---|---|---|
+| 1 | Environment, camera, atmosphere, character | ✅ |
+| 2 | The delayed shadow, on a grey-box test scene | ✅ |
+| 3 | Game feel — weight, coyote time, sound, screen shake | ✅ code, tuning open |
+| 4 | Puzzle design, 5–8 levels | next |
+| 5 | Death and retry, level transitions, saving, menus | |
+| 6 | Polish and release | |
+
+It is a hobby project, built one day a week. The plan it follows, and the
+reasoning behind each phase, is in [`CLAUDE.md`](CLAUDE.md).
+
+## Running it
+
+The Flutter version is pinned in `.fvmrc`. Install [FVM](https://fvm.app), then:
+
+```bash
+fvm install                                  # fetches the pinned SDK
+fvm flutter pub get
+
+fvm flutter run                              # the game
+fvm flutter run -t lib/main_lab.dart         # the shadow lab
+```
+
+**Two entry points.** `lib/main.dart` is the finished environment.
+`lib/main_lab.dart` is the grey-box test scene the shadow was built and
+measured in — it carries a live panel for the delay, the shadow's opacity, and
+whether the shadow is solid, kills you, or shows the path it is about to walk.
+Grey boxes on purpose: nice art flatters a mechanic, and the lab exists to find
+out whether this one stands up without help.
+
+**Controls.** A/D or arrows to move · W/space to jump · S to crouch · R to
+reload the lab scene.
+
+```bash
+fvm flutter analyze
+fvm flutter test
+```
+
+`.fvmrc` is committed and `.fvm/` is not, so everyone resolves the same SDK
+without the download living in the repository. Plain `flutter` works if your
+global SDK happens to match; only `fvm flutter` is guaranteed to be the pinned
+one. Build gotchas worth knowing about are in [`docs/building.md`](docs/building.md).
+
+## The grey-box lab
+
+![The test scene: a door, a pressure plate, a low tunnel and a ledge](docs/media/grey-box.png)
+
+Every measurement in that scene is load-bearing, and tests pin them: the ledge
+is too high to reach without standing on the shadow, the door is too tall to
+jump, and the tunnel is too low to walk through. Change the character's jump
+and a test fails rather than a puzzle quietly becoming trivial.
+
+![Jumping from a platform onto the shadow's head](docs/media/shadow-as-platform.png)
+
+A solid shadow is a **one-way platform** — you land on it from above, you do
+not walk into it. It is placed from a buffer rather than moved by physics, so
+it can appear inside you, and a fully solid one would wedge you into the
+geometry.
 
 ## Two decisions worth not re-litigating
 
@@ -55,12 +126,27 @@ before anything consumes it. Sources are all live simultaneously rather than
 selected by platform, so a phone in a desktop browser still gets touch and a
 tablet with a keyboard gets both. Adding a gamepad means adding one list entry.
 
-- Keyboard: arrows / WASD to walk, space / up / W to jump.
-- Touch: hold lower-left or lower-right to walk, touch the upper band to jump.
+- Keyboard: arrows / WASD to move, space / up / W to jump, S / down to crouch.
+- Touch: hold the lower left or right to move, the strip between them to
+  crouch, the upper band to jump.
 
-Jumping clears about 136 units — a little over the walker's own height — and
-lasts roughly 0.8s. A jump only launches from the ground, so holding the key
-does not climb.
+Jumping clears about 136 units — a little over the character's own height.
+Holding the key jumps that high; tapping it hops.
+
+**3. The shadow records where the body went, not which key was pressed.**
+Every fixed tick, the character's position, facing and pose go into a queue,
+and `delaySeconds` later the oldest entry comes out the far end and the shadow
+puts itself there. The shadow has no physics of its own.
+
+That is the difference between this and the games that have done delayed
+replay before. Re-simulating a recorded *input* needs deterministic physics,
+and Flame hands you a variable `dt`; in a puzzle where the shadow has to stand
+on a plate, a few units of drift is the player solving it correctly and the
+game saying no. Recording the *result* cannot drift — there is a test that
+asserts the replay matches to exact equality, with no tolerance.
+
+It also means everything in the game-feel pass below — speeds, gravity, coyote
+time — could be re-tuned without invalidating a single recording.
 
 ### Atmosphere
 
@@ -118,263 +204,92 @@ Proportions are fractions of body height, so the whole figure scales from one
 number. Far limbs draw, then the torso, then near limbs — drawing both arms
 before the body hid them behind it and left the figure looking one-armed.
 
+![Four frames of the run cycle](docs/media/run-cycle.png)
+
+The gait is a run rather than a walk because at 220 units per second a
+96-unit-tall character covers 2.3 of its own heights every second, which is a
+running speed; a walk cycle at that speed reads as being dragged along the
+ground. The body lifts at the two points in the stride where neither leg
+carries weight, which is the flight phase that separates the two.
+
 ## Layout
 
 ```
 lib/
-  main.dart                      app entry
+  main.dart                      the game
+  main_lab.dart                  the shadow lab
+  shadow/
+    snapshot.dart                one tick of the body: where, facing, pose
+    fixed_ticker.dart            60Hz out of a variable frame rate
+    shadow_recorder.dart         the delay line
+    shadow_figure.dart           the shadow: takes snapshots, has no physics
+  lab/
+    lab_scene.dart               the grey-box geometry, as plain rectangles
+    lab_player.dart              box collision against it
+    lab_props.dart               plate, door, goal, debug trail
+    lab_settings.dart            the live tunables
+    shadow_lab_game.dart         the lab, assembled
   game/
-    config.dart                  world height, horizon, speeds
-    waraya_game.dart             scene assembly, camera, input wiring
-    sky_backdrop.dart            sunset gradient (camera backdrop)
-    endless.dart                 per-index scenery, so the road has no end
-    photo_band.dart              a photographed band, tiled and parallaxed
-    power_line.dart              drawn poles and catenary wire
-    palm_row.dart                photographed crowns, placed
-    atmosphere/dust_field.dart   wind-blown motes
-    atmosphere/haze_veils.dart   drifting veils of hanging dust
-    atmosphere/god_rays.dart     light shafts, baked and blurred
-    atmosphere/vignette.dart     edge darkening
-    ground.dart                  graded road, ruts, roadside weeds
-    probe_walker.dart            the character: physics and input
+    config.dart                  every tuned number, in one file
+    waraya_game.dart             the finished scene
+    screen_shake.dart            landing flinch
     character/figure.dart        the silhouette, posed from a stride phase
+    character/locomotion.dart    speed, gravity, coyote time, jump buffer
+    probe_walker.dart            the character in the finished scene
+    atmosphere/                  dust, haze, god rays, vignette
+    ground.dart, photo_band.dart, palm_row.dart, power_line.dart, endless.dart
   input/
     input.dart                   InputIntent + InputSource
     input_controller.dart        per-frame merge
-    keyboard_input_source.dart
-    touch_input_source.dart
+    keyboard_input_source.dart, touch_input_source.dart
+  audio/
+    sfx.dart                     the sounds, and the silent seam
+    step_detector.dart           footsteps from the stride phase
+    flame_audio_out.dart         the only file that imports an audio library
   ui/
-    debug_hud.dart               per-platform readout
+    debug_hud.dart, lab_hud.dart, lab_controls.dart
 ```
 
 Render order inside the camera is **backdrop → world → viewport**. The sky sits
 in `camera.backdrop`; a sky in the viewport paints over the entire scene.
 
-## Running
+## The assets are generated, not drawn
 
-The Flutter version is pinned in `.fvmrc`. Install [FVM](https://fvm.app), then:
-
-```bash
-fvm install                     # fetches the pinned SDK on a new machine
-fvm flutter pub get
-fvm flutter run -d macos        # or windows, linux
-fvm flutter run -d chrome
-fvm flutter run                 # attached phone
-```
-
-Checks:
+There is no artist on this project, so nothing is drawn by hand and nothing is
+a mystery binary. Both scripts live next to what they produce:
 
 ```bash
-fvm flutter analyze
-fvm flutter test
+python3 tools/silhouette.py photo.jpg -o assets/images/layer_far.webp --tile
+python3 tools/sfx.py --verify
 ```
 
-`.fvmrc` is committed and `.fvm/` is not, so everyone resolves the same SDK
-without the download living in the repository. `.vscode/settings.json` points
-the Dart extension at `.fvm/flutter_sdk` so the editor and the CLI agree.
+`silhouette.py` turns a backlit photograph into a tileable silhouette layer —
+soft luminance matting, because a hard threshold eats the wires and palm
+fronds that make an Egyptian skyline read as Egyptian.
+[`docs/phase-1-art-pipeline.md`](docs/phase-1-art-pipeline.md) has the details
+and an honest account of what the source photographs did and did not yield.
 
-Plain `flutter` still works if your global SDK happens to match, but only
-`fvm flutter` is guaranteed to be the pinned one.
+`sfx.py` synthesises all seven sound effects from noise and low sweeps, stdlib
+only. `--verify` prints each sound's length, level and brightness, which is how
+you check a click is still a click without listening to it. **Do not hand-edit
+the wavs** — they are build output. Change the function and run it again.
 
-`pubspec.yaml` asks for Dart `^3.12.0`, which is what 3.44.9 ships (3.12.2).
-`flutter create` had written `^3.13.3` from the newer SDK it was generated
-with, and that will not resolve on the pinned version.
+## Docs
 
-### The bundled font, and why
+- [`CLAUDE.md`](CLAUDE.md) — the project plan, and the current phase
+- [`docs/phase-2-shadow-prototype.md`](docs/phase-2-shadow-prototype.md) — how
+  to run the three tests the shadow was judged by, and the verdict
+- [`docs/phase-2-plan.md`](docs/phase-2-plan.md) — the plan that phase followed
+- [`docs/phase-1-research.md`](docs/phase-1-research.md) — the original research
+- [`docs/phase-1-art-pipeline.md`](docs/phase-1-art-pipeline.md) — making the layers
+- [`docs/building.md`](docs/building.md) — build notes worth an afternoon each
 
-A web build from 3.44.9 requests
-`https://fonts.gstatic.com/s/roboto/v32/...woff2` while starting, and
-`--no-web-resources-cdn` does not cover it. Where that fetch is blocked, every
-string vanished — the debug HUD drew its panel and no text. Measured, not
-assumed: the same commit on 3.47.3 makes no such request and renders the HUD.
+## Credits
 
-**Liberation Mono is now bundled**, so text no longer depends on a CDN. With
-the font in the bundle and `fonts.gstatic.com` still blocked, the HUD renders
-identically to the 3.47.3 build. The Roboto request still happens — Flutter web
-registers it as the engine fallback regardless — but nothing visible depends on
-it any more.
+The bundled font is **Liberation Mono**, under the SIL Open Font License; the
+licence ships in the bundle and is registered at runtime, which is what the OFL
+asks for. Source photographs in `art/source` are the author's own.
 
-**Licence.** `assets/fonts/LiberationMono-Regular.ttf` is copyright (c) 2012
-Red Hat, Inc. with Reserved Font Name Liberation, under the SIL Open Font
-License 1.1. The full licence text is in
-`assets/fonts/LiberationMono-LICENSE.txt`, which ships inside the app bundle
-and is registered with Flutter's `LicenseRegistry` in `main.dart`, so it shows
-up wherever the app lists its open-source licences. The OFL requires the
-licence and copyright notice to travel with the font, which is what that
-arrangement is for.
-
-The file is shipped **unmodified and under its original name**, which is what
-keeps the reserved-name clause satisfied without renaming.
-
-**Size.** The font is 312 KB raw, about 174 KB gzipped, which roughly doubles
-the app's asset payload (304 KB of layers, 644 KB in total). Since web download
-size is the plan's main risk, the obvious next step is subsetting it to the
-glyphs actually used, which would take it to tens of kilobytes. That is a
-modification, so under OFL condition 3 a subset **must be renamed** before it
-can be redistributed — it could not still be called Liberation.
-
-### Web builds
-
-```bash
-flutter build web --release
-```
-
-Add `--no-web-resources-cdn` to bundle CanvasKit locally instead of pulling it
-from `gstatic.com` — required behind a restrictive network, and worth measuring
-either way since the plan treats web download size as the main risk. A `--wasm`
-build (skwasm, ~1.1 MB versus CanvasKit's ~1.5 MB) passes the dry run and is
-worth testing once real assets exist.
-
-## Turning photographs into layers
-
-`tools/silhouette.py` converts a backlit photo into a tileable silhouette PNG.
-It needs `pillow` and `numpy` (`pip install pillow numpy`).
-
-```bash
-python3 tools/silhouette.py photo.jpg \
-    -o assets/images/layer_far_treeline.png \
-    --crop 0.45,0.80 --height 720 --tile --verify
-```
-
-Because Flame repeats parallax layers (`ImageRepeat.repeatX`), **one ordinary
-phone photo is enough — no panorama.** `--tile` cross-fades the right edge onto
-the left so the repeat is invisible, and `--verify` writes a doubled strip so
-the seam can be checked by eye.
-
-Two knobs matter more than the rest, both verified against a gradient-sky test
-frame:
-
-- `--alpha-gamma 0.5` solidifies mid-tone objects. A grey water tank or a
-  concrete parapet sits near the brightness threshold and otherwise comes out
-  half transparent. Values below 1 also slightly thicken thin structures.
-- `--flatten 0.15` divides out the sky's vertical gradient, for a sunset frame
-  whose zenith is darker than the buildings. **It also eats large uniform dark
-  regions** — the solid ground below the horizon goes semi-transparent — so
-  prefer cropping to the horizon band and reach for `--flatten` only when a
-  crop cannot separate them.
-
-`--softness` (default 0.07) is the width of the alpha ramp and is what keeps
-wires, antennas and palm fronds alive; a hard threshold deletes them.
-
-Other options earned by real frames rather than guessed at:
-
-- `--x-crop left,right` cuts a foreground object out of a band that is
-  otherwise good — a tea glass sitting in the middle of a treeline, say.
-- `--rotate degrees` levels a frame before cropping (positive is
-  counter-clockwise). Phone frames are rarely level, and a sloped band
-  staircases when it tiles. It fixes tilt, **not perspective** — see below.
-- `--trim` crops transparent margins, for a discrete cut-out that code places
-  rather than a band that tiles.
-- `--feather-bottom 0.35` fades the bottom edge. A band floating above the
-  horizon otherwise ends in a hard horizontal line straight across the screen.
-- `--threshold` beats `--threshold auto` whenever a frame holds three tonal
-  groups rather than two. Measure first: Otsu split a bright awning from
-  everything else and left the sky opaque, where a measured 0.15 separated palm
-  from sky exactly.
-- The output extension picks the format. `.webp` cut the layer set from 808 KB
-  to 320 KB; `--webp-quality 0` keeps a cut-out lossless so its alpha edges do
-  not fringe.
-
-### How photographic to make the layers
-
-`--keep-texture --texture-gain 1.0` keeps the photograph's own colour and
-detail instead of a flat fill, and `--haze <colour>:<amount>` mixes a layer
-toward the sky so distance reads as lost contrast. Use a larger haze amount the
-further back a layer sits — that is what makes depth read once the layers are
-no longer flat shapes.
-
-**The matte is a brightness cut, so it can only keep things darker than the
-sky.** A backlit palm, pole or parapet comes out cleanly. A sunlit red brick
-wall at midday is *brighter* than parts of the sky, so it is classified as sky
-and cut away. Photographic realism therefore only works on frames shot against
-the light; a full-colour daylight scene needs real masking (pen tool or
-segmentation), which is a different order of work per layer.
-
-Two further costs, both measured on a textured test frame: keeping texture
-roughly doubled the file (57 KB flat, 123 KB textured, 110 KB textured+hazed),
-and a textured layer makes the horizontal repeat obvious where a flat
-silhouette hides it. Since web download size is the plan's main risk, prefer
-texture on near layers, where it is most visible, and flatter, hazier art
-further back.
-
-## Verified so far
-
-- Flutter 3.47.3 / Dart 3.13.3, flame 1.38.2 — matches the plan's minimums.
-- `flutter analyze` clean, 14 tests passing.
-- Web release build renders and responds to keyboard input at both 1600×900 and
-  844×390, with no console errors.
-- Linux desktop release binary builds and bundles.
-- Three photographed bands render with parallax on the web build, 320 KB of
-  WebP in total.
-- `tools/silhouette.py` on the real photographs in `art/source`, not only on a
-  synthetic frame.
-
-### What the photographs actually yielded
-
-`duststorm.jpg` carried the scene. Its sky is flat and bright and its trees are
-dark, which is the one case a brightness matte handles cleanly, and both bands
-come from it: a hazed far treeline and a full-texture mid treeline. Because
-they share one frame they share one light, which is most of why the scene holds
-together.
-
-It is named rather than numbered on purpose. A later batch of photographs was
-copied in as `src_01`–`src_05` and overwrote the numbered files, including the
-frame these layers were cut from; it was recovered from git history and given a
-name no numbered batch will claim.
-
-**The bands are cut above the source's own wires.** `duststorm.jpg` has two
-long horizontal wires at about 0.66 of frame height and a diagonal fan from a
-pole at the right edge. The first crop started at 0.66 and took the lower edge
-of both, so the bands carried photographed wire that broke at every tile
-boundary — which read as the drawn wires being cut, when they never were. The
-crops now start at 0.715 and stop at 0.76 of the width, above the horizontals
-and left of the fan.
-
-**Wires are drawn, not photographed.** They were a band cut from the same frame,
-but the wires run diagonally across it, so every tile boundary chopped them
-mid-span and the repeat read as broken cable — no seam blend fixes a wire that
-enters one edge at a different height and angle than it leaves the other. A wire
-at this scale is a two-pixel dark line, so the photograph contributed no texture
-worth keeping, while a catenary computed between known poles is continuous
-forever, tiles by construction, and costs no download. See
-`lib/game/power_line.dart`.
-
-**The palms are crowns, and that is deliberate.** Every palm in `art/source` has
-its lower trunk crossing something as dark as itself — a balcony awning, a tarp,
-a water tower, a row of houses — and dark-on-dark cannot be separated by a
-brightness cut, nor by any rectangular crop, since the occluders overlap the
-crowns in both axes.
-
-The fix was not a better matte but a better place to stand it: `PalmRow` renders
-*behind* the mid treeline band, with each crown's feathered lower edge sunk
-inside it. Only the part that cut cleanly is ever on screen, and a palm showing
-just its head above the trees is what a village skyline actually looks like. The
-crown itself comes from `src_04.jpg` as a flat dark silhouette, so it carries no
-light of its own to clash with the dust-storm bands.
-
-`src_13` (the sunset) is a beautiful photograph and a poor layer source: its
-subjects are discrete objects rather than continuous bands, and its sky is a
-strong vertical gradient. Its real value was the measured sky palette.
-
-**The balcony railing in `src_12` does not tile.** The ironwork itself cuts out
-well once the frame is levelled, but it was shot from above and along its
-length, so the top rail slopes and the bars crowd together toward the far end.
-Rotation levels the tilt and cannot touch the perspective, so the two ends meet
-at different heights and spacings and the repeat shows a step no seam blend
-hides. A face-on, level frame of the same railing would tile cleanly.
-
-### What one more photo session would unblock
-
-Both open items are the same shot discipline, and neither is a tooling problem:
-
-1. **A palm standing clear against sky** — nothing dark touching its crown.
-2. **A face-on foreground** — a railing, a parapet or a laundry line, camera
-   level and square to it rather than looking along it.
-
-Shoot both in the same dusty or golden light as `src_01`, since sharing one
-light is most of what makes the current bands sit together.
-
-Not yet verified anywhere: **Android, iOS and macOS**. Those need the M1 with
-Xcode and the Android SDK — the CI container has neither. FPS numbers in the
-debug HUD from a headless software renderer are meaningless; measure on real
-hardware.
+The setting is contemporary, working-class Egypt, and it is meant to be shown
+with warmth rather than as spectacle. Nothing pharaonic — that was ruled out at
+the start, and it is the one art direction note that is not negotiable.
