@@ -70,6 +70,20 @@ touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 It is a hobby project, built one day a week. The plan it follows, and the
 reasoning behind each phase, is in [`CLAUDE.md`](CLAUDE.md).
 
+## Playing it
+
+**<https://3shmawi.github.io/waraya/>** — the five puzzles, in the browser, no
+install. Every push to `main` republishes it (`.github/workflows/pages.yml`).
+
+Arrows or **WASD** to walk, **space** to jump, **down** to crouch, **R** to put
+the level back if you have painted yourself into a corner — which in one of
+them is the intended way to find out you did. On a phone: hold the bottom-left
+or bottom-right of the screen to walk, tap the upper half to jump, hold the
+strip between the two walking halves to crouch.
+
+There is nothing on screen telling you any of that, and no menu. That is a
+Phase 5 problem, not an oversight.
+
 ## Running it
 
 The Flutter version is pinned in `.fvmrc`. Install [FVM](https://fvm.app), then:
@@ -86,14 +100,13 @@ fvm flutter run                              # the finished environment
 **Three entry points.** `main_levels.dart` is the campaign — the puzzles, in
 teaching order. `main_lab.dart` is the same game on a bench scene with a live
 panel for the delay, the shadow's opacity, and whether the shadow is solid,
-kills you, or shows the path it is about to walk. `main.dart` is the finished
-environment from Phase 1, which the shadow has not moved into yet.
+kills you, or shows the path it is about to walk. `main.dart` is the Phase 1
+scene with nothing to solve in it — one walker, one horizon.
 
-Grey boxes on purpose: nice art flatters a mechanic, and the puzzles have to
-stand up without help first.
-
-**Controls.** A/D or arrows to move · W/space to jump · S to crouch · R to
-reload the lab scene.
+The bench stays grey on purpose. Nice art flatters a mechanic, so the puzzles
+had to stand up without it before they were allowed to move into the scene —
+and the place the numbers get argued with is still the place with no scenery in
+the way.
 
 ```bash
 fvm flutter analyze
