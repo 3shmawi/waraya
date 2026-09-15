@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../audio/sfx.dart';
 import '../audio/step_detector.dart';
 import '../game/config.dart';
+import '../game/scenery.dart';
 import '../game/screen_shake.dart';
 import '../input/input.dart';
 import '../input/input_controller.dart';
@@ -41,6 +42,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     LabSettings? settings,
     this.audio = const SilentAudio(),
     this.inputs,
+    this.look = LevelLook.greyBox,
   }) : settings = settings ?? LabSettings(),
        assert(levels.isNotEmpty, 'a game needs at least one level');
 
@@ -56,6 +58,16 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// Overrides the keyboard and touch backends when supplied. Tests use it to
   /// replay a recorded solution through the real game; nothing else should.
   final List<InputSource>? inputs;
+
+  /// Grey boxes, or the photographed environment.
+  ///
+  /// The geometry is identical either way — same rectangles, same numbers, one
+  /// class. Only the paint changes, which is the point: the bench stays ugly
+  /// and measurable while the campaign runs in the real scene, and neither is
+  /// a second implementation that can drift.
+  final LevelLook look;
+
+  bool get _lit => look == LevelLook.silhouette;
 
   final ShadowRecorder recorder = ShadowRecorder();
   final FixedTicker ticker = FixedTicker();
@@ -97,7 +109,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   int reloads = 0;
 
   @override
-  Color backgroundColor() => Palette.background;
+  Color backgroundColor() =>
+      _lit ? const Color(0xFF1B2A4A) : Palette.background;
 
   @override
   Future<void> onLoad() async {
@@ -114,6 +127,16 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       await camera.viewport.add(touch);
     }
     await add(_Hotkeys(reload));
+
+    // The scene the levels stand in, added once. The world half is rebuilt per
+    // level — `_build` empties the world — but the sky and the air do not
+    // change between levels, so they are not torn down with them.
+    if (_lit) {
+      final scenery = _scenery();
+      await scenery.preload();
+      await camera.backdrop.add(scenery.sky());
+      await camera.viewport.addAll(scenery.air());
+    }
 
     await _build();
     await camera.viewport.addAll([
@@ -141,14 +164,18 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     settings.shadowIsSolid = level.shadowIsSolid;
     settings.shadowKills = level.shadowKills;
 
-    plates.addAll(level.plates.map(PressurePlate.new));
-    doors.addAll(level.doors.map(Door.new));
+    plates.addAll(level.plates.map((spec) => PressurePlate(spec, look: look)));
+    doors.addAll(level.doors.map((spec) => Door(spec, look: look)));
     goals
-      ..add(Goal(area: level.goal))
-      ..addAll(level.markers.map((area) => Goal(area: area, endsLevel: false)));
+      ..add(Goal(area: level.goal, look: look))
+      ..addAll(
+        level.markers.map(
+          (area) => Goal(area: area, endsLevel: false, look: look),
+        ),
+      );
 
     shadow = ShadowFigure(
-      color: Palette.bodyColor,
+      color: _lit ? SilhouettePalette.shadowColor : Palette.shadowColor,
       opacity: settings.shadowOpacity,
     );
     player = Player(
@@ -156,14 +183,24 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       solids: _solids,
       spawnX: level.spawnX,
       floorTop: level.floorTop,
+      color: _lit ? SilhouettePalette.bodyColor : Palette.bodyColor,
     );
 
     await world.addAll([
-      Blocks(level.blocks),
+      if (_lit) ..._scenery().world(),
+      Blocks(
+        level.blocks,
+        look: look,
+        view: _lit ? () => camera.visibleWorldRect : null,
+      ),
       ...plates,
       ...doors,
       ...goals,
-      ShadowTrail(recorder: recorder, enabled: () => settings.showTrail),
+      ShadowTrail(
+        recorder: recorder,
+        enabled: () => settings.showTrail,
+        look: look,
+      ),
       shadow,
       player,
     ]);
@@ -171,6 +208,20 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     camera.viewfinder.position = Vector2(0, WarayaConfig.worldHeight / 2);
     camera.follow(player, horizontalOnly: true);
   }
+
+  /// The environment, standing on this level's floor.
+  ///
+  /// Its ground line is the level's, not Phase 1's horizon: the treeline has
+  /// to meet the floor the player is actually walking on, or the scene reads
+  /// as a backdrop hung behind the puzzle rather than as the place it is in.
+  /// No road either — the level brings its own floor, and a second ground
+  /// plane under it is haze in the wrong place.
+  Scenery _scenery() => Scenery(
+    images: images,
+    view: () => camera.visibleWorldRect,
+    groundY: level.floorTop,
+    withGround: false,
+  );
 
   @override
   void onGameResize(Vector2 size) {

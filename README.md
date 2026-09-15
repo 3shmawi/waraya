@@ -42,9 +42,19 @@ dust in the air and the light shafts are all painted with ordinary blend modes
 — there is not a single shader in the project, which is why it runs the same on
 a phone, a laptop and in a browser.
 
-The shadow has not moved into this scene yet. That is Phase 4: prove the
-mechanic on grey boxes first, because a beautiful scene will flatter a boring
-idea and you will not find out until much later.
+![The first puzzle in the lit scene: a black player at a closed door, a pale
+shadow walking onto a plate behind them](docs/media/lit-level.jpg)
+
+The puzzles run in that scene now. They did not to begin with, and the order
+matters: the mechanic was proved on grey boxes first, because a good-looking
+scene flatters a boring idea and you do not find out for months. The levels
+moved in only once they stood up without the help.
+
+The scene is paint, not geometry — same class, same rectangles, same numbers,
+with the look chosen at the entry point. A test plays the whole campaign again
+with the scenery switched on and requires the same recorded solutions to still
+work, so dressing a level can never quietly move something the player can
+touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 
 ## What's built
 

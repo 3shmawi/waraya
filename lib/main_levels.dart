@@ -42,7 +42,16 @@ class WarayaLevels extends StatelessWidget {
     // No MaterialApp: the game owns the whole surface, and skipping Material
     // keeps the web bundle a little smaller.
     return GameWidget.controlled(
-      gameFactory: () => LevelGame(levels: levels, audio: FlameAudioOut()),
+      gameFactory: () => LevelGame(
+        levels: levels,
+        audio: FlameAudioOut(),
+        // The puzzles are played in the scene from Phase 1, not on the bench's
+        // grey boxes. Same class, same geometry, same numbers — only the paint
+        // differs. `main_lab.dart` keeps the grey deliberately: art flatters a
+        // mechanic, and the bench exists to find out whether one holds up
+        // without help.
+        look: LevelLook.silhouette,
+      ),
     );
   }
 }

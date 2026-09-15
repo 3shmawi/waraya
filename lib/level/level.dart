@@ -96,6 +96,24 @@ class DoorSpec {
   final Rect closed;
 }
 
+/// How the level is drawn.
+///
+/// The bench and the game want opposite things from the same rectangles. On
+/// the bench they should be legible slabs you can measure; in the game they
+/// should be silhouettes against a bright sky, because that is the game.
+enum LevelLook {
+  /// Grey boxes on a light ground. Deliberately ugly: nice art flatters a
+  /// mechanic, and the bench exists to find out whether one stands up without
+  /// help.
+  greyBox,
+
+  /// Near-black shapes with a warm rim on every standable face, against the
+  /// photographed environment. The rim is doing real work — it is the only
+  /// thing separating one black shape from another, and it reads as the
+  /// backlight the art direction is built on.
+  silhouette,
+}
+
 /// The grey-box palette. Light ground, dark bodies: this is a silhouette game,
 /// and a black character on a dark test scene would tell us nothing about the
 /// shadow's opacity.
@@ -110,7 +128,39 @@ abstract final class Palette {
   static const Color goalIdle = Color(0xFF9A9A9A);
   static const Color goalReached = Color(0xFF2B2B2B);
   static const Color bodyColor = Color(0xFF141414);
+  static const Color shadowColor = bodyColor;
   static const Color trailColor = Color(0xFF3C3C3C);
+}
+
+/// The same scene, lit from behind.
+abstract final class SilhouettePalette {
+  static const Color blockFill = Color(0xFF0E0A10);
+  static const Color blockTop = Color(0xFFD9A25C);
+  static const Color blockEdge = Color(0x00000000);
+  static const Color plateUp = Color(0xFF241A16);
+  static const Color plateDown = Color(0xFFD9A25C);
+  static const Color doorColor = Color(0xFF0E0A10);
+  static const Color goalIdle = Color(0xFF140E12);
+  static const Color goalReached = Color(0xFFFFE7B0);
+
+  /// The player is as black as the scene gets — the cut-out the backlight
+  /// leaves.
+  static const Color bodyColor = Color(0xFF07050A);
+
+  /// The shadow is **not** a darker black, and not a warm one either.
+  ///
+  /// Black at half opacity over a near-black block is invisible, and that is
+  /// fatal here — the thing you have to read at a glance is where your old
+  /// body is, because you are about to stand on it. The first warm version was
+  /// invisible too, just somewhere else: it matched the brown of the mid
+  /// treeline exactly and vanished the moment it walked in front of it.
+  ///
+  /// Paler and slightly cold is the one colour nothing else in this scene has.
+  /// It lightens against the blocks, and against the sunset it reads as the
+  /// one thing in frame that is not warm.
+  static const Color shadowColor = Color(0xFFDCE4EE);
+
+  static const Color trailColor = Color(0x99FFE7B0);
 }
 
 /// Reading and writing a level as JSON.
