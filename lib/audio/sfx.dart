@@ -17,18 +17,28 @@ library;
 /// audio artist on this project. Retune them by editing that script and
 /// running it again; do not hand-edit the wavs, they are build output.
 enum Sfx {
-  step1('step_1.wav'),
-  step2('step_2.wav'),
-  step3('step_3.wav'),
+  step1('step_1.wav', voices: 4),
+  step2('step_2.wav', voices: 4),
+  step3('step_3.wav', voices: 4),
   jump('jump.wav'),
   land('land.wav'),
   plate('plate.wav'),
   door('door.wav');
 
-  const Sfx(this.file);
+  const Sfx(this.file, {this.voices = 2});
 
   /// Path relative to `assets/audio/`.
   final String file;
+
+  /// How many copies of this sound may be in the air at once.
+  ///
+  /// This is a budget, not a preference. An implementation that builds a fresh
+  /// audio player per sound works fine for a minute and then stops working:
+  /// measured in a browser, fifteen seconds of running created eighty-eight
+  /// players, and somewhere past the fiftieth the browser quietly stopped
+  /// playing them at all. Footsteps get the most because they fire four times
+  /// a second.
+  final int voices;
 
   /// The footstep variants, in the order they are cycled. One footstep sample
   /// four times a second is a woodpecker.

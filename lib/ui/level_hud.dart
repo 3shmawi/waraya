@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../level/level_game.dart';
+import '../licenses.dart';
 
 /// The in-world readout for the shadow lab.
 ///
@@ -20,7 +21,7 @@ class LevelHud extends PositionComponent {
       fontSize: 30,
       height: 1.1,
       color: Color(0xFF1A1A1A),
-      fontFamily: 'LiberationMono',
+      fontFamily: monoFontFamily,
     ),
   );
 
@@ -29,7 +30,7 @@ class LevelHud extends PositionComponent {
       fontSize: 13,
       height: 1.45,
       color: Color(0xFF2C2C2C),
-      fontFamily: 'LiberationMono',
+      fontFamily: monoFontFamily,
     ),
   );
 
@@ -70,10 +71,6 @@ class LevelHud extends PositionComponent {
     _delayText.text = 'delay ${settings.delaySeconds.toStringAsFixed(1)}s';
     final many = game.levels.length > 1;
     _statusText.text = [
-      // The level's own name is in the level data and is in Arabic, which the
-      // bundled monospace font has no glyphs for. Rendering it needs an Arabic
-      // face bundled and licensed the way Liberation Mono is — a real task,
-      // not a line, and until then a number beats a row of empty boxes.
       if (many) 'level      ${game.levelIndex + 1} / ${game.levels.length}',
       if (game.completed) 'done       ✓',
       waiting > 0

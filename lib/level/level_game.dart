@@ -16,6 +16,7 @@ import '../shadow/fixed_ticker.dart';
 import '../shadow/shadow_figure.dart';
 import '../shadow/shadow_recorder.dart';
 import '../ui/level_hud.dart';
+import '../ui/level_title.dart';
 import 'level.dart';
 import 'player.dart';
 import 'props.dart';
@@ -115,7 +116,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     await add(_Hotkeys(reload));
 
     await _build();
-    await camera.viewport.add(LevelHud(game: this));
+    await camera.viewport.addAll([
+      LevelHud(game: this),
+      LevelTitle(game: this),
+    ]);
   }
 
   /// Tears the current level down and puts the next one up.
