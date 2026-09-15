@@ -112,3 +112,145 @@ abstract final class Palette {
   static const Color bodyColor = Color(0xFF141414);
   static const Color trailColor = Color(0xFF3C3C3C);
 }
+
+/// Reading and writing a level as JSON.
+///
+/// This is the whole of what a backend needs. A level is already a value; this
+/// makes it a value that survives a network hop, so a level served from
+/// somewhere else runs through exactly the same code as a built-in one.
+///
+/// Rectangles are `[left, top, right, bottom]` rather than objects: a level is
+/// mostly rectangles, and four numbers read better than four keys repeated
+/// thirty times.
+extension LevelJson on Level {
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'name': name,
+    'teaches': teaches,
+    'delaySeconds': delaySeconds,
+    'spawnX': spawnX,
+    'floorTop': floorTop,
+    'shadowIsSolid': shadowIsSolid,
+    'shadowKills': shadowKills,
+    'goal': _rectToJson(goal),
+    'blocks': blocks.map(_rectToJson).toList(),
+    'markers': markers.map(_rectToJson).toList(),
+    'plates': [
+      for (final plate in plates)
+        {'area': _rectToJson(plate.area), 'opens': plate.opens},
+    ],
+    'doors': [
+      for (final door in doors)
+        {'id': door.id, 'closed': _rectToJson(door.closed)},
+    ],
+  };
+}
+
+List<double> _rectToJson(Rect r) => [r.left, r.top, r.right, r.bottom];
+
+/// Thrown when level data does not describe a level.
+///
+/// Anything coming from outside the app — a file, a server, a level somebody
+/// else authored — is malformed until proven otherwise, and the useful failure
+/// is one that names the field.
+class LevelFormatException implements Exception {
+  LevelFormatException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'LevelFormatException: $message';
+}
+
+/// Builds a [Level] from decoded JSON, or throws [LevelFormatException].
+Level levelFromJson(Object? source) {
+  final json = _asMap(source, 'level');
+  final id = _asString(json['id'], 'id');
+  try {
+    return Level(
+      id: id,
+      name: _asString(json['name'], 'name'),
+      teaches: _asString(json['teaches'], 'teaches'),
+      delaySeconds: _asDouble(json['delaySeconds'], 'delaySeconds'),
+      spawnX: _asDouble(json['spawnX'], 'spawnX'),
+      floorTop: _asDouble(json['floorTop'] ?? 620, 'floorTop'),
+      shadowIsSolid: _asBool(json['shadowIsSolid'] ?? true, 'shadowIsSolid'),
+      shadowKills: _asBool(json['shadowKills'] ?? false, 'shadowKills'),
+      goal: _rectFromJson(json['goal'], 'goal'),
+      blocks: _rectList(json['blocks'], 'blocks'),
+      markers: _rectList(json['markers'], 'markers'),
+      plates: [
+        for (final (i, entry) in _asList(json['plates'], 'plates').indexed)
+          PlateSpec(
+            area: _rectFromJson(
+              _asMap(entry, 'plates[$i]')['area'],
+              'plates[$i].area',
+            ),
+            opens: _asString(
+              _asMap(entry, 'plates[$i]')['opens'],
+              'plates[$i].opens',
+            ),
+          ),
+      ],
+      doors: [
+        for (final (i, entry) in _asList(json['doors'], 'doors').indexed)
+          DoorSpec(
+            id: _asString(_asMap(entry, 'doors[$i]')['id'], 'doors[$i].id'),
+            closed: _rectFromJson(
+              _asMap(entry, 'doors[$i]')['closed'],
+              'doors[$i].closed',
+            ),
+          ),
+      ],
+    );
+  } on LevelFormatException catch (error) {
+    // Say which level, not just which field: a campaign is a list, and "goal
+    // is not a rectangle" is no use without knowing whose goal.
+    throw LevelFormatException('level "$id": ${error.message}');
+  }
+}
+
+/// Builds a whole campaign from decoded JSON.
+List<Level> levelsFromJson(Object? source) => [
+  for (final entry in _asList(source, 'levels')) levelFromJson(entry),
+];
+
+Map<String, Object?> _asMap(Object? value, String field) => value is Map
+    ? value.cast<String, Object?>()
+    : throw LevelFormatException('$field is not an object');
+
+List<Object?> _asList(Object? value, String field) => switch (value) {
+  null => const [],
+  final List<Object?> list => list,
+  _ => throw LevelFormatException('$field is not a list'),
+};
+
+String _asString(Object? value, String field) =>
+    value is String && value.isNotEmpty
+    ? value
+    : throw LevelFormatException('$field is missing or not text');
+
+double _asDouble(Object? value, String field) => value is num
+    ? value.toDouble()
+    : throw LevelFormatException('$field is not a number');
+
+bool _asBool(Object? value, String field) => value is bool
+    ? value
+    : throw LevelFormatException('$field is not true or false');
+
+Rect _rectFromJson(Object? value, String field) {
+  final list = _asList(value, field);
+  if (list.length != 4) {
+    throw LevelFormatException('$field needs four numbers [l, t, r, b]');
+  }
+  final n = [for (final v in list) _asDouble(v, field)];
+  if (n[2] <= n[0] || n[3] <= n[1]) {
+    throw LevelFormatException('$field is inside out or empty');
+  }
+  return Rect.fromLTRB(n[0], n[1], n[2], n[3]);
+}
+
+List<Rect> _rectList(Object? value, String field) => [
+  for (final (i, entry) in _asList(value, field).indexed)
+    _rectFromJson(entry, '$field[$i]'),
+];

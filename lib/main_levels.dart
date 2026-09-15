@@ -3,8 +3,9 @@ import 'package:flutter/widgets.dart';
 
 import 'audio/flame_audio_out.dart';
 import 'licenses.dart';
+import 'level/level.dart';
 import 'level/level_game.dart';
-import 'level/levels.dart';
+import 'level/level_source.dart';
 
 /// The puzzles, in teaching order.
 ///
@@ -17,22 +18,31 @@ import 'level/levels.dart';
 /// the campaign with none of them. Nothing here can be tuned mid-play on
 /// purpose — a level is meant to be beaten at the numbers it was designed
 /// around.
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerFontLicenses();
-  runApp(const WarayaLevels());
+
+  // Where the levels come from is one line, and today it is the ones that
+  // ship in the app. When there is a server, it becomes:
+  //
+  //   LevelsThenExtras(const BuiltInLevels(), SupabaseLevels(...))
+  //
+  // and nothing below this line changes. See docs/backend-plan.md.
+  const source = BuiltInLevels();
+  runApp(WarayaLevels(levels: await source.load()));
 }
 
 class WarayaLevels extends StatelessWidget {
-  const WarayaLevels({super.key});
+  const WarayaLevels({super.key, required this.levels});
+
+  final List<Level> levels;
 
   @override
   Widget build(BuildContext context) {
     // No MaterialApp: the game owns the whole surface, and skipping Material
     // keeps the web bundle a little smaller.
     return GameWidget.controlled(
-      gameFactory: () =>
-          LevelGame(levels: Levels.campaign, audio: FlameAudioOut()),
+      gameFactory: () => LevelGame(levels: levels, audio: FlameAudioOut()),
     );
   }
 }
