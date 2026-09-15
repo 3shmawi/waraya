@@ -2,6 +2,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/widgets.dart';
 
 import 'audio/flame_audio_out.dart';
+import 'licenses.dart';
 import 'level/level_game.dart';
 import 'level/levels.dart';
 
@@ -16,7 +17,11 @@ import 'level/levels.dart';
 /// the campaign with none of them. Nothing here can be tuned mid-play on
 /// purpose — a level is meant to be beaten at the numbers it was designed
 /// around.
-void main() => runApp(const WarayaLevels());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  registerFontLicenses();
+  runApp(const WarayaLevels());
+}
 
 class WarayaLevels extends StatelessWidget {
   const WarayaLevels({super.key});

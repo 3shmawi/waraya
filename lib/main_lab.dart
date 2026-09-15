@@ -2,6 +2,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import 'audio/flame_audio_out.dart';
+import 'licenses.dart';
 import 'level/level_game.dart';
 import 'level/levels.dart';
 import 'ui/lab_controls.dart';
@@ -15,7 +16,11 @@ import 'ui/lab_controls.dart';
 /// A second entry point rather than a mode inside `main.dart`, so the shipping
 /// app never carries the debug sliders and the finished Phase 1 scene is not
 /// touched at all by this phase.
-void main() => runApp(const ShadowLabApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  registerFontLicenses();
+  runApp(const ShadowLabApp());
+}
 
 class ShadowLabApp extends StatelessWidget {
   const ShadowLabApp({super.key});
