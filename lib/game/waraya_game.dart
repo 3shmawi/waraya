@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flame/camera.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flame/sprite.dart';
 
 import '../audio/sfx.dart';
 import '../audio/step_detector.dart';
@@ -12,18 +11,10 @@ import '../input/input_controller.dart';
 import '../input/keyboard_input_source.dart';
 import '../input/touch_input_source.dart';
 import '../ui/debug_hud.dart';
-import 'atmosphere/dust_field.dart';
-import 'atmosphere/god_rays.dart';
-import 'atmosphere/haze_veils.dart';
-import 'atmosphere/vignette.dart';
 import 'config.dart';
-import 'ground.dart';
-import 'palm_row.dart';
-import 'photo_band.dart';
-import 'power_line.dart';
 import 'probe_walker.dart';
+import 'scenery.dart';
 import 'screen_shake.dart';
-import 'sky_backdrop.dart';
 
 /// Phase 1 skeleton: one scene, one walker, no gameplay.
 ///
@@ -66,108 +57,28 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
     await add(input);
     await add(keyboard);
 
+    final scenery = Scenery(
+      images: images,
+      view: () => camera.visibleWorldRect,
+      groundY: WarayaConfig.horizonY,
+    );
+    await scenery.preload();
+
     // The sky goes in the backdrop, not the viewport: the camera renders
     // backdrop -> world -> viewport, so a viewport sky would paint over the
     // whole scene.
-    await camera.backdrop.add(SkyBackdrop());
+    await camera.backdrop.add(scenery.sky());
     await camera.viewport.add(touch);
-    // Atmosphere, over the world and under the debug readout. Both are the
-    // plan's shader-free tricks: nothing here compiles a fragment program, so
-    // nothing here can break on a web build.
-    await camera.viewport.add(
-      GodRays(color: const Color(0xFFFFE7B0), priority: 90),
-    );
-    await camera.viewport.add(
-      HazeVeils(color: const Color(0xFFE8B55E), priority: 95),
-    );
-    await camera.viewport.add(
-      DustField(color: const Color(0xFFF6D79A), priority: 100),
-    );
-    await camera.viewport.add(
-      Vignette(color: const Color(0xFF120A04), priority: 110),
-    );
+    // Atmosphere, over the world and under the debug readout.
+    await camera.viewport.addAll(scenery.air());
     await camera.viewport.add(
       DebugHud(input: input, visibleWorldRect: () => camera.visibleWorldRect),
     );
 
-    // The photographed bands, far to near. Depth drives the parallax: 0 is
-    // infinitely distant, 1 sits in the world plane with the character. The
-    // far band is the same treeline as the mid one, hazed and scaled down --
-    // aerial perspective from a single source frame.
-    //
-    // The palms are crowns only. Every palm in art/source has its lower trunk
-    // crossing something as dark as itself, so no brightness matte separates
-    // them -- but rendering the row behind the treeline hides exactly the part
-    // that could not be cut.
-    final far = await images.load('layer_far_treeline.webp');
-    final mid = await images.load('layer_mid_treeline.webp');
-    final palm = await images.load('palm_01.webp');
-
-    Rect view() => camera.visibleWorldRect;
-
-    await world.addAll([
-      PhotoBand(
-        image: far,
-        depth: 0.15,
-        heightUnits: 120,
-        // Above the mid band's top edge, or it is hidden behind it entirely.
-        bottomY: WarayaConfig.horizonY - 96,
-        visibleWorldRect: view,
-        priority: -40,
-      ),
-      // Behind the mid band on purpose: only the crown clears the trees, which
-      // is both how a village skyline looks and why the missing trunk in the
-      // cut-out never shows.
-      PalmRow(
-        sprite: Sprite(palm),
-        visibleWorldRect: view,
-        heightUnits: 215,
-        // Inside the treeline band, so the feathered cut stays hidden.
-        baseY: WarayaConfig.horizonY - 130,
-        priority: -35,
-      ),
-      PhotoBand(
-        image: mid,
-        depth: 0.45,
-        heightUnits: 230,
-        bottomY: WarayaConfig.horizonY + 4,
-        visibleWorldRect: view,
-        priority: -30,
-      ),
-      GroundPlane(
-        // The horizon end carries the same haze the bands fade into; the near
-        // end is the shadow the road sits in right under the camera.
-        horizonColor: const Color(0xFF3D2609),
-        nearColor: const Color(0xFF0E0805),
-        visibleWorldRect: view,
-        priority: -20,
-      ),
-      // Behind the walker, at the character's own depth.
-      GroundDetail(
-        color: const Color(0xFF1A1009),
-        visibleWorldRect: view,
-        baseY: WarayaConfig.horizonY + 14,
-        spacing: 110,
-        seed: 29,
-        priority: -18,
-      ),
-      // In front of the walker: the closest thing in the scene, so it sells
-      // the speed of everything behind it.
-      GroundDetail(
-        color: const Color(0xFF0D0705),
-        visibleWorldRect: view,
-        baseY: WarayaConfig.horizonY + 178,
-        sizeScale: 3.4,
-        spacing: 240,
-        seed: 31,
-        priority: 200,
-      ),
-      PowerLine(
-        color: const Color(0xFF1B1119),
-        visibleWorldRect: view,
-        priority: -5,
-      ),
-    ]);
+    // The photographed bands, the road and the wires, far to near. Depth
+    // drives the parallax: 0 is infinitely distant, 1 sits in the world plane
+    // with the character.
+    await world.addAll(scenery.world());
 
     walker = ProbeWalker(input: input);
     await world.add(walker);

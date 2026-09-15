@@ -43,6 +43,7 @@ class Player extends PositionComponent {
     required this.solids,
     required double spawnX,
     required double floorTop,
+    this.color = Palette.bodyColor,
   }) : _spawn = Vector2(spawnX, floorTop),
        super(
          size: Vector2(44, 96),
@@ -56,6 +57,10 @@ class Player extends PositionComponent {
   final Vector2 _spawn;
 
   final InputController input;
+
+  /// What the body is drawn in. A level's look decides it: legibly dark on the
+  /// bench, as black as the scene gets in the lit environment.
+  final Color color;
 
   /// Read fresh every frame: the shadow's rect changes and may vanish.
   final Solids Function() solids;
@@ -96,7 +101,7 @@ class Player extends PositionComponent {
   /// and still count as landing on it, rather than passing through from below.
   static const double _landingTolerance = 6;
 
-  late final Figure _figure = Figure(height: size.y, color: Palette.bodyColor);
+  late final Figure _figure = Figure(height: size.y, color: color);
 
   /// Current standing height, shrinking as the body folds up.
   double get bodyHeight => boxFor(crouch).height;
