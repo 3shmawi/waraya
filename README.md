@@ -43,7 +43,7 @@ dust in the air and the light shafts are all painted with ordinary blend modes
 a phone, a laptop and in a browser.
 
 ![The first puzzle in the lit scene: a black player at a closed door, a pale
-shadow walking onto a plate behind them](docs/media/lit-level.jpg)
+shadow running toward the plate behind them](docs/media/lit-level.jpg)
 
 The puzzles run in that scene now. They did not to begin with, and the order
 matters: the mechanic was proved on grey boxes first, because a good-looking

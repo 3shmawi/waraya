@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import 'config.dart';
 import 'endless.dart';
 
 /// Poles and the wire sagging between them, drawn rather than photographed.
@@ -23,6 +22,7 @@ class PowerLine extends EndlessRow {
   PowerLine({
     required this.color,
     required super.visibleWorldRect,
+    required this.baseY,
     super.spacing = 460,
     this.poleHeight = 250,
     super.seed = 11,
@@ -31,7 +31,12 @@ class PowerLine extends EndlessRow {
 
   final Color color;
 
-  /// Height of a typical pole above the horizon, in world units.
+  /// World y the poles stand on. A parameter rather than the Phase 1 horizon,
+  /// because a scene whose ground is somewhere else gets poles hanging in the
+  /// air above it.
+  final double baseY;
+
+  /// Height of a typical pole above [baseY], in world units.
   final double poleHeight;
 
   @override
@@ -50,7 +55,7 @@ class PowerLine extends EndlessRow {
   /// Village poles are rarely plumb; a perfectly upright row reads as a fence.
   double _leanOf(int index) => (noise(index, seed ^ 0x77) - 0.5) * 18;
 
-  double _topOf(int index) => WarayaConfig.horizonY - _heightOf(index);
+  double _topOf(int index) => baseY - _heightOf(index);
 
   @override
   void buildItem(EndlessItem item, int index, double x) {
@@ -96,10 +101,10 @@ class PowerLine extends EndlessRow {
     const footHalf = 5.5;
     const headHalf = 3.5;
     path
-      ..moveTo(baseX - footHalf, WarayaConfig.horizonY)
+      ..moveTo(baseX - footHalf, baseY)
       ..lineTo(headX - headHalf, top)
       ..lineTo(headX + headHalf, top)
-      ..lineTo(baseX + footHalf, WarayaConfig.horizonY)
+      ..lineTo(baseX + footHalf, baseY)
       ..close();
   }
 

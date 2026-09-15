@@ -30,6 +30,7 @@ class Scenery {
     required this.view,
     required this.groundY,
     this.withGround = true,
+    this.withPowerLine = true,
   });
 
   final Images images;
@@ -45,6 +46,14 @@ class Scenery {
   /// False for the puzzles: a level brings its own floor, and a second ground
   /// plane underneath it is just haze in the wrong place.
   final bool withGround;
+
+  /// Whether the poles and their wires are drawn.
+  ///
+  /// False for the puzzles. They are the one piece of this scene that stands
+  /// *in* the play plane rather than behind it, and a dark vertical post the
+  /// same value as a platform is a thing the player tries to stand on. Good
+  /// atmosphere is not worth a misread jump.
+  final bool withPowerLine;
 
   /// The photographs this scene is made of.
   static const List<String> assets = [
@@ -126,11 +135,13 @@ class Scenery {
           priority: 200,
         ),
       ],
-      PowerLine(
-        color: const Color(0xFF1B1119),
-        visibleWorldRect: view,
-        priority: -5,
-      ),
+      if (withPowerLine)
+        PowerLine(
+          color: const Color(0xFF1B1119),
+          visibleWorldRect: view,
+          baseY: groundY,
+          priority: -5,
+        ),
     ];
   }
 

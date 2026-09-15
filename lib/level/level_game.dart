@@ -221,6 +221,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     view: () => camera.visibleWorldRect,
     groundY: level.floorTop,
     withGround: false,
+    withPowerLine: false,
   );
 
   @override
