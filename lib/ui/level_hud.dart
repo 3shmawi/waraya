@@ -1,7 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
-import '../lab/shadow_lab_game.dart';
+import '../level/level_game.dart';
 
 /// The in-world readout for the shadow lab.
 ///
@@ -9,11 +9,11 @@ import '../lab/shadow_lab_game.dart';
 /// the plan's TikTok note says the clip that explains this game is the player,
 /// the shadow, and **the delay number visible on screen**. A number burned
 /// into the frame needs no caption and no voiceover.
-class LabHud extends PositionComponent {
-  LabHud({required this.game})
+class LevelHud extends PositionComponent {
+  LevelHud({required this.game})
     : super(position: Vector2.all(12), priority: 1000);
 
-  final ShadowLabGame game;
+  final LevelGame game;
 
   static final _big = TextPaint(
     style: const TextStyle(
@@ -68,14 +68,22 @@ class LabHud extends PositionComponent {
     final waiting = recorder.secondsUntilPlaying;
 
     _delayText.text = 'delay ${settings.delaySeconds.toStringAsFixed(1)}s';
+    final many = game.levels.length > 1;
     _statusText.text = [
+      // The level's own name is in the level data and is in Arabic, which the
+      // bundled monospace font has no glyphs for. Rendering it needs an Arabic
+      // face bundled and licensed the way Liberation Mono is — a real task,
+      // not a line, and until then a number beats a row of empty boxes.
+      if (many) 'level      ${game.levelIndex + 1} / ${game.levels.length}',
+      if (game.completed) 'done       ✓',
       waiting > 0
           ? 'shadow     arrives in ${waiting.toStringAsFixed(1)}s'
           : 'shadow     live · ${recorder.delayTicks} ticks buffered',
       'solid      ${_onOff(settings.shadowIsSolid)}    '
           'kills ${_onOff(settings.shadowKills)}',
-      'opacity    ${settings.shadowOpacity.toStringAsFixed(2)}    '
-          'trail ${_onOff(settings.showTrail)}',
+      if (!many)
+        'opacity    ${settings.shadowOpacity.toStringAsFixed(2)}    '
+            'trail ${_onOff(settings.showTrail)}',
       'reloads    ${game.reloads}   (R)',
       'fps        ${_fps.fps.toStringAsFixed(0)}',
     ].join('\n');

@@ -6,8 +6,9 @@ import 'package:waraya/audio/sfx.dart';
 import 'package:waraya/audio/step_detector.dart';
 import 'package:waraya/game/config.dart';
 import 'package:waraya/lab/lab_scene.dart';
-import 'package:waraya/lab/lab_settings.dart';
-import 'package:waraya/lab/shadow_lab_game.dart';
+import 'package:waraya/level/level.dart';
+import 'package:waraya/level/levels.dart';
+import 'package:waraya/level/level_game.dart';
 
 /// An [AudioOut] that writes down what it was asked to play.
 class RecordingAudio implements AudioOut {
@@ -83,53 +84,59 @@ void main() {
   group('the lab makes the right noises', () {
     late RecordingAudio audio;
 
-    ShadowLabGame build() {
+    LevelGame build() {
       audio = RecordingAudio();
-      return ShadowLabGame(
-        settings: LabSettings()..delaySeconds = 1,
-        audio: audio,
+      final level = Level(
+        id: 'test',
+        name: Levels.lab.name,
+        teaches: Levels.lab.teaches,
+        delaySeconds: 1,
+        spawnX: Levels.lab.spawnX,
+        floorTop: Levels.lab.floorTop,
+        blocks: Levels.lab.blocks,
+        plates: Levels.lab.plates,
+        doors: Levels.lab.doors,
+        goal: Levels.lab.goal,
+        markers: Levels.lab.markers,
       );
+      return LevelGame(levels: [level], audio: audio);
     }
 
-    testWithGame<ShadowLabGame>('loads its sounds up front', build, (
-      game,
-    ) async {
+    testWithGame<LevelGame>('loads its sounds up front', build, (game) async {
       await game.ready();
       expect(audio.preloads, 1);
     });
 
-    testWithGame<ShadowLabGame>(
-      'a hard landing is louder than a soft one',
-      build,
-      (game) async {
-        await game.ready();
-        for (var i = 0; i < 10; i++) {
-          game.update(_dt);
-        }
-        audio.clear();
+    testWithGame<LevelGame>('a hard landing is louder than a soft one', build, (
+      game,
+    ) async {
+      await game.ready();
+      for (var i = 0; i < 10; i++) {
+        game.update(_dt);
+      }
+      audio.clear();
 
-        // A long drop.
-        game.player.position.setValues(150, 150);
-        for (var i = 0; i < 60; i++) {
-          game.update(_dt);
-        }
-        final hard = audio.played.firstWhere((e) => e.$1 == Sfx.land).$2;
+      // A long drop.
+      game.player.position.setValues(150, 150);
+      for (var i = 0; i < 60; i++) {
+        game.update(_dt);
+      }
+      final hard = audio.played.firstWhere((e) => e.$1 == Sfx.land).$2;
 
-        game.reload();
-        audio.clear();
-        // A short one.
-        game.player.position.setValues(150, LabScene.floorTop - 130);
-        for (var i = 0; i < 60; i++) {
-          game.update(_dt);
-        }
-        final soft = audio.played.firstWhere((e) => e.$1 == Sfx.land).$2;
+      game.reload();
+      audio.clear();
+      // A short one.
+      game.player.position.setValues(150, LabScene.floorTop - 130);
+      for (var i = 0; i < 60; i++) {
+        game.update(_dt);
+      }
+      final soft = audio.played.firstWhere((e) => e.$1 == Sfx.land).$2;
 
-        expect(hard, greaterThan(soft));
-        expect(hard, lessThanOrEqualTo(1));
-      },
-    );
+      expect(hard, greaterThan(soft));
+      expect(hard, lessThanOrEqualTo(1));
+    });
 
-    testWithGame<ShadowLabGame>('a gentle step down is not a thud', build, (
+    testWithGame<LevelGame>('a gentle step down is not a thud', build, (
       game,
     ) async {
       await game.ready();
@@ -139,33 +146,31 @@ void main() {
       expect(audio.sounds, isNot(contains(Sfx.land)));
     });
 
-    testWithGame<ShadowLabGame>(
-      'the plate clicks and the door answers',
-      build,
-      (game) async {
-        await game.ready();
-        // Stand on the plate, then leave. A second later the shadow arrives and
-        // stands on it, so the plate clicks and the door answers — twice each,
-        // in fact: once for us and once for our shadow.
-        for (var i = 0; i < 40; i++) {
-          game.player.position.x = LabScene.plate.center.dx;
-          game.update(_dt);
-        }
-        expect(audio.sounds.where((s) => s == Sfx.plate), hasLength(1));
-        expect(audio.sounds.where((s) => s == Sfx.door), hasLength(1));
+    testWithGame<LevelGame>('the plate clicks and the door answers', build, (
+      game,
+    ) async {
+      await game.ready();
+      // Stand on the plate, then leave. A second later the shadow arrives and
+      // stands on it, so the plate clicks and the door answers — twice each,
+      // in fact: once for us and once for our shadow.
+      for (var i = 0; i < 40; i++) {
+        game.player.position.x = LabScene.plate.center.dx;
+        game.update(_dt);
+      }
+      expect(audio.sounds.where((s) => s == Sfx.plate), hasLength(1));
+      expect(audio.sounds.where((s) => s == Sfx.door), hasLength(1));
 
-        audio.clear();
-        for (var i = 0; i < 100; i++) {
-          game.player.position.x = 0;
-          game.update(_dt);
-        }
+      audio.clear();
+      for (var i = 0; i < 100; i++) {
+        game.player.position.x = 0;
+        game.update(_dt);
+      }
 
-        expect(audio.sounds, contains(Sfx.plate));
-        expect(audio.sounds, contains(Sfx.door));
-      },
-    );
+      expect(audio.sounds, contains(Sfx.plate));
+      expect(audio.sounds, contains(Sfx.door));
+    });
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'footsteps follow the legs, not the position',
       build,
       (game) async {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:waraya/lab/lab_props.dart';
+import 'package:waraya/level/props.dart';
 import 'package:waraya/shadow/shadow_recorder.dart';
 import 'package:waraya/shadow/snapshot.dart';
 
