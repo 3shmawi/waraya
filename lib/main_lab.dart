@@ -2,10 +2,11 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import 'audio/flame_audio_out.dart';
-import 'lab/shadow_lab_game.dart';
+import 'level/level_game.dart';
+import 'level/levels.dart';
 import 'ui/lab_controls.dart';
 
-/// Phase 2 entry point — the shadow prototype on grey boxes.
+/// The tuning bench — the shadow, on grey boxes, with every number exposed.
 ///
 /// ```sh
 /// flutter run -t lib/main_lab.dart
@@ -28,8 +29,9 @@ class ShadowLabApp extends StatelessWidget {
       title: 'waraya · shadow lab',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(useMaterial3: true),
-      home: GameWidget<ShadowLabGame>.controlled(
-        gameFactory: () => ShadowLabGame(audio: FlameAudioOut()),
+      home: GameWidget<LevelGame>.controlled(
+        gameFactory: () =>
+            LevelGame(levels: [Levels.lab], audio: FlameAudioOut()),
         overlayBuilderMap: {
           'controls': (context, game) =>
               LabControls(settings: game.settings, onReload: game.reload),

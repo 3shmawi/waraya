@@ -8,7 +8,7 @@ import '../game/character/locomotion.dart';
 import '../game/config.dart';
 import '../input/input_controller.dart';
 import '../shadow/snapshot.dart';
-import 'lab_scene.dart';
+import 'level.dart';
 
 /// The surfaces the player can stand on this frame.
 ///
@@ -18,13 +18,13 @@ import 'lab_scene.dart';
 /// materialise inside the player and wedge them into the geometry with no way
 /// out. Landing on it from above is the use the plan actually wants tested
 /// ("الظل كمنصة"); the shadow as a blocking wall is a later phase.
-class LabSolids {
-  const LabSolids({this.blocking = const [], this.oneWay = const []});
+class Solids {
+  const Solids({this.blocking = const [], this.oneWay = const []});
 
   final List<Rect> blocking;
   final List<Rect> oneWay;
 
-  static const empty = LabSolids();
+  static const empty = Solids();
 }
 
 /// The player in the grey-box scene.
@@ -37,19 +37,28 @@ class LabSolids {
 /// Nothing here is game feel. No coyote time, no jump buffering, no
 /// acceleration curve: that is Phase 3, and adding it now would mean tuning
 /// the feel of a mechanic we have not yet decided to keep.
-class LabPlayer extends PositionComponent {
-  LabPlayer({required this.input, required this.solids})
-    : super(
-        size: Vector2(44, 96),
-        anchor: Anchor.bottomCenter,
-        position: Vector2(LabScene.spawnX, LabScene.floorTop),
-        priority: 100,
-      );
+class Player extends PositionComponent {
+  Player({
+    required this.input,
+    required this.solids,
+    required double spawnX,
+    required double floorTop,
+  }) : _spawn = Vector2(spawnX, floorTop),
+       super(
+         size: Vector2(44, 96),
+         anchor: Anchor.bottomCenter,
+         position: Vector2(spawnX, floorTop),
+         priority: 100,
+       );
+
+  /// Where a reload puts the body back. A level's, not a constant: the same
+  /// player runs every level.
+  final Vector2 _spawn;
 
   final InputController input;
 
   /// Read fresh every frame: the shadow's rect changes and may vanish.
-  final LabSolids Function() solids;
+  final Solids Function() solids;
 
   /// Speed, jump timing and gravity — the same object the Phase 1 scene uses.
   final Locomotion locomotion = Locomotion();
@@ -87,7 +96,7 @@ class LabPlayer extends PositionComponent {
   /// and still count as landing on it, rather than passing through from below.
   static const double _landingTolerance = 6;
 
-  late final Figure _figure = Figure(height: size.y, color: LabScene.bodyColor);
+  late final Figure _figure = Figure(height: size.y, color: Palette.bodyColor);
 
   /// Current standing height, shrinking as the body folds up.
   double get bodyHeight => boxFor(crouch).height;
@@ -133,7 +142,7 @@ class LabPlayer extends PositionComponent {
   double _landingImpact = 0;
 
   void resetToSpawn() {
-    position.setValues(LabScene.spawnX, LabScene.floorTop);
+    position.setValues(_spawn.x, _spawn.y);
     locomotion.reset();
     _landingImpact = 0;
     facing = 1;
@@ -198,7 +207,7 @@ class LabPlayer extends PositionComponent {
   /// of the key leaves you crouched until you walk out, which is what every
   /// game that has ever had a crouch does, and the only alternative is being
   /// shoved through the floor.
-  void _updateCrouch(double dt, LabSolids world) {
+  void _updateCrouch(double dt, Solids world) {
     final wants = input.intent.crouch && isGrounded;
     final step = WarayaConfig.crouchRate * dt;
     if (wants) {
@@ -211,7 +220,7 @@ class LabPlayer extends PositionComponent {
     if (wouldFit) crouch = next;
   }
 
-  void _resolveHorizontal(LabSolids world, double step) {
+  void _resolveHorizontal(Solids world, double step) {
     for (final rect in world.blocking) {
       if (!bounds.overlaps(rect)) continue;
       position.x = step > 0 ? rect.left - size.x / 2 : rect.right + size.x / 2;
@@ -221,24 +230,28 @@ class LabPlayer extends PositionComponent {
     }
   }
 
-  void _resolveVertical(
-    LabSolids world,
-    double previousFeet,
-    bool wasGrounded,
-  ) {
+  void _resolveVertical(Solids world, double previousFeet, bool wasGrounded) {
     isGrounded = false;
     isOnShadow = false;
 
     for (final rect in world.blocking) {
       if (!bounds.overlaps(rect)) continue;
-      if (verticalVelocity >= 0) {
+      if (verticalVelocity < 0) {
+        position.y = rect.bottom + bodyHeight;
+        locomotion.stopRising();
+        continue;
+      }
+      if (previousFeet <= rect.top + _landingTolerance) {
         position.y = rect.top;
         isGrounded = true;
         _recordLanding(wasGrounded);
-      } else {
-        position.y = rect.bottom + bodyHeight;
-        locomotion.stopRising();
+        continue;
       }
+      // We did not fall onto this: it arrived at us. A door coming down on a
+      // body used to teleport that body onto its roof, 190 units up, because
+      // "overlapping and falling" was taken to mean "landed on it". Being
+      // shoved out of the doorway is what a closing door does.
+      _pushOutOf(rect);
     }
 
     if (verticalVelocity < 0) return;
@@ -252,6 +265,17 @@ class LabPlayer extends PositionComponent {
       isOnShadow = true;
       _recordLanding(wasGrounded);
     }
+  }
+
+  /// Shifts the body to whichever side of [rect] is nearer, and kills the
+  /// speed it had. Used when a solid moves into the body rather than the
+  /// other way round.
+  void _pushOutOf(Rect rect) {
+    final box = bounds;
+    final leftwards = box.right - rect.left;
+    final rightwards = rect.right - box.left;
+    position.x += leftwards < rightwards ? -leftwards : rightwards;
+    locomotion.stopHorizontally();
   }
 
   /// Zeroes the fall and remembers how hard it was, but only for a fall that

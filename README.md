@@ -53,7 +53,7 @@ idea and you will not find out until much later.
 | 1 | Environment, camera, atmosphere, character | ✅ |
 | 2 | The delayed shadow, on a grey-box test scene | ✅ |
 | 3 | Game feel — weight, coyote time, sound, screen shake | ✅ code, tuning open |
-| 4 | Puzzle design, 5–8 levels | next |
+| 4 | Puzzle design, 5–8 levels | 3 of them built |
 | 5 | Death and retry, level transitions, saving, menus | |
 | 6 | Polish and release | |
 
@@ -68,16 +68,19 @@ The Flutter version is pinned in `.fvmrc`. Install [FVM](https://fvm.app), then:
 fvm install                                  # fetches the pinned SDK
 fvm flutter pub get
 
-fvm flutter run                              # the game
-fvm flutter run -t lib/main_lab.dart         # the shadow lab
+fvm flutter run -t lib/main_levels.dart      # the puzzles
+fvm flutter run -t lib/main_lab.dart         # the tuning bench
+fvm flutter run                              # the finished environment
 ```
 
-**Two entry points.** `lib/main.dart` is the finished environment.
-`lib/main_lab.dart` is the grey-box test scene the shadow was built and
-measured in — it carries a live panel for the delay, the shadow's opacity, and
-whether the shadow is solid, kills you, or shows the path it is about to walk.
-Grey boxes on purpose: nice art flatters a mechanic, and the lab exists to find
-out whether this one stands up without help.
+**Three entry points.** `main_levels.dart` is the campaign — the puzzles, in
+teaching order. `main_lab.dart` is the same game on a bench scene with a live
+panel for the delay, the shadow's opacity, and whether the shadow is solid,
+kills you, or shows the path it is about to walk. `main.dart` is the finished
+environment from Phase 1, which the shadow has not moved into yet.
+
+Grey boxes on purpose: nice art flatters a mechanic, and the puzzles have to
+stand up without help first.
 
 **Controls.** A/D or arrows to move · W/space to jump · S to crouch · R to
 reload the lab scene.
@@ -92,7 +95,30 @@ without the download living in the repository. Plain `flutter` works if your
 global SDK happens to match; only `fvm flutter` is guaranteed to be the pinned
 one. Build gotchas worth knowing about are in [`docs/building.md`](docs/building.md).
 
-## The grey-box lab
+## The puzzles
+
+![Walking away from a plate, and the door opening as your shadow reaches
+it](docs/media/level-one.gif)
+
+That is the first level, start to finish. The plate is in the opposite
+direction from the door, so you walk the wrong way, stand on something
+pointless, walk all the way back — and the door opens on its own as your own
+past arrives at the plate behind you.
+
+**Every level ships with a recorded solution, and a recording of the obvious
+wrong idea.** A test replays both through the real game: the first has to
+finish the level, the second has to fail to. The second one is what matters.
+The first draft of that level put the plate on the way to the door, so walking
+left crossed it, and three seconds later the shadow crossed it too and opened
+the door for a player who had done nothing — a puzzle you beat by holding one
+key. The test caught it.
+
+Levels are data (`lib/level/level.dart`): rectangles, a spawn, a goal, and the
+three numbers that change how the shadow behaves. The delay is one of them, per
+level, because the same layout at two seconds and at five is two different
+puzzles.
+
+## The tuning bench
 
 ![The test scene: a door, a pressure plate, a low tunnel and a ledge](docs/media/grey-box.png)
 

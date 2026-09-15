@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/game/config.dart';
 import 'package:waraya/input/input.dart';
 import 'package:waraya/input/input_controller.dart';
-import 'package:waraya/lab/lab_player.dart';
+import 'package:waraya/level/player.dart';
 import 'package:waraya/lab/lab_scene.dart';
 import 'package:waraya/shadow/snapshot.dart';
 
@@ -23,7 +23,7 @@ class ScriptedSource implements InputSource {
 
 /// Steps the player the way the game does: refresh input, then update.
 void step(
-  LabPlayer player,
+  Player player,
   InputController input,
   ScriptedSource source, {
   InputIntent intent = InputIntent.none,
@@ -46,12 +46,16 @@ void main() {
     input = InputController([source]);
   });
 
-  LabPlayer playerWith(LabSolids solids) =>
-      LabPlayer(input: input, solids: () => solids);
+  Player playerWith(Solids solids) => Player(
+    input: input,
+    solids: () => solids,
+    spawnX: LabScene.spawnX,
+    floorTop: LabScene.floorTop,
+  );
 
-  group('LabPlayer collision', () {
+  group('Player collision', () {
     test('settles on the floor and stays grounded', () {
-      final player = playerWith(const LabSolids(blocking: [LabScene.floor]));
+      final player = playerWith(const Solids(blocking: [LabScene.floor]));
 
       step(player, input, source, frames: 30);
 
@@ -62,9 +66,7 @@ void main() {
 
     test('is stopped by a wall instead of walking through it', () {
       const wall = Rect.fromLTRB(200, 400, 260, 700);
-      final player = playerWith(
-        const LabSolids(blocking: [LabScene.floor, wall]),
-      );
+      final player = playerWith(const Solids(blocking: [LabScene.floor, wall]));
 
       step(
         player,
@@ -80,7 +82,7 @@ void main() {
     test('lands on a one-way surface from above', () {
       const ledge = Rect.fromLTRB(-100, 400, 100, 460);
       final player = playerWith(
-        const LabSolids(blocking: [LabScene.floor], oneWay: [ledge]),
+        const Solids(blocking: [LabScene.floor], oneWay: [ledge]),
       );
       // Drop it in from above the ledge.
       player.position.y = 300;
@@ -97,7 +99,7 @@ void main() {
       // still be a platform on the way down.
       const overhead = Rect.fromLTRB(-100, 560, 100, 600);
       final player = playerWith(
-        const LabSolids(blocking: [LabScene.floor], oneWay: [overhead]),
+        const Solids(blocking: [LabScene.floor], oneWay: [overhead]),
       );
       step(player, input, source, frames: 2);
 
@@ -129,7 +131,7 @@ void main() {
       // exactly the way the plan warns about.
       const straddling = Rect.fromLTRB(-100, 560, 100, 640);
       final player = playerWith(
-        const LabSolids(blocking: [LabScene.floor], oneWay: [straddling]),
+        const Solids(blocking: [LabScene.floor], oneWay: [straddling]),
       );
 
       step(player, input, source, frames: 5);
@@ -150,7 +152,7 @@ void main() {
     test('rides along when the surface under it moves', () {
       const ledge = Rect.fromLTRB(-100, 400, 100, 460);
       final player = playerWith(
-        const LabSolids(blocking: [LabScene.floor], oneWay: [ledge]),
+        const Solids(blocking: [LabScene.floor], oneWay: [ledge]),
       );
       player.position.y = 300;
       step(player, input, source, frames: 60);
@@ -165,9 +167,51 @@ void main() {
     });
   });
 
-  group('LabPlayer crouch', () {
+  group('Player and solids that move', () {
+    test('a solid coming down shoves the body aside, not onto its roof', () {
+      // The bug this pins: a door closing on the player treated "overlapping
+      // and falling" as "landed on it" and put them 190 units up, standing on
+      // the door. Found while recording the README clips.
+      var door = const Rect.fromLTRB(-13, 430, 13, LabScene.floorTop);
+      final player = Player(
+        input: input,
+        solids: () => Solids(blocking: [LabScene.floor, door]),
+        spawnX: LabScene.spawnX,
+        floorTop: LabScene.floorTop,
+      );
+
+      // Stand in the doorway with the door up, then bring it down.
+      door = const Rect.fromLTRB(-13, 240, 13, 430);
+      step(player, input, source, frames: 10);
+      expect(player.y, closeTo(LabScene.floorTop, 0.001));
+
+      door = const Rect.fromLTRB(-13, 430, 13, LabScene.floorTop);
+      step(player, input, source, frames: 10);
+
+      expect(
+        player.y,
+        closeTo(LabScene.floorTop, 0.001),
+        reason: 'still on the ground, not on top of the door',
+      );
+      expect(player.bounds.overlaps(door), isFalse, reason: 'and out of it');
+    });
+
+    test('still lands on things it falls onto', () {
+      final player = playerWith(
+        const Solids(blocking: [LabScene.floor, LabScene.lowPlatform]),
+      );
+      player.position.setValues(LabScene.lowPlatform.center.dx, 300);
+
+      step(player, input, source, frames: 60);
+
+      expect(player.y, closeTo(LabScene.lowPlatform.top, 0.001));
+      expect(player.isGrounded, isTrue);
+    });
+  });
+
+  group('Player crouch', () {
     test('folds up, shrinking the collision box, not the sprite', () {
-      final player = playerWith(const LabSolids(blocking: [LabScene.floor]));
+      final player = playerWith(const Solids(blocking: [LabScene.floor]));
       step(player, input, source, frames: 5);
       final standing = player.bounds.height;
 
@@ -189,7 +233,7 @@ void main() {
     });
 
     test('crouched movement is slower', () {
-      final player = playerWith(const LabSolids(blocking: [LabScene.floor]));
+      final player = playerWith(const Solids(blocking: [LabScene.floor]));
       step(player, input, source, frames: 30);
 
       final start = player.x;
@@ -222,7 +266,7 @@ void main() {
     });
 
     test('cannot jump out of a crouch', () {
-      final player = playerWith(const LabSolids(blocking: [LabScene.floor]));
+      final player = playerWith(const Solids(blocking: [LabScene.floor]));
       step(
         player,
         input,
@@ -246,9 +290,7 @@ void main() {
     test('stays down while there is a ceiling in the way', () {
       // A beam with 80 units of headroom, off to the right of the spawn.
       const beam = Rect.fromLTRB(120, 400, 400, LabScene.floorTop - 80);
-      final player = playerWith(
-        const LabSolids(blocking: [LabScene.floor, beam]),
-      );
+      final player = playerWith(const Solids(blocking: [LabScene.floor, beam]));
 
       // Standing, the beam is a wall: you get stopped at its edge.
       step(
@@ -298,9 +340,9 @@ void main() {
     });
   });
 
-  group('LabPlayer.capture', () {
+  group('Player.capture', () {
     test('reports the pose the figure is drawing', () {
-      final player = playerWith(const LabSolids(blocking: [LabScene.floor]));
+      final player = playerWith(const Solids(blocking: [LabScene.floor]));
 
       step(player, input, source, frames: 5);
       expect(player.capture().state, PoseState.idle);
@@ -330,7 +372,7 @@ void main() {
     });
 
     test('the jump flag is an edge, recorded once', () {
-      final player = playerWith(const LabSolids(blocking: [LabScene.floor]));
+      final player = playerWith(const Solids(blocking: [LabScene.floor]));
       step(player, input, source, frames: 5);
 
       step(
@@ -347,9 +389,7 @@ void main() {
       // The distinction the whole approach rests on: what comes out is where
       // the body ended up after collision, not what the player asked for.
       const wall = Rect.fromLTRB(60, 400, 120, 700);
-      final player = playerWith(
-        const LabSolids(blocking: [LabScene.floor, wall]),
-      );
+      final player = playerWith(const Solids(blocking: [LabScene.floor, wall]));
 
       step(
         player,

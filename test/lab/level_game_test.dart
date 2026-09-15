@@ -4,15 +4,16 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/game/config.dart';
 import 'package:waraya/lab/lab_scene.dart';
-import 'package:waraya/lab/lab_settings.dart';
-import 'package:waraya/lab/shadow_lab_game.dart';
+import 'package:waraya/level/level.dart';
+import 'package:waraya/level/levels.dart';
+import 'package:waraya/level/level_game.dart';
 
 const double _dt = 1 / 60;
 
 /// Runs [frames] game frames, optionally parking the player at [x] first so
 /// the recorder sees a chosen path. Returns what the player's x was at the
 /// moment each frame was recorded.
-List<double> run(ShadowLabGame game, int frames, {double? x, double? crouch}) {
+List<double> run(LevelGame game, int frames, {double? x, double? crouch}) {
   final history = <double>[];
   for (var i = 0; i < frames; i++) {
     if (x != null) game.player.position.x = x;
@@ -27,20 +28,33 @@ List<double> run(ShadowLabGame game, int frames, {double? x, double? crouch}) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  ShadowLabGame gameWith({
+  LevelGame gameWith({
     double delaySeconds = 1,
     bool solid = true,
     bool kills = false,
   }) {
-    final settings = LabSettings()
-      ..delaySeconds = delaySeconds
-      ..shadowIsSolid = solid
-      ..shadowKills = kills;
-    return ShadowLabGame(settings: settings);
+    // A copy of the bench with the test's numbers: the level seeds the
+    // settings on load, so overriding them has to happen in the level.
+    final level = Level(
+      id: 'test',
+      name: Levels.lab.name,
+      teaches: Levels.lab.teaches,
+      delaySeconds: delaySeconds,
+      spawnX: Levels.lab.spawnX,
+      floorTop: Levels.lab.floorTop,
+      blocks: Levels.lab.blocks,
+      plates: Levels.lab.plates,
+      doors: Levels.lab.doors,
+      goal: Levels.lab.goal,
+      markers: Levels.lab.markers,
+      shadowIsSolid: solid,
+      shadowKills: kills,
+    );
+    return LevelGame(levels: [level]);
   }
 
-  group('ShadowLabGame', () {
-    testWithGame<ShadowLabGame>(
+  group('LevelGame', () {
+    testWithGame<LevelGame>(
       'the shadow does not exist until the delay has passed',
       gameWith,
       (game) async {
@@ -56,7 +70,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'the shadow walks the path the player walked, to the unit',
       gameWith,
       (game) async {
@@ -76,7 +90,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'the shadow holds the plate down and the door opens',
       gameWith,
       (game) async {
@@ -84,23 +98,23 @@ void main() {
         // Test 1, end to end: stand on the plate, walk away, and have your own
         // past press it for you.
         run(game, 60, x: LabScene.plate.center.dx);
-        expect(game.plate.pressedByPlayer, isTrue);
-        expect(game.plate.pressedByShadow, isFalse);
+        expect(game.plates.first.pressedByPlayer, isTrue);
+        expect(game.plates.first.pressedByShadow, isFalse);
 
         // Leave, and wait out the one-second delay somewhere else entirely.
         run(game, 20, x: 0);
 
-        expect(game.plate.pressedByPlayer, isFalse);
-        expect(game.plate.pressedByShadow, isTrue);
-        expect(game.door.wantsOpen, isTrue);
+        expect(game.plates.first.pressedByPlayer, isFalse);
+        expect(game.plates.first.pressedByShadow, isTrue);
+        expect(game.doors.first.wantsOpen, isTrue);
 
         // And the door actually travels far enough to walk through.
         run(game, 25, x: 0);
-        expect(game.door.isSolid, isFalse);
+        expect(game.doors.first.isSolid, isFalse);
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'a solid shadow is something to stand on, and only from above',
       gameWith,
       (game) async {
@@ -121,7 +135,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'with solidity off the shadow is scenery',
       () => gameWith(solid: false),
       (game) async {
@@ -139,7 +153,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'shadowKills reloads the scene on contact',
       () => gameWith(kills: true),
       (game) async {
@@ -154,13 +168,13 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>('reload puts everything back', gameWith, (
+    testWithGame<LevelGame>('reload puts everything back', gameWith, (
       game,
     ) async {
       await game.ready();
       run(game, 90, x: LabScene.plate.center.dx);
       expect(game.shadow.isActive, isTrue);
-      expect(game.plate.isPressed, isTrue);
+      expect(game.plates.first.isPressed, isTrue);
 
       game.reload();
       game.update(_dt);
@@ -168,12 +182,12 @@ void main() {
       expect(game.reloads, 1);
       expect(game.player.x, LabScene.spawnX);
       expect(game.shadow.isActive, isFalse);
-      expect(game.door.openFraction, 0);
-      expect(game.doorGoal.reached, isFalse);
-      expect(game.ledgeGoal.reached, isFalse);
+      expect(game.doors.first.openFraction, 0);
+      expect(game.goals.first.reached, isFalse);
+      expect(game.goals.last.reached, isFalse);
     });
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'the delay slider takes effect while the game runs',
       gameWith,
       (game) async {
@@ -192,7 +206,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'a monstrous first frame does not drop the player out of the world',
       gameWith,
       (game) async {
@@ -208,7 +222,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'walking off the end of the floor puts you back, not nowhere',
       gameWith,
       (game) async {
@@ -221,7 +235,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'the shadow replays a crouch, box and all',
       gameWith,
       (game) async {
@@ -250,7 +264,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'the shadow is smoothed between ticks without moving its hitbox',
       gameWith,
       (game) async {
@@ -277,7 +291,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'a hard landing shakes the camera, a step down does not',
       gameWith,
       (game) async {
@@ -297,7 +311,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'draws without blowing up, shadow and trail included',
       () => gameWith(),
       (game) async {
@@ -316,7 +330,7 @@ void main() {
       },
     );
 
-    testWithGame<ShadowLabGame>(
+    testWithGame<LevelGame>(
       'the viewport keeps the world height pinned, like the real game',
       gameWith,
       (game) async {

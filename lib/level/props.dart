@@ -4,23 +4,25 @@ import 'package:flame/components.dart';
 import 'package:flutter/foundation.dart';
 
 import '../shadow/shadow_recorder.dart';
-import 'lab_scene.dart';
+import 'level.dart';
 
-/// Every immovable grey box in one component. They never change, so there is
-/// no reason for each to carry its own transform.
-class LabBlocks extends PositionComponent {
-  LabBlocks({super.priority = -10});
+/// Every immovable block in one component. They never change within a level,
+/// so there is no reason for each to carry its own transform.
+class Blocks extends PositionComponent {
+  Blocks(this.rects, {super.priority = -10});
 
-  final Paint _fill = Paint()..color = LabScene.blockFill;
-  final Paint _top = Paint()..color = LabScene.blockTop;
+  final List<Rect> rects;
+
+  final Paint _fill = Paint()..color = Palette.blockFill;
+  final Paint _top = Paint()..color = Palette.blockTop;
   final Paint _edge = Paint()
-    ..color = LabScene.blockEdge
+    ..color = Palette.blockEdge
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
 
   @override
   void render(Canvas canvas) {
-    for (final rect in LabScene.blocking) {
+    for (final rect in rects) {
       canvas.drawRect(rect, _fill);
       // A lighter cap on the standable face, so "you can land here" reads
       // without any art.
@@ -30,36 +32,50 @@ class LabBlocks extends PositionComponent {
   }
 }
 
-/// Test 1's plate. Held down by any body resting on it — the player's or,
-/// crucially, the shadow's.
+/// A plate. Held down by any body resting on it — the player's or, crucially,
+/// the shadow's.
 class PressurePlate extends PositionComponent {
-  PressurePlate({super.priority = -6});
+  PressurePlate(this.spec, {super.priority = -6});
+
+  final PlateSpec spec;
 
   bool pressedByPlayer = false;
   bool pressedByShadow = false;
 
   bool get isPressed => pressedByPlayer || pressedByShadow;
 
+  /// Id of the door this plate holds open.
+  String get opens => spec.opens;
+
+  Rect get trigger => spec.trigger;
+
+  void reset() {
+    pressedByPlayer = false;
+    pressedByShadow = false;
+  }
+
   @override
   void render(Canvas canvas) {
-    final rect = isPressed ? LabScene.plate.translate(0, 6) : LabScene.plate;
+    final rect = isPressed ? spec.area.translate(0, 6) : spec.area;
     canvas.drawRect(
       rect,
-      Paint()..color = isPressed ? LabScene.plateDown : LabScene.plateUp,
+      Paint()..color = isPressed ? Palette.plateDown : Palette.plateUp,
     );
     canvas.drawRect(
       rect,
       Paint()
-        ..color = LabScene.blockEdge
+        ..color = Palette.blockEdge
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
   }
 }
 
-/// Test 1's door. Open only while the plate is held.
-class LabDoor extends PositionComponent {
-  LabDoor({super.priority = -6});
+/// A door. Open only while its plate is held.
+class Door extends PositionComponent {
+  Door(this.spec, {super.priority = -6});
+
+  final DoorSpec spec;
 
   /// How fast it travels, in fractions of its own height per second. Not a
   /// feel decision — it just needs to be visibly a door opening rather than a
@@ -71,11 +87,13 @@ class LabDoor extends PositionComponent {
   double _open = 0;
   double get openFraction => _open;
 
+  String get id => spec.id;
+
   /// Solid until it is nearly all the way up, so squeezing through a door
   /// that is still closing is not a thing.
   bool get isSolid => _open < 0.9;
 
-  Rect get bounds => LabScene.door.translate(0, -LabScene.door.height * _open);
+  Rect get bounds => spec.closed.translate(0, -spec.closed.height * _open);
 
   void reset() {
     _open = 0;
@@ -92,11 +110,11 @@ class LabDoor extends PositionComponent {
 
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(bounds, Paint()..color = LabScene.doorColor);
+    canvas.drawRect(bounds, Paint()..color = Palette.doorColor);
     canvas.drawRect(
       bounds,
       Paint()
-        ..color = LabScene.blockEdge
+        ..color = Palette.blockEdge
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
@@ -105,13 +123,14 @@ class LabDoor extends PositionComponent {
 
 /// A square that fills in when the player reaches it.
 ///
-/// Not a level-completion system — the plan forbids building one here. It is
-/// the cheapest possible answer to "did that work?", so the three Friday tests
-/// have a moment to point at.
-class LabGoal extends PositionComponent {
-  LabGoal({required this.area, super.priority = -6});
+/// With [endsLevel] it is the way out; without, it is a marker — something
+/// worth reaching that does not finish anything, which is how the tuning
+/// bench shows its two targets without becoming a level to be won.
+class Goal extends PositionComponent {
+  Goal({required this.area, this.endsLevel = true, super.priority = -6});
 
   final Rect area;
+  final bool endsLevel;
   bool reached = false;
 
   void reset() => reached = false;
@@ -121,7 +140,7 @@ class LabGoal extends PositionComponent {
     canvas.drawRect(
       area,
       Paint()
-        ..color = reached ? LabScene.goalReached : LabScene.goalIdle
+        ..color = reached ? Palette.goalReached : Palette.goalIdle
         ..style = reached ? PaintingStyle.fill : PaintingStyle.stroke
         ..strokeWidth = 3,
     );
@@ -131,9 +150,9 @@ class LabGoal extends PositionComponent {
 /// The path the shadow is about to walk — literally the unplayed contents of
 /// the buffer.
 ///
-/// This is the debug toggle the plan is least sure about: seeing the future
-/// makes the mechanic instantly legible, and may also delete the puzzle. That
-/// is a question for Friday, which is why it is a switch and not a decision.
+/// A debug toggle the plan was least sure about: seeing the future makes the
+/// mechanic instantly legible, and may also delete the puzzle. That is a
+/// question for playing, which is why it is a switch and not a decision.
 class ShadowTrail extends PositionComponent {
   ShadowTrail({
     required this.recorder,
@@ -145,7 +164,7 @@ class ShadowTrail extends PositionComponent {
   final ValueGetter<bool> enabled;
 
   final Paint _line = Paint()
-    ..color = LabScene.trailColor
+    ..color = Palette.trailColor
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
 
@@ -156,8 +175,7 @@ class ShadowTrail extends PositionComponent {
   /// Every one of them, not every sixth. Subsampling looked like a free
   /// saving and was not: the buffer shifts by one entry per tick, so "every
   /// sixth" picks a different six each tick and the whole line shimmers, with
-  /// the ends jumping a tenth of a second's travel back and forth. A few
-  /// hundred `lineTo`s are nothing next to that.
+  /// the ends jumping a tenth of a second's travel back and forth.
   Iterable<Offset> points() =>
       recorder.pending.map((s) => Offset(s.x, s.y - 48));
 
