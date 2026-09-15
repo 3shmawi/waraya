@@ -41,9 +41,23 @@ class Playthrough {
   static const double dt = 1 / 60;
 
   double elapsed = 0;
-  double? finishedAt;
 
-  void play(List<Move> moves) {
+  /// When each level was finished. A list rather than a single time because
+  /// the campaign run-through finishes five of them in one sitting.
+  final List<double> finishes = [];
+
+  /// When the first level was finished, or null if none was.
+  double? get finishedAt => finishes.isEmpty ? null : finishes.first;
+
+  bool _wasComplete = false;
+
+  /// Feeds [moves] to the game one frame at a time.
+  ///
+  /// With [stopWhenComplete], input stops the moment the level is finished —
+  /// which is what a player does, and what keeps a solution that overruns its
+  /// own ending from walking the *next* level's player away from their spawn
+  /// before that level has started.
+  void play(List<Move> moves, {bool stopWhenComplete = false}) {
     for (final move in moves) {
       final frames = (move.seconds / dt).round();
       for (var frame = 0; frame < frames; frame++) {
@@ -55,7 +69,9 @@ class Playthrough {
         );
         game.update(dt);
         elapsed += dt;
-        if (game.completed && finishedAt == null) finishedAt = elapsed;
+        if (game.completed && !_wasComplete) finishes.add(elapsed);
+        _wasComplete = game.completed;
+        if (stopWhenComplete && game.completed) return;
       }
     }
   }
@@ -81,3 +97,60 @@ class ScriptedInput implements InputSource {
   @override
   InputIntent poll() => next;
 }
+
+/// The recorded solutions, one per level.
+///
+/// They live here rather than inside a test because two tests need them: the
+/// per-level ones, which prove each puzzle can be finished, and the campaign
+/// run-through, which proves they can be finished one after another in the
+/// real game with the real level list.
+const walkthroughs = <String, List<Move>>{
+  'press-it-early': [
+    Move.right(1.8), // out to the plate, the wrong way from the door
+    Move(1.2), // stand on it
+    Move.left(4.8), // all the way to the door, and wait there
+  ],
+  'stand-on-yourself': [
+    Move.left(3.3), // out to the mark, under the ledge
+    Move(2.5), // stand there long enough to leave a solid shadow
+    Move.right(0.9), // get out of your own way
+    Move(0.8), // wait for it to appear
+    Move.left(0.45), // run at it
+    Move.left(0.55, jump: true), // up onto its head
+    Move.left(0.6, jump: true), // and off the head onto the ledge
+    Move.left(1.5), // along to the way out
+  ],
+  'not-the-same-way-back': [
+    Move.left(1.9), // into the corridor, onto the plate
+    Move(1.0), // hold it down
+    Move.left(0.5), // on to the dead end
+    Move.left(0.5, jump: true), // up onto the step
+    Move(0.25),
+    Move.right(0.3), // a run at the gap
+    Move.right(0.75, jump: true), // across onto the upper lane
+    Move.right(1.7), // home, above your own footprints
+    Move.right(2.5), // down off the end and through the door
+  ],
+  'take-it-with-you': [
+    Move.right(1.9), // out to the plate, away from the drop
+    Move(2.5), // stand on it long enough to be worth something
+    Move.left(2.9), // back along the shelf
+    Move.left(0.7), // off the end, committing
+    Move.left(1.0), // to the door at the bottom
+    Move.left(1.2), // through it, once your past opens it
+  ],
+  'both-at-once': [
+    Move.left(1.1), // back to the plate
+    Move(1.2), // hold it
+    Move.right(2.0), // to the door, and wait at it
+    Move.right(1.2), // through, once the shadow takes over the plate
+    Move.right(0.6), // out to the mark, short of the ledge
+    Move(2.0), // stand there: this is the second job
+    Move.left(0.9), // out of your own way
+    Move(0.6),
+    Move.right(0.45), // run at what you left behind
+    Move.right(0.55, jump: true), // onto its head
+    Move.right(0.6, jump: true), // and off the head onto the ledge
+    Move.right(1.5), // along to the way out
+  ],
+};

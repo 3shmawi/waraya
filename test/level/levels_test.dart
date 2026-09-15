@@ -33,12 +33,7 @@ void main() {
       build(Levels.pressItEarly),
       (game) async {
         await game.ready();
-        final run = start(game)
-          ..play(const [
-            Move.right(1.8), // out to the plate, the wrong way from the door
-            Move(1.2), // stand on it
-            Move.left(4.8), // all the way to the door, and wait there
-          ]);
+        final run = start(game)..play(walkthroughs['press-it-early']!);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -63,17 +58,7 @@ void main() {
       build(Levels.standOnYourself),
       (game) async {
         await game.ready();
-        final run = start(game)
-          ..play(const [
-            Move.left(3.3), // out to the mark, under the ledge
-            Move(2.5), // stand there long enough to leave a solid shadow
-            Move.right(0.9), // get out of your own way
-            Move(0.8), // wait for it to appear
-            Move.left(0.45), // run at it
-            Move.left(0.55, jump: true), // up onto its head
-            Move.left(0.6, jump: true), // and off the head onto the ledge
-            Move.left(1.5), // along to the way out
-          ]);
+        final run = start(game)..play(walkthroughs['stand-on-yourself']!);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -104,18 +89,7 @@ void main() {
       build(Levels.notTheSameWayBack),
       (game) async {
         await game.ready();
-        final run = start(game)
-          ..play(const [
-            Move.left(1.9), // into the corridor, onto the plate
-            Move(1.0), // hold it down
-            Move.left(0.5), // on to the dead end
-            Move.left(0.5, jump: true), // up onto the step
-            Move(0.25),
-            Move.right(0.3), // a run at the gap
-            Move.right(0.75, jump: true), // across onto the upper lane
-            Move.right(1.7), // home, above your own footprints
-            Move.right(2.5), // down off the end and through the door
-          ]);
+        final run = start(game)..play(walkthroughs['not-the-same-way-back']!);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -140,12 +114,93 @@ void main() {
     );
   });
 
+  group('take it with you', () {
+    testWithGame<LevelGame>(
+      'press it on the shelf, then jump into a hole you cannot climb out of',
+      build(Levels.takeItWithYou),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(walkthroughs['take-it-with-you']!);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'jumping in without pressing it first leaves you in the hole',
+      build(Levels.takeItWithYou),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(const [Move.left(9)]);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+        expect(game.doors.first.openFraction, 0);
+        expect(
+          game.player.y,
+          greaterThan(Levels.takeItWithYou.floorTop),
+          reason: 'and down in the pit, with only R to get out',
+        );
+      },
+    );
+  });
+
+  group('both at once', () {
+    testWithGame<LevelGame>(
+      'one shadow, two jobs, in the order you laid them down',
+      build(Levels.bothAtOnce),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(walkthroughs['both-at-once']!);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'the door still will not open for someone who skipped the plate',
+      build(Levels.bothAtOnce),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(const [Move.right(8)]);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+        expect(game.doors.first.openFraction, 0);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'and the ledge past it is still out of reach on your own legs',
+      build(Levels.bothAtOnce),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            // The plate half, played properly, to get through the door.
+            Move.left(1.1),
+            Move(1.2),
+            Move.right(2.0),
+            Move.right(1.2),
+            // Then the honest attempt: run at the ledge and jump.
+            Move.right(1.2),
+            Move.right(0.8, jump: true),
+            Move.right(1.5),
+            Move.right(0.8, jump: true),
+            Move.right(1.5),
+          ]);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+  });
+
   group('the campaign holds together', () {
     test('teaches one thing at a time, in order', () {
       expect(Levels.campaign.first.id, 'press-it-early');
-      expect(Levels.campaign.map((l) => l.id).toSet(), hasLength(3));
-      // Only the third level can kill you: the first two are for working the
-      // mechanic out without being punished for it.
+      expect(Levels.campaign.map((l) => l.id).toSet(), hasLength(5));
+      // Exactly one level can kill you, and it is not one of the first two:
+      // the opening levels are for working the mechanic out without being
+      // punished for it.
+      expect(Levels.campaign.where((l) => l.shadowKills), hasLength(1));
       expect(Levels.campaign.take(2).any((l) => l.shadowKills), isFalse);
     });
 
