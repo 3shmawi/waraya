@@ -109,11 +109,76 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(200, 548, 280, 620),
   );
 
+  /// **Use four: the sacrifice.** A drop with no way back up.
+  ///
+  /// The plate is on the shelf you start on; the door is at the bottom of a
+  /// fall you cannot climb out of. So the whole level is one decision made
+  /// before you can see whether it worked: stand on the plate long enough,
+  /// then throw yourself off, and wait in a hole for a body that is four
+  /// seconds behind you to do the thing you can no longer do.
+  ///
+  /// Get it wrong and there is no death and no penalty — just a hole, and R.
+  /// That is the point. The cost is commitment, not damage.
+  static final Level takeItWithYou = Level(
+    id: 'take-it-with-you',
+    name: 'خُد قرارك واقفز',
+    teaches: 'اللي تحت مفيش رجوع منه. اتأكد إنك سيبت حاجة وراك.',
+    delaySeconds: 4.5,
+    // On the shelf, not the floor: this level starts you above the level it
+    // is really about.
+    spawnX: 0,
+    floorTop: 430,
+    blocks: [
+      _ground(-900, 500),
+      // The shelf, and the only way off it is down.
+      const Rect.fromLTRB(-200, 430, 500, 470),
+    ],
+    // At the far end from the drop, for the reason `pressItEarly` learned the
+    // hard way: a plate on the way to where you are going is a plate you press
+    // by accident, and a puzzle you solve by holding one key.
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(340, 418, 460, 430), opens: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-420, 430, -394, 620)),
+    ],
+    goal: const Rect.fromLTRB(-620, 548, -540, 620),
+  );
+
+  /// **All of it at once.** A door you need your past for, and then a ledge
+  /// you need your past for, from the same three seconds of history.
+  ///
+  /// Nothing new is introduced. The only new thing is that both setups are in
+  /// flight at the same time, and the order they were laid down in is the
+  /// order they come back in.
+  static final Level bothAtOnce = Level(
+    id: 'both-at-once',
+    name: 'الاتنين مع بعض',
+    teaches: 'ظل واحد، مهمتين. الترتيب اللي عملتهم بيه هو اللي راجع بيه.',
+    delaySeconds: 3,
+    spawnX: -200,
+    floorTop: _floor,
+    blocks: [
+      _ground(-900, 900),
+      // Too high to reach on your own legs; not too high from your own head.
+      const Rect.fromLTRB(380, 430, 800, 470),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-500, 608, -380, 620), opens: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-100, 430, -74, 620)),
+    ],
+    goal: const Rect.fromLTRB(600, 358, 680, 430),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
     standOnYourself,
     notTheSameWayBack,
+    takeItWithYou,
+    bothAtOnce,
   ];
 
   /// The Phase 2 tuning bench, as a level so it runs on the same code as the
