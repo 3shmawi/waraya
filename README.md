@@ -72,8 +72,9 @@ reasoning behind each phase, is in [`CLAUDE.md`](CLAUDE.md).
 
 ## Playing it
 
-**<https://3shmawi.github.io/waraya/>** — the five puzzles, in the browser, no
-install. Every push to `main` republishes it (`.github/workflows/pages.yml`).
+**<https://3shmawi.github.io/waraya/>** — the introduction, and one button to
+the game at `/play/`. In the browser, no install. Every push to `main`
+republishes both (`.github/workflows/pages.yml`).
 
 Arrows or **WASD** to walk, **space** to jump, **down** to crouch, **R** to put
 the level back if you have painted yourself into a corner — which in one of
@@ -81,8 +82,12 @@ them is the intended way to find out you did. On a phone: hold the bottom-left
 or bottom-right of the screen to walk, tap the upper half to jump, hold the
 strip between the two walking halves to crouch.
 
-There is nothing on screen telling you any of that, and no menu. That is a
-Phase 5 problem, not an oversight.
+The game itself says none of that: no menu, no prompts, and that stays a Phase
+5 question rather than something bolted onto a level. So the two places a
+player is already waiting or reading say it instead — the landing page, and the
+loading splash. A CanvasKit build takes a couple of megabytes to paint the
+first frame, and that wait is the one moment in the whole game with room for a
+sentence.
 
 ## Running it
 
