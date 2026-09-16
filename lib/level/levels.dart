@@ -20,8 +20,19 @@ abstract final class Levels {
   static const double _floor = 620;
 
   /// Ground from [left] to [right], deep enough that nothing falls through it.
+  /// How far past the ends of the play area the ground keeps going.
+  ///
+  /// The camera shows about 640 world units either side of the player on a
+  /// 16:9 screen and more on a wider one, so a ground rect that stops at the
+  /// edge of the puzzle is a ledge you can see over and walk off. Nothing in
+  /// any level uses the end of the ground for anything, and falling off the
+  /// map is not a failure any of them meant to have, so it simply carries on
+  /// past where the camera can look.
+  static const double _offstage = 900;
+
+  /// Ground under the whole of [left] to [right], and well past both ends.
   static Rect _ground(double left, double right) =>
-      Rect.fromLTRB(left, _floor, right, 1200);
+      Rect.fromLTRB(left - _offstage, _floor, right + _offstage, 1200);
 
   /// **Use one: the button.** A plate too far from the door to use yourself.
   ///
@@ -103,8 +114,19 @@ abstract final class Levels {
     plates: const [
       PlateSpec(area: Rect.fromLTRB(-340, 608, -240, 620), opens: 'gate'),
     ],
+    // Latched. Without it the level is a stopwatch: the door is held open only
+    // for as long as you happened to stand on the plate, that window arrives
+    // exactly five seconds later, and the lane you come home along is a
+    // sixteen-unit shelf with your own past walking up it behind you. Arrive a
+    // beat late and there is no door, no room to dodge and nothing to do but
+    // watch yourself arrive. The lesson here is "your old path is deadly, find
+    // another one" — not "hit this one second".
     doors: const [
-      DoorSpec(id: 'gate', closed: Rect.fromLTRB(100, 430, 126, 620)),
+      DoorSpec(
+        id: 'gate',
+        closed: Rect.fromLTRB(100, 430, 126, 620),
+        latches: true,
+      ),
     ],
     goal: const Rect.fromLTRB(200, 548, 280, 620),
   );
@@ -172,6 +194,92 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(600, 358, 680, 430),
   );
 
+  /// **Use five: the shape.** Your shadow is the shape you were in, and there
+  /// is exactly one place you were allowed to be a full-height one.
+  ///
+  /// A roof eighty units off the floor runs almost the whole level. A standing
+  /// body is ninety-six and does not fit; a crouched one is sixty-nine and
+  /// does. So the whole level is walked bent over — except for one gap in the
+  /// roof, which is the only place in the level where you can stand up.
+  ///
+  /// The way out is on top of the roof, and the roof is out of reach of any
+  /// jump made from the floor. The only thing tall enough to climb is a
+  /// standing body, and the only place you are allowed to leave one is that
+  /// gap. So the gap is where the ladder has to be built, and it has to be
+  /// built before you need it, from the one spot you can build it in.
+  ///
+  /// Nothing here is a stopwatch. The shadow stands in the gap for exactly as
+  /// long as you stood there, so a player who wants more room simply waits
+  /// longer — the level is made harder by having more to work out, not by
+  /// giving less time to do it in.
+  static final Level goInLow = Level(
+    id: 'go-in-low',
+    name: 'خُش واطي',
+    teaches: 'تحت السقف مفيش وقوف. المكان الوحيد اللي تقف فيه هو مكان السلّمة.',
+    delaySeconds: 4,
+    spawnX: 330,
+    floorTop: _floor,
+    blocks: [
+      _ground(-600, 600),
+      // The roof, in two pieces. Its underside is eighty above the floor —
+      // crouched fits, standing does not. Its top is a hundred and sixty
+      // above, and a jump lifts a hundred and thirty, so the floor cannot
+      // reach it and the only way up is over something.
+      const Rect.fromLTRB(-420, 460, -180, 540),
+      const Rect.fromLTRB(0, 460, 220, 540),
+    ],
+    // The gap between those two, -180 to 0, is the only headroom in the level.
+    // A hundred and eighty wide: two forty-four-wide bodies, the one you leave
+    // and the one that climbs it, with room to take a step.
+    goal: const Rect.fromLTRB(120, 388, 200, 460),
+  );
+
+  /// **Use six: the two jobs at once, from one second of your past.** You end
+  /// up standing on the very thing that is holding your way out open.
+  ///
+  /// The shelf is out of reach of any jump from the floor, so the only way up
+  /// is over a standing body, and the only standing body available is the one
+  /// on the plate. That plate holds the door on the shelf. So the body under
+  /// your feet and the hand on the door are the same body, in the same
+  /// seconds — and the moment it stops standing there, the door shuts and you
+  /// are on a shelf with a wall.
+  ///
+  /// Which makes the length of time you stood on that plate the length of time
+  /// you have to climb yourself, run the shelf and get through. That is the
+  /// lesson, and it is a lever the player holds rather than a window they have
+  /// to hit: stand longer, get longer. A one-second press puts you on the shelf
+  /// looking at a shut door, which is a failure you can read off the screen and
+  /// fix without being told.
+  ///
+  /// Nothing kills here. Getting it wrong costs the walk back, not a life.
+  static final Level holdYourOwnDoor = Level(
+    id: 'hold-your-own-door',
+    name: 'واقف على اللي فاتحلك',
+    teaches: 'قد ما وقفت على الزرار، قد ما الباب هيفضل مفتوح.',
+    delaySeconds: 5,
+    spawnX: 400,
+    floorTop: _floor,
+    blocks: [
+      _ground(-600, 600),
+      // Its top is a hundred and ninety above the floor and a jump lifts a
+      // hundred and thirty, so the floor cannot reach it from anywhere along
+      // its length.
+      const Rect.fromLTRB(60, 430, 520, 470),
+    ],
+    // Far to the left of everything, in the open: you need floor to take a
+    // run at your own head from, and the shelf overhead would cap the jump.
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-100, 608, 0, 620), opens: 'gate'),
+    ],
+    // A hundred and seventy tall, standing on the shelf. A jump from the shelf
+    // lifts a hundred and thirty, so it cannot be hopped over — otherwise the
+    // whole point of holding the plate long enough evaporates.
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(300, 260, 326, 430)),
+    ],
+    goal: const Rect.fromLTRB(420, 358, 500, 430),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -179,6 +287,8 @@ abstract final class Levels {
     notTheSameWayBack,
     takeItWithYou,
     bothAtOnce,
+    goInLow,
+    holdYourOwnDoor,
   ];
 
   /// The Phase 2 tuning bench, as a level so it runs on the same code as the

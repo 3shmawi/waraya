@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ورايا · waraya</title>
+<meta name="description" content="ورايا — لعبة ظل بيعيد اللي عملته بعد تأخير ثابت. خمس مراحل في المتصفح، من غير تحميل.">
+<meta name="theme-color" content="#E59D00">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+
+<meta property="og:title" content="ورايا · waraya">
+<meta property="og:description" content="انت مش بتتحكم في ظلك. بتتحكم في اللي هيعمله بعد شوية.">
+<meta property="og:image" content="media/lit-level.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+
+<style>
+  @font-face {
+    font-family: 'Cairo';
+    src: url('fonts/Cairo-Regular.ttf') format('truetype');
+    font-display: swap;
+  }
+
+  :root {
+    --sky-top: #F7C032;
+    --sky: #E59D00;
+    --sky-low: #D28C02;
+    --ink: #14100A;
+    --ink-soft: #3A2408;
+    --night: #0E0A10;
+    --rim: #D9A25C;
+    --ghost: #DCE4EE;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--night);
+    line-height: 1.75;
+  }
+
+  /* The hero is the game's own sky, so the page and the thing it is
+     introducing are lit by the same sun. */
+  .hero {
+    background: linear-gradient(var(--sky-top), var(--sky) 62%, var(--sky-low));
+    padding: clamp(40px, 9vw, 88px) 20px clamp(52px, 10vw, 96px);
+    text-align: center;
+    position: relative;
+  }
+  .hero::after {
+    /* The lit ground line the whole art direction rests on. Brighter than the
+       in-game rim on purpose: against the sky's own bottom colour the warm
+       brown disappears, and the edge is the whole point. */
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 3px;
+    background: #FFE7B0;
+  }
+
+  .mark { width: clamp(84px, 16vw, 112px); height: auto; filter: drop-shadow(0 8px 22px rgba(20,10,0,.25)); }
+
+  h1 {
+    margin: 18px 0 2px;
+    font-size: clamp(42px, 11vw, 78px);
+    font-weight: 400;
+    letter-spacing: .01em;
+  }
+  .latin {
+    margin: 0;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-size: 13px;
+    letter-spacing: .42em;
+    text-transform: lowercase;
+    color: rgba(20,16,10,.55);
+    direction: ltr;
+  }
+
+  .pitch {
+    margin: 26px auto 0;
+    max-width: 26ch;
+    font-size: clamp(19px, 5vw, 27px);
+    line-height: 1.65;
+    color: var(--ink);
+  }
+  /* Two lines, and the turn between them is the whole idea. Emphasis is
+     colour only: a highlight box behind the second line broke into ragged
+     pieces every time the phrase wrapped, which it does at most widths. */
+  .pitch .a { display: block; color: rgba(20, 16, 10, .62); }
+  .pitch .b { display: block; color: var(--ink); }
+
+  .play {
+    display: inline-block;
+    margin-top: 30px;
+    padding: 15px 46px;
+    border-radius: 999px;
+    background: var(--night);
+    color: #FFE7B0;
+    font-family: inherit;
+    font-size: 20px;
+    text-decoration: none;
+    border: 0;
+    transition: transform .14s ease, box-shadow .14s ease;
+    box-shadow: 0 8px 24px rgba(20,10,0,.28);
+  }
+  .play:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(20,10,0,.34); }
+  .play:active { transform: translateY(0); }
+  .play:focus-visible { outline: 3px solid var(--night); outline-offset: 4px; }
+
+  .free { margin: 12px 0 0; font-size: 14px; color: rgba(20,16,10,.62); }
+
+  /* Below the ground line the page goes into the dark, which is where the
+     game's own silhouettes live. */
+  main { background: var(--night); color: #E6DACB; }
+  section { max-width: 720px; margin: 0 auto; padding: clamp(40px, 8vw, 72px) 22px; }
+
+  h2 {
+    font-size: clamp(22px, 5.5vw, 30px);
+    font-weight: 400;
+    margin: 0 0 18px;
+    color: #FFE7B0;
+  }
+  p { margin: 0 0 16px; color: #D6C8B6; font-size: 17px; }
+  b { color: #FFE7B0; font-weight: 400; }
+
+  figure { margin: 0; }
+  figure img { width: 100%; height: auto; display: block; border-radius: 12px; border: 1px solid rgba(217,162,92,.28); }
+  figcaption { margin-top: 12px; font-size: 14px; color: #9A8B7A; text-align: center; }
+
+  .rule { height: 1px; background: rgba(217,162,92,.22); border: 0; margin: 0; }
+
+  ul { margin: 0; padding: 0 20px 0 0; }
+  li { margin-bottom: 12px; color: #D6C8B6; }
+
+  .controls { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .card { background: rgba(217,162,92,.07); border: 1px solid rgba(217,162,92,.2); border-radius: 12px; padding: 20px 22px; }
+  .card h3 { margin: 0 0 12px; font-size: 16px; font-weight: 400; color: #FFE7B0; }
+  .card div { font-size: 15px; color: #C9BBA9; margin-bottom: 7px; }
+  kbd {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 13px;
+    background: rgba(255,231,176,.12);
+    border: 1px solid rgba(255,231,176,.22);
+    border-radius: 5px;
+    padding: 2px 7px;
+    color: #FFE7B0;
+    direction: ltr;
+    display: inline-block;
+  }
+
+  footer { padding: 34px 22px 52px; text-align: center; font-size: 14px; color: #8A7C6C; }
+  /* The footer sits on the dark, so the button inverts: the hero's black pill
+     would be a black pill on black. */
+  footer .play { background: #FFE7B0; color: var(--night); box-shadow: 0 8px 22px rgba(0,0,0,.4); }
+  footer a { color: #D9A25C; }
+  a { color: #E8B55E; }
+
+  /* The English block reads left to right inside an otherwise Arabic page. */
+  .en { direction: ltr; text-align: left; }
+  .en p { font-family: system-ui, -apple-system, sans-serif; font-size: 15.5px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <svg class="mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="waraya">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#F7C032"/>
+        <stop offset="0.62" stop-color="#E59D00"/>
+        <stop offset="1" stop-color="#D28C02"/>
+      </linearGradient>
+      <clipPath id="frame"><rect width="100" height="100" rx="22"/></clipPath>
+      <g id="body" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
+        <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/>
+        <circle cx="-6.1" cy="28.4" r="4.3" stroke="none"/>
+        <path d="M0 52.2 L-7 65 L-10 78" fill="none" stroke-width="3.8"/>
+        <path d="M0 52.2 L5.5 65.5 L10.5 74.5" fill="none" stroke-width="3.8"/>
+        <path d="M-4.6 34.3 L-10.5 43 L-13.5 50.5" fill="none" stroke-width="3.2"/>
+        <path d="M-4.6 34.3 L2 43.5 L6 50.5" fill="none" stroke-width="3.2"/>
+      </g>
+    </defs>
+    <g clip-path="url(#frame)">
+      <rect width="100" height="100" fill="url(#sky)"/>
+      <use href="#body" x="70" color="#DCE4EE" opacity="0.30"/>
+      <use href="#body" x="58" color="#DCE4EE" opacity="0.55"/>
+      <use href="#body" x="44" color="#07050A"/>
+      <rect x="0" y="78" width="100" height="22" fill="#0E0A10"/>
+      <rect x="0" y="78" width="100" height="1.6" fill="#D9A25C"/>
+    </g>
+  </svg>
+
+  <h1>ورايا</h1>
+  <p class="latin">waraya</p>
+
+  <p class="pitch">
+    <span class="a">انت مش بتتحكم في ظلك.</span>
+    <span class="b">بتتحكم في اللي هيعمله بعد شوية.</span>
+  </p>
+
+  <a class="play" href="play/">إلعب دلوقتي</a>
+  <p class="free">في المتصفح · من غير تحميل · موبايل وكمبيوتر</p>
+</header>
+
+<main>
+  <section>
+    <h2>الفكرة</h2>
+    <p>
+      ظلك بيعيد كل حاجة عملتها، بعد كام ثانية ثابتة. وهو ماشي بيعيد، بيبقى
+      <b>حاجة حقيقية في الدنيا</b> — تقف عليه، يقف في طريقك، أو يمسكك.
+    </p>
+    <p>
+      يعني لو عايز زرار يفضل مدوس هناك، لازم تروح تقف عليه انت بنفسك قبلها
+      بشوية، وبعدين تمشي وتكون في مكان تاني لما نفسك القديمة توصل وتدوسه. فبتقضي
+      اللعبة وانت بتعمل حاجات شكلها ملهاش لازمة، وانت عارف إنها الحل لمشكلة
+      لسه موصلتش لها.
+    </p>
+    <p>
+      <b>مفيش زرار تسجيل ومفيش رجوع بالوقت.</b> التأخير شغال سواء انت جاهز أو لأ،
+      وده اللي بيخلي الإحساس أقرب لإنك متطارد من إنه لغز هادي.
+    </p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <figure>
+      <img src="media/lit-level.jpg" alt="اللاعب أسود واقف قدام باب مقفول، وظله الفاتح بيجري ناحية الزرار وراه" loading="lazy">
+      <figcaption>المرحلة الأولى. الأسود ده انت. الفاتح ده انت كمان، من تلات ثواني ونص.</figcaption>
+    </figure>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>التحكم</h2>
+    <div class="controls">
+      <div class="card">
+        <h3>كمبيوتر</h3>
+        <div><kbd>A</kbd> <kbd>D</kbd> أو الأسهم — مشي</div>
+        <div><kbd>Space</kbd> — نطة. امسكها تنط أعلى</div>
+        <div><kbd>S</kbd> أو سهم تحت — قعدة</div>
+        <div><kbd>R</kbd> — إعادة المرحلة</div>
+      </div>
+      <div class="card">
+        <h3>موبايل</h3>
+        <div>المس تحت يمين أو تحت شمال — مشي</div>
+        <div>المس النص الفوقاني — نطة</div>
+        <div>الشريط اللي بين نصين المشي — قعدة</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>عن المشروع</h2>
+    <p>
+      خمس مراحل لحد دلوقتي، كل واحدة بتعلّم استخدام واحد للفكرة وبعدين تسيبه:
+      الزرار، المنصة، العقبة، التضحية، وبعدين الاتنين مع بعض. التأخير بيتغير من
+      مرحلة للي بعدها — نفس التصميم بتأخير تاني بيبقى لغز تاني.
+    </p>
+    <p>
+      المكان مصر المعاصرة، مش مصر القديمة. كل حاجة غامقة في الصورة فوق دي صورة
+      فوتوغرافية لمكان حقيقي، متقصوصة silhouette ومتحطة في طبقات.
+    </p>
+    <p>
+      مشروع شخص واحد، يوم في الأسبوع، بـ<bdi>Flutter</bdi> و<a href="https://flame-engine.org"><bdi>Flame</bdi></a>.
+      الكود كله مفتوح على <a href="https://github.com/3shmawi/waraya"><bdi>GitHub</bdi></a>.
+    </p>
+
+    <div class="en">
+      <p>
+        <b>In English:</b> you do not control your shadow — you control what it
+        will do a few seconds from now. It repeats everything you did, that long
+        ago, and it is a real thing in the world while it does it: something to
+        stand on, something in your way, something that can catch you. Five
+        puzzles, in the browser, no install. Built in Flutter and Flame, one day
+        a week. <a href="https://github.com/3shmawi/waraya">Source on GitHub.</a>
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p><a class="play" href="play/" style="font-size:17px;padding:12px 38px">إلعب</a></p>
+  <p style="margin-top:26px">ورايا · <a href="https://github.com/3shmawi/waraya">github.com/3shmawi/waraya</a></p>
+</footer>
+
+</body>
+</html>

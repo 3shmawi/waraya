@@ -1,0 +1,86 @@
+# Publishes the site to GitHub Pages, so a link is enough to play the game.
+#
+# Two things go up: the hand-written landing page from site/ at the root, and
+# the Flutter build under play/. The landing page is where someone finds out
+# what the game is and which keys move them, because the game itself has no
+# menu and says nothing.
+#
+# The campaign is what gets built, not the Phase 1 walker and not the tuning
+# bench: a link handed to someone is a link to the game. The bench carries debug
+# sliders that would only invite fiddling with numbers the levels are measured
+# against.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  # So a deploy can be forced without pushing anything.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. A running one is left to finish rather than cancelled —
+# cancelling mid-deploy is how a half-published site happens.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Same pin as checks.yml and .fvmrc.
+          flutter-version: 3.44.9
+          channel: stable
+          cache: true
+
+      # `enablement` turns Pages on the first time this runs, so the repository
+      # settings never have to be touched by hand.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - run: flutter pub get
+
+      # A project page is served from /<repo>/play/, not from the domain root,
+      # so the asset URLs have to be written for it. Without this every request
+      # for a font, an image or the CanvasKit bundle 404s and the page stays
+      # blank.
+      #
+      # --no-web-resources-cdn bundles CanvasKit with the build instead of
+      # fetching it from gstatic. It costs about a megabyte and buys the game
+      # working on a connection that cannot reach Google's CDN.
+      - run: >
+          flutter build web
+          -t lib/main_levels.dart
+          --release
+          --no-web-resources-cdn
+          --base-href /${{ github.event.repository.name }}/play/
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/play
+          cp -r site/. _site/
+          rm -f _site/README.md
+          cp -r build/web/. _site/play/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

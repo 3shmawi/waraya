@@ -1,46 +1,196 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
   <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
+    Replaced by the value of `flutter build --base-href`. A project page on
+    GitHub Pages is served from /waraya/play/, not from the domain root, so
+    every asset URL below is written against whatever lands here.
   -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Waraya - an atmospheric Egyptian side-scroller built with Flutter + Flame">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="ورايا — لعبة ظل بيعيد اللي عملته بعد تأخير ثابت">
+  <meta name="theme-color" content="#E59D00">
 
-  <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="waraya">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>waraya</title>
+  <title>ورايا · waraya</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /*
+      The splash is not decoration. A CanvasKit build is a couple of megabytes
+      before it paints anything, and a blank amber page for that long reads as
+      broken. It is also the only place in the whole game where there is room
+      to say which keys do what — the game itself has no menu and no prompts,
+      and that is a Phase 5 question, not something to bolt onto a level.
+    */
+    @font-face {
+      font-family: 'Cairo';
+      /* The same file the game embeds, so the splash and the level titles are
+         in one typeface and it is only downloaded once. */
+      src: url('assets/assets/fonts/Cairo-Regular.ttf') format('truetype');
+      font-display: swap;
+    }
+
+    html, body { margin: 0; padding: 0; height: 100%; background: #E59D00; }
+    body { overflow: hidden; }
+
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 26px;
+      padding: 24px;
+      box-sizing: border-box;
+      /* The in-game sky, top to bottom (lib/game/sky_backdrop.dart). */
+      background: linear-gradient(#F7C032, #E59D00 62%, #D28C02);
+      color: #2A1A06;
+      font-family: 'Cairo', system-ui, sans-serif;
+      text-align: center;
+      transition: opacity .55s ease;
+    }
+    #splash.done { opacity: 0; pointer-events: none; }
+
+    #splash svg { width: 92px; height: 92px; filter: drop-shadow(0 6px 18px rgba(20, 10, 0, .28)); }
+
+    #splash h1 {
+      margin: 0;
+      font-size: clamp(34px, 9vw, 54px);
+      font-weight: 400;
+      letter-spacing: .02em;
+      color: #14100A;
+    }
+    #splash .pitch {
+      margin: -14px 0 0;
+      max-width: 30ch;
+      font-size: clamp(15px, 4vw, 19px);
+      line-height: 1.7;
+      color: #3A2408;
+    }
+    #splash .pitch .a { display: block; color: rgba(20, 16, 10, .62); }
+    #splash .pitch .b { display: block; color: #14100A; }
+
+    #splash .keys {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px 10px;
+      max-width: 34ch;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    #splash .keys span {
+      background: rgba(20, 16, 10, .09);
+      border: 1px solid rgba(20, 16, 10, .16);
+      border-radius: 999px;
+      padding: 5px 13px;
+      white-space: nowrap;
+    }
+    /* Touch devices get the thumb zones; pointer devices get the keys. */
+    #splash .touch { display: none; }
+    @media (hover: none) and (pointer: coarse) {
+      #splash .keyboard { display: none; }
+      #splash .touch { display: flex; }
+    }
+
+    #splash .bar {
+      width: min(220px, 60vw);
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(20, 16, 10, .16);
+      overflow: hidden;
+    }
+    #splash .bar i {
+      display: block;
+      width: 40%;
+      height: 100%;
+      border-radius: 999px;
+      background: #14100A;
+      animation: sweep 1.25s ease-in-out infinite;
+    }
+    /* Indeterminate on purpose: the loader reports no progress worth showing,
+       and a fake percentage that jumps to 100 is worse than none. */
+    @keyframes sweep {
+      0%   { transform: translateX(-110%); }
+      100% { transform: translateX(260%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #splash .bar i { animation: none; width: 100%; opacity: .5; }
+      #splash { transition: none; }
+    }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <div id="splash">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
+      <g id="body" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
+        <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/>
+        <circle cx="-6.1" cy="28.4" r="4.3" stroke="none"/>
+        <path d="M0 52.2 L-7 65 L-10 78" fill="none" stroke-width="3.8"/>
+        <path d="M0 52.2 L5.5 65.5 L10.5 74.5" fill="none" stroke-width="3.8"/>
+        <path d="M-4.6 34.3 L-10.5 43 L-13.5 50.5" fill="none" stroke-width="3.2"/>
+        <path d="M-4.6 34.3 L2 43.5 L6 50.5" fill="none" stroke-width="3.2"/>
+      </g>
+      <use href="#body" x="70" color="#DCE4EE" opacity="0.30"/>
+      <use href="#body" x="58" color="#DCE4EE" opacity="0.55"/>
+      <use href="#body" x="44" color="#07050A"/>
+      <rect x="0" y="78" width="100" height="22" fill="#0E0A10"/>
+      <rect x="0" y="78" width="100" height="1.6" fill="#D9A25C"/>
+    </svg>
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
+    <h1>ورايا</h1>
+    <p class="pitch">
+      <span class="a">انت مش بتتحكم في ظلك.</span>
+      <span class="b">بتتحكم في اللي هيعمله بعد شوية.</span>
+    </p>
+
+    <div class="keys keyboard">
+      <span>الأسهم أو WASD للمشي</span>
+      <span>مسافة للنطة</span>
+      <span>سهم تحت للقعدة</span>
+      <span>R لإعادة المرحلة</span>
+    </div>
+    <div class="keys touch">
+      <span>المس تحت يمين أو شمال عشان تمشي</span>
+      <span>المس فوق عشان تنط</span>
+      <span>النص عشان توطي</span>
+    </div>
+
+    <div class="bar"><i></i></div>
+  </div>
+
+  <script>
+    // The engine fires this once it has actually painted, which is the only
+    // moment that means "there is a game behind this". Hiding the splash when
+    // the script loads instead would uncover a blank canvas for a second or two.
+    (function () {
+      var splash = document.getElementById('splash');
+      var hidden = false;
+      function hide() {
+        if (hidden) return;
+        hidden = true;
+        splash.classList.add('done');
+        setTimeout(function () { splash.remove(); }, 600);
+      }
+      window.addEventListener('flutter-first-frame', hide);
+      // If that event ever stops firing, a splash that never lifts is a game
+      // nobody can play. Twenty-five seconds is well past the slowest load
+      // measured here, so this only ever runs when something is wrong.
+      setTimeout(hide, 25000);
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

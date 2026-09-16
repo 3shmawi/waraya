@@ -42,9 +42,19 @@ dust in the air and the light shafts are all painted with ordinary blend modes
 — there is not a single shader in the project, which is why it runs the same on
 a phone, a laptop and in a browser.
 
-The shadow has not moved into this scene yet. That is Phase 4: prove the
-mechanic on grey boxes first, because a beautiful scene will flatter a boring
-idea and you will not find out until much later.
+![The first puzzle in the lit scene: a black player at a closed door, a pale
+shadow running toward the plate behind them](docs/media/lit-level.jpg)
+
+The puzzles run in that scene now. They did not to begin with, and the order
+matters: the mechanic was proved on grey boxes first, because a good-looking
+scene flatters a boring idea and you do not find out for months. The levels
+moved in only once they stood up without the help.
+
+The scene is paint, not geometry — same class, same rectangles, same numbers,
+with the look chosen at the entry point. A test plays the whole campaign again
+with the scenery switched on and requires the same recorded solutions to still
+work, so dressing a level can never quietly move something the player can
+touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 
 ## What's built
 
@@ -53,12 +63,31 @@ idea and you will not find out until much later.
 | 1 | Environment, camera, atmosphere, character | ✅ |
 | 2 | The delayed shadow, on a grey-box test scene | ✅ |
 | 3 | Game feel — weight, coyote time, sound, screen shake | ✅ code, tuning open |
-| 4 | Puzzle design, 5–8 levels | 5 built, playtesting open |
+| 4 | Puzzle design, 5–8 levels | 7 built, playtesting open |
 | 5 | Death and retry, level transitions, saving, menus | |
 | 6 | Polish and release | |
 
 It is a hobby project, built one day a week. The plan it follows, and the
 reasoning behind each phase, is in [`CLAUDE.md`](CLAUDE.md).
+
+## Playing it
+
+**<https://3shmawi.github.io/waraya/>** — the introduction, and one button to
+the game at `/play/`. In the browser, no install. Every push to `main`
+republishes both (`.github/workflows/pages.yml`).
+
+Arrows or **WASD** to walk, **space** to jump, **down** to crouch, **R** to put
+the level back if you have painted yourself into a corner — which in one of
+them is the intended way to find out you did. On a phone: hold the bottom-left
+or bottom-right of the screen to walk, tap the upper half to jump, hold the
+strip between the two walking halves to crouch.
+
+The game itself says none of that: no menu, no prompts, and that stays a Phase
+5 question rather than something bolted onto a level. So the two places a
+player is already waiting or reading say it instead — the landing page, and the
+loading splash. A CanvasKit build takes a couple of megabytes to paint the
+first frame, and that wait is the one moment in the whole game with room for a
+sentence.
 
 ## Running it
 
@@ -76,14 +105,13 @@ fvm flutter run                              # the finished environment
 **Three entry points.** `main_levels.dart` is the campaign — the puzzles, in
 teaching order. `main_lab.dart` is the same game on a bench scene with a live
 panel for the delay, the shadow's opacity, and whether the shadow is solid,
-kills you, or shows the path it is about to walk. `main.dart` is the finished
-environment from Phase 1, which the shadow has not moved into yet.
+kills you, or shows the path it is about to walk. `main.dart` is the Phase 1
+scene with nothing to solve in it — one walker, one horizon.
 
-Grey boxes on purpose: nice art flatters a mechanic, and the puzzles have to
-stand up without help first.
-
-**Controls.** A/D or arrows to move · W/space to jump · S to crouch · R to
-reload the lab scene.
+The bench stays grey on purpose. Nice art flatters a mechanic, so the puzzles
+had to stand up without it before they were allowed to move into the scene —
+and the place the numbers get argued with is still the place with no scenery in
+the way.
 
 ```bash
 fvm flutter analyze
@@ -107,9 +135,9 @@ past arrives at the plate behind you.
 
 **Every level ships with a recorded solution, and a recording of the obvious
 wrong idea.** A test replays both through the real game: the first has to
-finish the level, the second has to fail to. A sixth test plays all five
-levels back to back in one game, which is the only way to catch a handover
-that leaves something behind. The second one is what matters.
+finish the level, the second has to fail to. Another plays every level back to
+back in one game, which is the only way to catch a handover that leaves
+something behind. The second kind is what matters.
 The first draft of that level put the plate on the way to the door, so walking
 left crossed it, and three seconds later the shadow crossed it too and opened
 the door for a player who had done nothing — a puzzle you beat by holding one
@@ -119,6 +147,21 @@ Levels are data (`lib/level/level.dart`): rectangles, a spawn, a goal, and the
 three numbers that change how the shadow behaves. The delay is one of them, per
 level, because the same layout at two seconds and at five is two different
 puzzles.
+
+### What playing it found that the tests could not
+
+The first report from a real playthrough was "level three keeps restarting",
+and it was right. The door was held open for exactly as long as the player had
+stood on the plate — under a second — and that window arrived exactly five
+seconds later. Stop to think for two seconds, which is what people do, and you
+are on a sixteen-unit shelf with a shut door in front of you and your own past
+walking up behind you. No door, no room to dodge, nothing to do.
+
+The fix is a door that latches open, off by default because a door that shuts
+again as you walk away is the first level's entire lesson. Tests now play that
+level pausing for one, two and three seconds and require it to finish without a
+death. The rule it left behind: make a level harder by giving it more to work
+out, never by giving less time to do it in.
 
 ## The tuning bench
 

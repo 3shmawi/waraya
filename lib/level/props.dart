@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'dart:ui' as ui;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -9,24 +11,79 @@ import 'level.dart';
 /// Every immovable block in one component. They never change within a level,
 /// so there is no reason for each to carry its own transform.
 class Blocks extends PositionComponent {
-  Blocks(this.rects, {super.priority = -10});
+  Blocks(this.rects, {this.look = LevelLook.greyBox, super.priority = -10});
 
   final List<Rect> rects;
+  final LevelLook look;
 
-  final Paint _fill = Paint()..color = Palette.blockFill;
-  final Paint _top = Paint()..color = Palette.blockTop;
-  final Paint _edge = Paint()
-    ..color = Palette.blockEdge
+  bool get _lit => look == LevelLook.silhouette;
+
+  late final Paint _fill = Paint()
+    ..color = _lit ? SilhouettePalette.blockFill : Palette.blockFill;
+  late final Paint _top = Paint()
+    ..color = _lit ? SilhouettePalette.blockTop : Palette.blockTop;
+  late final Paint _edge = Paint()
+    ..color = _lit ? SilhouettePalette.blockEdge : Palette.blockEdge
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
 
+  /// How far the backlight spills over a lit edge into the air above it.
+  static const double _bloom = 22;
+
+  /// The face shading and the light spilling over the top edge, one pair per
+  /// rectangle.
+  ///
+  /// Flat near-black on a photograph reads as a hole cut in the picture rather
+  /// than as a thing standing in front of it — reported from playing as the
+  /// blocks looking "detached from the background". Two cheap gradients fix
+  /// it: the face is not one flat value, and the edge the light is coming from
+  /// glows a little into the air, which is what an edge lit from behind does.
+  ///
+  /// Built once. They are vertical, so they do not care where the rectangle is
+  /// horizontally, which is what lets the ground fill stretch to the camera
+  /// without rebuilding anything.
+  late final List<(Paint, Paint)> _shading = [
+    for (final rect in rects) (_faceFor(rect), _bloomFor(rect)),
+  ];
+
+  Paint _faceFor(Rect rect) => Paint()
+    ..shader = ui.Gradient.linear(
+      Offset(0, rect.top),
+      Offset(0, rect.top + min(140, rect.height)),
+      const [Color(0xFF191020), Color(0x00191020)],
+    );
+
+  Paint _bloomFor(Rect rect) => Paint()
+    ..shader = ui.Gradient.linear(
+      Offset(0, rect.top - _bloom),
+      Offset(0, rect.top),
+      const [Color(0x00E8B55E), Color(0x38E8B55E)],
+    );
+
   @override
   void render(Canvas canvas) {
-    for (final rect in rects) {
-      canvas.drawRect(rect, _fill);
+    for (final (i, rect) in rects.indexed) {
+      final body = rect;
+      if (_lit) {
+        final (face, bloom) = _shading[i];
+        // On the real rectangle, not the stretched fill: the glow belongs to
+        // the lit edge, and the lit edge stops where the floor does.
+        canvas.drawRect(
+          Rect.fromLTRB(rect.left, rect.top - _bloom, rect.right, rect.top),
+          bloom,
+        );
+        canvas.drawRect(body, _fill);
+        canvas.drawRect(body, face);
+      } else {
+        canvas.drawRect(body, _fill);
+      }
       // A lighter cap on the standable face, so "you can land here" reads
-      // without any art.
-      canvas.drawRect(Rect.fromLTWH(rect.left, rect.top, rect.width, 6), _top);
+      // without any art. Lit from behind it is doing more than that: it is
+      // the only thing separating one black shape from the next.
+      canvas.drawRect(
+        Rect.fromLTWH(rect.left, rect.top, rect.width, _lit ? 3 : 6),
+        _top,
+      );
       canvas.drawRect(rect, _edge);
     }
   }
@@ -35,9 +92,12 @@ class Blocks extends PositionComponent {
 /// A plate. Held down by any body resting on it — the player's or, crucially,
 /// the shadow's.
 class PressurePlate extends PositionComponent {
-  PressurePlate(this.spec, {super.priority = -6});
+  PressurePlate(this.spec, {this.look = LevelLook.greyBox, super.priority = -6});
 
   final PlateSpec spec;
+  final LevelLook look;
+
+  bool get _lit => look == LevelLook.silhouette;
 
   bool pressedByPlayer = false;
   bool pressedByShadow = false;
@@ -59,8 +119,14 @@ class PressurePlate extends PositionComponent {
     final rect = isPressed ? spec.area.translate(0, 6) : spec.area;
     canvas.drawRect(
       rect,
-      Paint()..color = isPressed ? Palette.plateDown : Palette.plateUp,
+      Paint()
+        ..color = _lit
+            ? (isPressed
+                  ? SilhouettePalette.plateDown
+                  : SilhouettePalette.plateUp)
+            : (isPressed ? Palette.plateDown : Palette.plateUp),
     );
+    if (_lit) return;
     canvas.drawRect(
       rect,
       Paint()
@@ -73,21 +139,41 @@ class PressurePlate extends PositionComponent {
 
 /// A door. Open only while its plate is held.
 class Door extends PositionComponent {
-  Door(this.spec, {super.priority = -6});
+  Door(this.spec, {this.look = LevelLook.greyBox, super.priority = -6});
 
   final DoorSpec spec;
+  final LevelLook look;
 
   /// How fast it travels, in fractions of its own height per second. Not a
   /// feel decision — it just needs to be visibly a door opening rather than a
   /// wall blinking out of existence.
   static const double _speed = 3;
 
+  /// Whether the door is being asked to be open this frame.
+  ///
+  /// Write it through [hold] rather than directly: a latching door has to
+  /// remember that it was ever asked.
   bool wantsOpen = false;
+
+  /// Set once a latching door has been opened. Cleared only by [reset].
+  bool _latched = false;
 
   double _open = 0;
   double get openFraction => _open;
 
   String get id => spec.id;
+
+  /// Ask the door to be open this frame because a plate is held.
+  ///
+  /// Returns true if the answer changed, which is what the scene listens to so
+  /// a door makes its noise once rather than every frame.
+  bool hold(bool pressed) {
+    if (pressed && spec.latches) _latched = true;
+    final wanted = pressed || _latched;
+    if (wanted == wantsOpen) return false;
+    wantsOpen = wanted;
+    return true;
+  }
 
   /// Solid until it is nearly all the way up, so squeezing through a door
   /// that is still closing is not a thing.
@@ -100,6 +186,7 @@ class Door extends PositionComponent {
     // Also the request, or the door creeps open for one frame after a reload
     // because the plate was still held when everything was put back.
     wantsOpen = false;
+    _latched = false;
   }
 
   @override
@@ -110,11 +197,16 @@ class Door extends PositionComponent {
 
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(bounds, Paint()..color = Palette.doorColor);
+    final lit = look == LevelLook.silhouette;
     canvas.drawRect(
       bounds,
       Paint()
-        ..color = Palette.blockEdge
+        ..color = lit ? SilhouettePalette.doorColor : Palette.doorColor,
+    );
+    canvas.drawRect(
+      bounds,
+      Paint()
+        ..color = lit ? SilhouettePalette.blockTop : Palette.blockEdge
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
@@ -127,16 +219,43 @@ class Door extends PositionComponent {
 /// worth reaching that does not finish anything, which is how the tuning
 /// bench shows its two targets without becoming a level to be won.
 class Goal extends PositionComponent {
-  Goal({required this.area, this.endsLevel = true, super.priority = -6});
+  Goal({
+    required this.area,
+    this.endsLevel = true,
+    this.look = LevelLook.greyBox,
+    super.priority = -6,
+  });
 
   final Rect area;
   final bool endsLevel;
+  final LevelLook look;
   bool reached = false;
 
   void reset() => reached = false;
 
   @override
   void render(Canvas canvas) {
+    if (look == LevelLook.silhouette) {
+      // A doorway, not an outline. The grey-box version is a pale stroke, and
+      // against a sunset a pale stroke is nothing at all — the way out was
+      // invisible the first time the puzzles ran in the real scene. A dark
+      // opening with a lit frame reads on both.
+      canvas.drawRect(
+        area,
+        Paint()
+          ..color = reached
+              ? SilhouettePalette.goalReached
+              : SilhouettePalette.goalIdle,
+      );
+      canvas.drawRect(
+        area.deflate(2),
+        Paint()
+          ..color = SilhouettePalette.goalReached
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4,
+      );
+      return;
+    }
     canvas.drawRect(
       area,
       Paint()
@@ -157,14 +276,18 @@ class ShadowTrail extends PositionComponent {
   ShadowTrail({
     required this.recorder,
     required this.enabled,
+    this.look = LevelLook.greyBox,
     super.priority = 80,
   });
 
   final ShadowRecorder recorder;
   final ValueGetter<bool> enabled;
+  final LevelLook look;
 
-  final Paint _line = Paint()
-    ..color = Palette.trailColor
+  late final Paint _line = Paint()
+    ..color = look == LevelLook.silhouette
+        ? SilhouettePalette.trailColor
+        : Palette.trailColor
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
 

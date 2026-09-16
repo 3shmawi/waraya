@@ -153,4 +153,27 @@ const walkthroughs = <String, List<Move>>{
     Move.right(0.6, jump: true), // and off the head onto the ledge
     Move.right(1.5), // along to the way out
   ],
+  'go-in-low': [
+    Move.left(0.5), // out to the mouth of the roof
+    Move.left(2.9, crouch: true), // under it, bent over, all the way to the gap
+    Move(2.0), // stand up: the only place in the level you are allowed to
+    Move.left(1.2, crouch: true), // back under the roof, out of your own way
+    Move(0.8), // wait for it
+    Move.right(1.2, crouch: true), // back to the mouth of the gap
+    Move(0.2),
+    Move.right(0.5, jump: true), // up onto your own head
+    Move.right(0.6, jump: true), // and off it onto the roof
+    Move.right(1.2), // along to the way out
+  ],
+  'hold-your-own-door': [
+    Move.left(2.1), // out to the plate, the wrong way from everything
+    Move(3.0), // hold it. this is how long the door will be open for
+    Move.left(0.6), // on past it, into the open, out of your own way
+    Move(1.6), // and wait there for yourself to arrive
+    Move.right(0.75, jump: true), // a running jump onto your own head
+    Move(0.2),
+    Move.right(0.75, jump: true), // off it onto the shelf
+    Move.right(1.6), // along the shelf, through the door you are holding open
+    Move.right(1.5), // to the way out
+  ],
 };
