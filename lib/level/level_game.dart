@@ -283,11 +283,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     for (final door in doors) {
-      final wanted = plates
+      final pressed = plates
           .where((plate) => plate.opens == door.id)
           .any((plate) => plate.isPressed);
-      if (wanted != door.wantsOpen) audio.play(Sfx.door, volume: 0.4);
-      door.wantsOpen = wanted;
+      if (door.hold(pressed)) audio.play(Sfx.door, volume: 0.4);
     }
 
     for (final goal in goals) {

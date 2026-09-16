@@ -88,12 +88,28 @@ class PlateSpec {
 
 /// A door. Solid while shut, slides up out of the way while a plate is held.
 class DoorSpec {
-  const DoorSpec({required this.id, required this.closed});
+  const DoorSpec({
+    required this.id,
+    required this.closed,
+    this.latches = false,
+  });
 
   final String id;
 
   /// Where it sits when shut.
   final Rect closed;
+
+  /// Whether the first press opens it for good.
+  ///
+  /// Off by default, because a door that shuts again as you walk away from the
+  /// plate is the first level's entire lesson. On, it stops the level being a
+  /// stopwatch: the window a plate holds a door open for is exactly as long as
+  /// you happened to stand on it, which can be under a second, and arriving a
+  /// beat late then means standing in front of a shut door with your own past
+  /// walking up behind you. That is not difficulty, it is a coin toss you
+  /// cannot see. Latch it wherever *having gone there at all* is the puzzle and
+  /// hitting a one-second window is not.
+  final bool latches;
 }
 
 /// How the level is drawn.
@@ -191,7 +207,11 @@ extension LevelJson on Level {
     ],
     'doors': [
       for (final door in doors)
-        {'id': door.id, 'closed': _rectToJson(door.closed)},
+        {
+          'id': door.id,
+          'closed': _rectToJson(door.closed),
+          'latches': door.latches,
+        },
     ],
   };
 }
@@ -249,6 +269,10 @@ Level levelFromJson(Object? source) {
             closed: _rectFromJson(
               _asMap(entry, 'doors[$i]')['closed'],
               'doors[$i].closed',
+            ),
+            latches: _asBool(
+              _asMap(entry, 'doors[$i]')['latches'] ?? false,
+              'doors[$i].latches',
             ),
           ),
       ],

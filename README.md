@@ -63,7 +63,7 @@ touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 | 1 | Environment, camera, atmosphere, character | ✅ |
 | 2 | The delayed shadow, on a grey-box test scene | ✅ |
 | 3 | Game feel — weight, coyote time, sound, screen shake | ✅ code, tuning open |
-| 4 | Puzzle design, 5–8 levels | 5 built, playtesting open |
+| 4 | Puzzle design, 5–8 levels | 6 built, playtesting open |
 | 5 | Death and retry, level transitions, saving, menus | |
 | 6 | Polish and release | |
 
@@ -135,9 +135,9 @@ past arrives at the plate behind you.
 
 **Every level ships with a recorded solution, and a recording of the obvious
 wrong idea.** A test replays both through the real game: the first has to
-finish the level, the second has to fail to. A sixth test plays all five
-levels back to back in one game, which is the only way to catch a handover
-that leaves something behind. The second one is what matters.
+finish the level, the second has to fail to. Another plays every level back to
+back in one game, which is the only way to catch a handover that leaves
+something behind. The second kind is what matters.
 The first draft of that level put the plate on the way to the door, so walking
 left crossed it, and three seconds later the shadow crossed it too and opened
 the door for a player who had done nothing — a puzzle you beat by holding one
@@ -147,6 +147,21 @@ Levels are data (`lib/level/level.dart`): rectangles, a spawn, a goal, and the
 three numbers that change how the shadow behaves. The delay is one of them, per
 level, because the same layout at two seconds and at five is two different
 puzzles.
+
+### What playing it found that the tests could not
+
+The first report from a real playthrough was "level three keeps restarting",
+and it was right. The door was held open for exactly as long as the player had
+stood on the plate — under a second — and that window arrived exactly five
+seconds later. Stop to think for two seconds, which is what people do, and you
+are on a sixteen-unit shelf with a shut door in front of you and your own past
+walking up behind you. No door, no room to dodge, nothing to do.
+
+The fix is a door that latches open, off by default because a door that shuts
+again as you walk away is the first level's entire lesson. Tests now play that
+level pausing for one, two and three seconds and require it to finish without a
+death. The rule it left behind: make a level harder by giving it more to work
+out, never by giving less time to do it in.
 
 ## The tuning bench
 

@@ -134,12 +134,31 @@ class Door extends PositionComponent {
   /// wall blinking out of existence.
   static const double _speed = 3;
 
+  /// Whether the door is being asked to be open this frame.
+  ///
+  /// Write it through [hold] rather than directly: a latching door has to
+  /// remember that it was ever asked.
   bool wantsOpen = false;
+
+  /// Set once a latching door has been opened. Cleared only by [reset].
+  bool _latched = false;
 
   double _open = 0;
   double get openFraction => _open;
 
   String get id => spec.id;
+
+  /// Ask the door to be open this frame because a plate is held.
+  ///
+  /// Returns true if the answer changed, which is what the scene listens to so
+  /// a door makes its noise once rather than every frame.
+  bool hold(bool pressed) {
+    if (pressed && spec.latches) _latched = true;
+    final wanted = pressed || _latched;
+    if (wanted == wantsOpen) return false;
+    wantsOpen = wanted;
+    return true;
+  }
 
   /// Solid until it is nearly all the way up, so squeezing through a door
   /// that is still closing is not a thing.
@@ -152,6 +171,7 @@ class Door extends PositionComponent {
     // Also the request, or the door creeps open for one frame after a reload
     // because the plate was still held when everything was put back.
     wantsOpen = false;
+    _latched = false;
   }
 
   @override

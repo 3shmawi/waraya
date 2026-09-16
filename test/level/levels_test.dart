@@ -112,6 +112,118 @@ void main() {
         expect(run.finishedAt, isNull);
       },
     );
+
+    // Reported from a real playthrough: stuck on the end of the lane, shut
+    // door, level restarting over and over.
+    //
+    // The door used to be held open only for as long as the player had stood
+    // on the plate — under a second — and that window arrived exactly five
+    // seconds later. Pausing to look around cost more than the window was
+    // wide, and then there was a shut door in front, a sixteen-unit shelf
+    // underfoot and your own past walking up it behind you: no door, no room
+    // to dodge, nothing to do. Latching the door fixed it. This pins that
+    // hesitating is survivable, because a player who is thinking is the
+    // normal case and not a mistake.
+    for (final pause in const [1.0, 2.0, 3.0]) {
+      testWithGame<LevelGame>(
+        'stopping to think for ${pause}s on the lane is not fatal',
+        build(Levels.notTheSameWayBack),
+        (game) async {
+          await game.ready();
+          final run = start(game)
+            ..play([
+              ...walkthroughs['not-the-same-way-back']!.take(7),
+              Move(pause),
+              ...walkthroughs['not-the-same-way-back']!.skip(7),
+            ], stopWhenComplete: true);
+
+          expect(run.finishedAt, isNotNull, reason: run.where);
+          expect(game.reloads, 0, reason: run.where);
+        },
+      );
+    }
+  });
+
+  group('go in low', () {
+    testWithGame<LevelGame>(
+      'build the ladder in the one place you are allowed to stand up',
+      build(Levels.goInLow),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(walkthroughs['go-in-low']!, stopWhenComplete: true);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'the same moves, with a shadow that is not a surface, go nowhere',
+      () => LevelGame(
+        levels: [
+          Level(
+            id: 'go-in-low-soft',
+            name: Levels.goInLow.name,
+            teaches: Levels.goInLow.teaches,
+            delaySeconds: Levels.goInLow.delaySeconds,
+            spawnX: Levels.goInLow.spawnX,
+            floorTop: Levels.goInLow.floorTop,
+            shadowIsSolid: false,
+            blocks: Levels.goInLow.blocks,
+            goal: Levels.goInLow.goal,
+          ),
+        ],
+        inputs: [ScriptedInput()],
+      ),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(walkthroughs['go-in-low']!, stopWhenComplete: true);
+
+        // Not a corridor: take the thing to climb away and the identical run
+        // ends on the floor.
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'walking in upright never gets under the roof at all',
+      build(Levels.goInLow),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(0.5),
+            Move.left(3.5), // straight at it, standing: the roof says no
+            Move(1.0),
+            Move.right(0.6, jump: true),
+            Move.right(0.6, jump: true),
+            Move(2.0),
+          ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'jumping at the way out from underneath it does not reach',
+      build(Levels.goInLow),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(0.9), // in under the roof, below the goal
+            Move(0.3),
+            Move(0.6, jump: true), // and up at it, repeatedly
+            Move(0.6, jump: true),
+            Move.left(0.4, crouch: true),
+            Move(0.6, jump: true),
+            Move(2.0),
+          ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
   });
 
   group('take it with you', () {
@@ -196,7 +308,14 @@ void main() {
   group('the campaign holds together', () {
     test('teaches one thing at a time, in order', () {
       expect(Levels.campaign.first.id, 'press-it-early');
-      expect(Levels.campaign.map((l) => l.id).toSet(), hasLength(5));
+      // Unique ids, not a count: the campaign is meant to grow, and a magic
+      // number here only ever fails for the wrong reason. Duplicates would be
+      // a real problem — a server-sent level is matched to a built-in one by
+      // id, so two of anything means one of them silently never loads.
+      expect(
+        Levels.campaign.map((l) => l.id).toSet(),
+        hasLength(Levels.campaign.length),
+      );
       // Exactly one level can kill you, and it is not one of the first two:
       // the opening levels are for working the mechanic out without being
       // punished for it.
