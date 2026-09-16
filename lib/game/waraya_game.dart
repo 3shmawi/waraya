@@ -85,17 +85,26 @@ class WarayaGame extends FlameGame with HasKeyboardHandlerComponents {
     // Side-scroller framing: the camera tracks the walker horizontally only,
     // and its vertical position is pinned so the horizon stays where the art
     // was composed for it instead of riding up and down with the character.
-    camera.viewfinder.position = Vector2(0, WarayaConfig.worldHeight / 2);
+    _frameVertically();
     camera.follow(walker, horizontalOnly: true);
   }
 
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    // Fix the world height; the width is whatever the device gives us.
-    if (size.y > 0) {
-      camera.viewfinder.zoom = size.y / WarayaConfig.worldHeight;
-    }
+    if (size.x <= 0 || size.y <= 0) return;
+    camera.viewfinder.zoom = WarayaConfig.zoomFor(size.x, size.y);
+    _frameVertically();
+  }
+
+  /// Keeps the horizon at the same height on screen on any shape of screen.
+  void _frameVertically() {
+    final zoom = camera.viewfinder.zoom;
+    if (zoom <= 0) return;
+    camera.viewfinder.position = Vector2(
+      camera.viewfinder.position.x,
+      WarayaConfig.viewpointY(WarayaConfig.horizonY, size.y, zoom),
+    );
   }
 
   @override

@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../level/level_game.dart';
 import '../licenses.dart';
+import 'level_hud.dart';
 
 /// The level's name and its one line of teaching, top right.
 ///
@@ -14,9 +17,15 @@ import '../licenses.dart';
 /// plan's whole point is that the player works the mechanic out; this is the
 /// nudge that stops a first-time player deciding the game is broken.
 class LevelTitle extends PositionComponent {
-  LevelTitle({required this.game}) : super(priority: 1000);
+  LevelTitle({required this.game, required this.hud}) : super(priority: 1000);
 
   final LevelGame game;
+
+  /// The readout in the opposite corner. Read, never written: the title has to
+  /// know where it ends to know whether it fits beside it.
+  final LevelHud hud;
+
+  Vector2 _viewport = Vector2.zero();
 
   static final _name = TextPaint(
     style: const TextStyle(
@@ -58,10 +67,9 @@ class LevelTitle extends PositionComponent {
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    // Same shrink as the debug readout, so the two stay in proportion on a
-    // phone.
-    scale.setAll((size.y / 720).clamp(0.55, 1.0));
-    position = Vector2(size.x - 16, 14);
+    _viewport = size;
+    // Same shrink as the readout, so the two stay in proportion.
+    scale.setAll(LevelHud.readoutScale(size));
   }
 
   @override
@@ -69,5 +77,26 @@ class LevelTitle extends PositionComponent {
     super.update(dt);
     _nameText.text = game.level.name;
     _teachesText.text = game.completed ? 'خلصت.' : game.level.teaches;
+    _place();
+  }
+
+  /// Top right, unless the readout is already using that room.
+  ///
+  /// On a phone held upright the two of them landed on top of each other —
+  /// the level's name printed straight through "delay 3.5s". Rather than pick
+  /// a breakpoint, it measures: if what is left of the width after the readout
+  /// cannot hold the title, the title drops below the readout instead, still
+  /// against the right edge.
+  void _place() {
+    if (_viewport.x == 0) return;
+    final widest = max(_nameText.size.x, _teachesText.size.x) * scale.x;
+    final hudRight = hud.position.x + hud.size.x * hud.scale.x;
+    final fitsBeside = _viewport.x - hudRight - 24 >= widest;
+    position = fitsBeside
+        ? Vector2(_viewport.x - 16, 14)
+        : Vector2(
+            _viewport.x - 16,
+            hud.position.y + hud.size.y * hud.scale.y + 12,
+          );
   }
 }

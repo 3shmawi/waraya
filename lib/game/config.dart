@@ -14,6 +14,46 @@ abstract final class WarayaConfig {
   /// landscape gives roughly this much width at [worldHeight].
   static const double referenceWorldWidth = 1280;
 
+  /// The least world width the camera will ever show.
+  ///
+  /// Pinning the world height and letting the width stretch is right on
+  /// anything wider than it is tall, and falls apart on a phone held upright:
+  /// a 412x915 screen shows 412 * 720 / 915 = 324 world units across, which is
+  /// two jumps end to end. Reported from playing on a phone, and it makes a
+  /// side-scroller unreadable — you cannot see what you are walking towards.
+  ///
+  /// So the height stays pinned right up until honouring it would show less
+  /// world than this, and past that the width takes over and the screen simply
+  /// shows more of the sky and more of the ground. Still no letterbox bars,
+  /// which is the part of the original rule that actually mattered.
+  static const double minVisibleWorldWidth = 760;
+
+  /// Where the ground sits on screen, as a fraction of the height.
+  ///
+  /// Sampled from what a 16:9 screen already did, so nothing changes there.
+  /// It matters on a phone: zooming out to get a usable width also shows far
+  /// more vertically, and with the camera simply centred on the middle of the
+  /// world that extra room all appeared *below* the floor as a dead black
+  /// band. Holding the ground at a fixed height puts it in the sky instead,
+  /// which is a sunset with dust in it rather than a slab of nothing.
+  static const double groundOnScreen = 0.86;
+
+  /// Where to point the camera vertically so [groundY] lands on
+  /// [groundOnScreen] of a viewport [height] pixels tall at [zoom].
+  static double viewpointY(double groundY, double height, double zoom) =>
+      groundY - (groundOnScreen - 0.5) * (height / zoom);
+
+  /// How far to zoom the camera for a viewport of [width] by [height] pixels.
+  ///
+  /// Shared by both scenes rather than written twice: the bench and the
+  /// campaign have to frame the world identically or the numbers tuned in one
+  /// are not the numbers played in the other.
+  static double zoomFor(double width, double height) {
+    final byHeight = height / worldHeight;
+    final byWidth = width / minVisibleWorldWidth;
+    return byHeight < byWidth ? byHeight : byWidth;
+  }
+
   /// Ground line, measured in world units from the top.
   static const double horizonY = worldHeight * 0.72;
 
@@ -80,14 +120,6 @@ abstract final class WarayaConfig {
   /// How far the camera lurches on the hardest possible landing, in world
   /// units.
   static const double landingShakeMax = 7;
-
-  /// Taps landing in the top fraction of the screen mean "jump" rather than
-  /// "walk", so a thumb resting low never fires a jump by accident.
-  static const double touchJumpBandFraction = 0.45;
-
-  /// Width of the crouch zone, as a fraction of the screen, centred between
-  /// the two walk halves of the lower band.
-  static const double touchCrouchBandFraction = 0.2;
 
   /// How tall the character is while crouched, as a fraction of its standing
   /// height. Matched to the pose `Figure` draws at full crouch, so the head

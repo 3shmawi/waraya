@@ -88,16 +88,18 @@ void main() {
       (game) async {
         await game.ready();
         final horizonOnScreen = game.camera.visibleWorldRect.top;
+        // Whatever the framing works out to for this viewport — the point is
+        // that it does not move, not what it is. Pinning the number here meant
+        // a test failure the first time the framing changed for phones, which
+        // told us nothing about the thing it was guarding.
+        final restingY = game.camera.viewfinder.position.y;
 
         // Shove the walker off the horizon the way a jump eventually will.
         game.walker.position.y -= 300;
         game.update(0.016);
         game.update(0.016);
 
-        expect(
-          game.camera.viewfinder.position.y,
-          closeTo(WarayaConfig.worldHeight / 2, 0.01),
-        );
+        expect(game.camera.viewfinder.position.y, closeTo(restingY, 0.01));
         expect(
           game.camera.visibleWorldRect.top,
           closeTo(horizonOnScreen, 0.01),

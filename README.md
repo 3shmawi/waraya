@@ -78,9 +78,8 @@ republishes both (`.github/workflows/pages.yml`).
 
 Arrows or **WASD** to walk, **space** to jump, **down** to crouch, **R** to put
 the level back if you have painted yourself into a corner — which in one of
-them is the intended way to find out you did. On a phone: hold the bottom-left
-or bottom-right of the screen to walk, tap the upper half to jump, hold the
-strip between the two walking halves to crouch.
+them is the intended way to find out you did. On a phone there are four drawn
+buttons: two arrows bottom left, jump and crouch bottom right.
 
 The game itself says none of that: no menu, no prompts, and that stays a Phase
 5 question rather than something bolted onto a level. So the two places a

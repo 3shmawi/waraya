@@ -32,7 +32,7 @@ abstract final class LabScene {
   /// Deeper than the screen on purpose: only the top edge is ever seen, and a
   /// thick floor is one more thing standing between a lag spike and a player
   /// who fell out of the world.
-  static const Rect floor = Rect.fromLTRB(-1300, floorTop, 1300, 1200);
+  static const Rect floor = Rect.fromLTRB(-1300, floorTop, 1300, 2200);
 
   /// Test 2, step one: a normal jump gets you here.
   static const Rect lowPlatform = Rect.fromLTRB(300, 500, 520, 560);
