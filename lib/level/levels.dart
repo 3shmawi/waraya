@@ -19,6 +19,20 @@ import 'level.dart';
 abstract final class Levels {
   static const double _floor = 620;
 
+  /// The shortest a door is allowed to be, measured from whatever it stands on.
+  ///
+  /// A jump lifts about 136 and a body is 96 tall, so a player standing on a
+  /// shadow that is standing on a door's own sill gets their feet 232 above
+  /// that sill. Every door in the game used to be 190 tall, which made
+  /// "leave a body by the door, climb it, step over" a second solution to
+  /// every door in the campaign — reported from playing, and it collapses the
+  /// first level completely, since the plate is the only thing that level is
+  /// about.
+  ///
+  /// 250 clears 232 with room to spare, and `levels_test.dart` holds every
+  /// door to it so a new one cannot quietly reintroduce the shortcut.
+  static const double minDoorHeight = 250;
+
   /// Ground from [left] to [right], deep enough that nothing falls through it.
   /// How far past the ends of the play area the ground keeps going.
   ///
@@ -58,7 +72,7 @@ abstract final class Levels {
       PlateSpec(area: Rect.fromLTRB(300, 608, 420, 620), opens: 'gate'),
     ],
     doors: const [
-      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-200, 430, -174, 620)),
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-200, 360, -174, 620)),
     ],
     goal: const Rect.fromLTRB(-420, 548, -340, 620),
   );
@@ -128,7 +142,7 @@ abstract final class Levels {
     doors: const [
       DoorSpec(
         id: 'gate',
-        closed: Rect.fromLTRB(100, 430, 126, 620),
+        closed: Rect.fromLTRB(100, 360, 126, 620),
         lingerSeconds: 6,
       ),
     ],
@@ -166,7 +180,7 @@ abstract final class Levels {
       PlateSpec(area: Rect.fromLTRB(340, 418, 460, 430), opens: 'gate'),
     ],
     doors: const [
-      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-420, 430, -394, 620)),
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-420, 360, -394, 620)),
     ],
     goal: const Rect.fromLTRB(-620, 548, -540, 620),
   );
@@ -193,7 +207,7 @@ abstract final class Levels {
       PlateSpec(area: Rect.fromLTRB(-500, 608, -380, 620), opens: 'gate'),
     ],
     doors: const [
-      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-100, 430, -74, 620)),
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-100, 360, -74, 620)),
     ],
     goal: const Rect.fromLTRB(600, 358, 680, 430),
   );
@@ -275,11 +289,11 @@ abstract final class Levels {
     plates: const [
       PlateSpec(area: Rect.fromLTRB(-100, 608, 0, 620), opens: 'gate'),
     ],
-    // A hundred and seventy tall, standing on the shelf. A jump from the shelf
-    // lifts a hundred and thirty, so it cannot be hopped over — otherwise the
-    // whole point of holding the plate long enough evaporates.
+    // Two hundred and sixty tall, standing on the shelf: enough that a body
+    // standing on a *shadow* standing on the shelf still cannot top it. See
+    // the note on door heights at the top of this file.
     doors: const [
-      DoorSpec(id: 'gate', closed: Rect.fromLTRB(300, 260, 326, 430)),
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(300, 170, 326, 430)),
     ],
     goal: const Rect.fromLTRB(420, 358, 500, 430),
   );

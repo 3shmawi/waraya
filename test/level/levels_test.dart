@@ -394,6 +394,30 @@ void main() {
   });
 
   group('a door is something your past is holding', () {
+    // The exploit above, played out in the level it broke worst.
+    testWithGame<LevelGame>(
+      'leaving a body at the door and climbing it does not get you through',
+      build(Levels.pressItEarly),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(0.9), // up to the door, the direct way
+            Move(1.6), // stand there long enough to leave a ladder
+            Move.right(0.5), // out of your own way
+            Move(1.6), // wait for it to arrive at the door
+            Move.left(0.45, jump: true), // onto your own head
+            Move(0.15),
+            Move.left(0.7, jump: true), // and over the door, in theory
+            Move.left(1.6),
+            Move(1.5),
+          ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+        expect(game.doors.first.openFraction, 0);
+      },
+    );
+
     // Reported from playing: "the door stays open". It did — the first fix for
     // level three latched it open forever, which reads as a broken door rather
     // than as a door somebody is holding. A linger is a grace period, not a
@@ -489,6 +513,37 @@ void main() {
       // punished for it.
       expect(Levels.campaign.where((l) => l.shadowKills), hasLength(1));
       expect(Levels.campaign.take(2).any((l) => l.shadowKills), isFalse);
+    });
+
+    // Reported from playing: "I can climb the wall if I stand on the shadow,
+    // so there are two ways past a wall." There were. A jump lifts about 136
+    // and a body is 96 tall, so a player standing on a shadow that is standing
+    // at a door's foot gets their feet 232 above that door's sill — and every
+    // door in the game was 190 tall. Leave a body by the door, climb it, step
+    // over: a second solution to every door in the campaign, and the only
+    // thing the first level is about.
+    test('no door can be climbed by standing on a shadow at its foot', () {
+      final reach =
+          WarayaConfig.jumpSpeed *
+              WarayaConfig.jumpSpeed /
+              (2 * WarayaConfig.gravity) +
+          96;
+      expect(
+        Levels.minDoorHeight,
+        greaterThan(reach),
+        reason: 'the rule itself has to clear the boost',
+      );
+      for (final level in [...Levels.campaign, Levels.lab]) {
+        for (final door in level.doors) {
+          expect(
+            door.closed.height,
+            greaterThanOrEqualTo(Levels.minDoorHeight),
+            reason:
+                '${level.id}: a body on a shadow at this door\'s foot reaches '
+                '${reach.toStringAsFixed(0)} above its sill',
+          );
+        }
+      }
     });
 
     test('every level is winnable at a delay the panel can produce', () {
