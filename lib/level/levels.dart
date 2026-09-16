@@ -45,8 +45,12 @@ abstract final class Levels {
   static const double _offstage = 900;
 
   /// Ground under the whole of [left] to [right], and well past both ends.
+  ///
+  /// Deep as well as wide. A phone held upright zooms the camera out far
+  /// enough to see roughly 1200 units below the middle of the world, so a slab
+  /// that stopped at 1200 ran out exactly where someone could see it.
   static Rect _ground(double left, double right) =>
-      Rect.fromLTRB(left - _offstage, _floor, right + _offstage, 1200);
+      Rect.fromLTRB(left - _offstage, _floor, right + _offstage, 2200);
 
   /// **Use one: the button.** A plate too far from the door to use yourself.
   ///

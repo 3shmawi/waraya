@@ -141,10 +141,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     await _build();
-    await camera.viewport.addAll([
-      LevelHud(game: this),
-      LevelTitle(game: this),
-    ]);
+    final hud = LevelHud(game: this);
+    await camera.viewport.addAll([hud, LevelTitle(game: this, hud: hud)]);
   }
 
   /// Tears the current level down and puts the next one up.
@@ -203,7 +201,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       player,
     ]);
 
-    camera.viewfinder.position = Vector2(0, WarayaConfig.worldHeight / 2);
+    _frameVertically();
     camera.follow(player, horizontalOnly: true);
   }
 
@@ -221,6 +219,18 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     withGround: false,
     withPowerLine: false,
   );
+
+  /// Points the camera so the level's ground lands at the same height on
+  /// screen whatever shape the screen is. Only the vertical: the horizontal is
+  /// the follow behaviour's, and it writes that every frame.
+  void _frameVertically() {
+    final zoom = camera.viewfinder.zoom;
+    if (zoom <= 0) return;
+    camera.viewfinder.position = Vector2(
+      camera.viewfinder.position.x,
+      WarayaConfig.viewpointY(_sceneryGround, size.y, zoom),
+    );
+  }
 
   /// The lowest ground in the level, which is where the treeline belongs.
   ///
@@ -243,10 +253,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    // Pin the world height; the width is whatever the device gives us.
-    if (size.y > 0) {
-      camera.viewfinder.zoom = size.y / WarayaConfig.worldHeight;
-    }
+    if (size.x <= 0 || size.y <= 0) return;
+    camera.viewfinder.zoom = WarayaConfig.zoomFor(size.x, size.y);
+    _frameVertically();
   }
 
   @override

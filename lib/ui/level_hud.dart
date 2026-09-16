@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
@@ -58,8 +60,18 @@ class LevelHud extends PositionComponent {
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    scale.setAll((size.y / 720).clamp(0.55, 1.0));
+    scale.setAll(readoutScale(size));
   }
+
+  /// How much to shrink a corner readout on a viewport of this size.
+  ///
+  /// It used to go by height alone, which is exactly wrong on a phone held
+  /// upright: a 412x915 screen is *taller* than the reference, so the readout
+  /// stayed at full size and took a third of a narrow screen. Reported from
+  /// playing on a phone, where it also collided with the level title. Width
+  /// is what is scarce on a phone, so whichever axis is tighter decides.
+  static double readoutScale(Vector2 size) =>
+      min(size.x / 900, size.y / 720).clamp(0.5, 1.0);
 
   @override
   void update(double dt) {
