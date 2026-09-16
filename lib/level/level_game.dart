@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -215,10 +217,28 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   Scenery _scenery() => Scenery(
     images: images,
     view: () => camera.visibleWorldRect,
-    groundY: level.floorTop,
+    groundY: _sceneryGround,
     withGround: false,
     withPowerLine: false,
   );
+
+  /// The lowest ground in the level, which is where the treeline belongs.
+  ///
+  /// Not `floorTop`: that is where the player *spawns*, and a level can start
+  /// you on a shelf above its real floor. Doing it that way put the whole
+  /// treeline up at shelf height in the level with the drop, leaving the
+  /// bottom half of it as bare gradient with nothing behind it — reported from
+  /// playing as the level still not looking right. A slab that falls off the
+  /// bottom of the world is ground; the lowest of those is the horizon.
+  double get _sceneryGround {
+    var lowest = level.floorTop;
+    for (final rect in level.blocks) {
+      if (rect.bottom >= WarayaConfig.worldHeight && rect.top > lowest) {
+        lowest = rect.top;
+      }
+    }
+    return lowest;
+  }
 
   @override
   void onGameResize(Vector2 size) {
@@ -272,9 +292,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
     for (final plate in plates) {
       final wasPressed = plate.isPressed;
-      plate.pressedByPlayer = playerBox.overlaps(plate.trigger);
+      plate.pressedByPlayer = _standsOn(playerBox, plate.trigger);
       plate.pressedByShadow =
-          shadowBox != null && shadowBox.overlaps(plate.trigger);
+          shadowBox != null && _standsOn(shadowBox, plate.trigger);
       if (plate.isPressed != wasPressed) audio.play(Sfx.plate, volume: 0.5);
     }
 
@@ -303,6 +323,22 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
         playerBox.overlaps(shadowBox)) {
       reload();
     }
+  }
+
+  /// Whether [body] is standing on [trigger] rather than touching its edge.
+  ///
+  /// A body is 44 wide and `Rect.overlaps` is true at a single unit of
+  /// contact, so standing *beside* a plate with one edge over the line pressed
+  /// it — reported from playing as a door opening while the character was
+  /// visibly off the plate. A third of the body has to be over it, or the
+  /// whole plate if the plate is narrower than that.
+  static const double _footprint = 16;
+
+  static bool _standsOn(Rect body, Rect trigger) {
+    if (!body.overlaps(trigger)) return false;
+    final overlap =
+        min(body.right, trigger.right) - max(body.left, trigger.left);
+    return overlap >= min(_footprint, trigger.width);
   }
 
   /// Moves on once the goal has had its beat. The last level simply stays

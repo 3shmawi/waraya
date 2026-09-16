@@ -45,8 +45,10 @@ abstract final class LabScene {
   /// shadow comes the other way.
   static const Rect corridorCeiling = Rect.fromLTRB(-280, 450, -80, 540);
 
-  /// Test 1: the door, closed. Taller than the character's jump.
-  static const Rect door = Rect.fromLTRB(-993, 430, -967, floorTop);
+  /// Test 1: the door, closed. Taller than the character's jump, and taller
+  /// than a jump taken from the head of a shadow standing at its foot — see
+  /// `Levels.minDoorHeight`.
+  static const Rect door = Rect.fromLTRB(-993, 360, -967, floorTop);
 
   /// Test 1: the plate. Held down by anything standing on it — including a
   /// shadow, which is the entire point.

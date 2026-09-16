@@ -91,7 +91,7 @@ class DoorSpec {
   const DoorSpec({
     required this.id,
     required this.closed,
-    this.latches = false,
+    this.lingerSeconds = 0,
   });
 
   final String id;
@@ -99,17 +99,22 @@ class DoorSpec {
   /// Where it sits when shut.
   final Rect closed;
 
-  /// Whether the first press opens it for good.
+  /// How long it stays open after the plate is let go, in seconds.
   ///
-  /// Off by default, because a door that shuts again as you walk away from the
-  /// plate is the first level's entire lesson. On, it stops the level being a
-  /// stopwatch: the window a plate holds a door open for is exactly as long as
-  /// you happened to stand on it, which can be under a second, and arriving a
-  /// beat late then means standing in front of a shut door with your own past
-  /// walking up behind you. That is not difficulty, it is a coin toss you
-  /// cannot see. Latch it wherever *having gone there at all* is the puzzle and
-  /// hitting a one-second window is not.
-  final bool latches;
+  /// Zero by default: a door that shuts the moment you step off is the first
+  /// level's entire lesson, and your own past holding something open for you
+  /// is the image the whole game is built on.
+  ///
+  /// It exists because a door with no linger makes a level a stopwatch. The
+  /// window a plate holds a door open for is exactly as long as you happened
+  /// to stand on it — which can be under a second — and it arrives one whole
+  /// delay later, so a beat of hesitation puts you at a shut door that is
+  /// never opening again. A door that drifts shut a few seconds after your
+  /// past steps off the plate is forgiving in the way a person needs and is
+  /// still visibly a door your past opened. The first attempt at this fix
+  /// latched the door open forever, and that came straight back as a bug
+  /// report: a door that never shuts is not a door anyone is holding.
+  final double lingerSeconds;
 }
 
 /// How the level is drawn.
@@ -210,7 +215,7 @@ extension LevelJson on Level {
         {
           'id': door.id,
           'closed': _rectToJson(door.closed),
-          'latches': door.latches,
+          'lingerSeconds': door.lingerSeconds,
         },
     ],
   };
@@ -270,9 +275,9 @@ Level levelFromJson(Object? source) {
               _asMap(entry, 'doors[$i]')['closed'],
               'doors[$i].closed',
             ),
-            latches: _asBool(
-              _asMap(entry, 'doors[$i]')['latches'] ?? false,
-              'doors[$i].latches',
+            lingerSeconds: _asDouble(
+              _asMap(entry, 'doors[$i]')['lingerSeconds'] ?? 0,
+              'doors[$i].lingerSeconds',
             ),
           ),
       ],
