@@ -151,12 +151,14 @@ class Door extends PositionComponent {
 
   /// Whether the door is being asked to be open this frame.
   ///
-  /// Write it through [hold] rather than directly: a latching door has to
-  /// remember that it was ever asked.
+  /// Write it through [hold] rather than directly: a door with a linger has to
+  /// remember that it was asked a moment ago.
   bool wantsOpen = false;
 
-  /// Set once a latching door has been opened. Cleared only by [reset].
-  bool _latched = false;
+  bool _pressed = false;
+
+  /// Seconds of grace left since the plate was last held.
+  double _linger = 0;
 
   double _open = 0;
   double get openFraction => _open;
@@ -168,8 +170,9 @@ class Door extends PositionComponent {
   /// Returns true if the answer changed, which is what the scene listens to so
   /// a door makes its noise once rather than every frame.
   bool hold(bool pressed) {
-    if (pressed && spec.latches) _latched = true;
-    final wanted = pressed || _latched;
+    _pressed = pressed;
+    if (pressed) _linger = spec.lingerSeconds;
+    final wanted = pressed || _linger > 0;
     if (wanted == wantsOpen) return false;
     wantsOpen = wanted;
     return true;
@@ -186,12 +189,16 @@ class Door extends PositionComponent {
     // Also the request, or the door creeps open for one frame after a reload
     // because the plate was still held when everything was put back.
     wantsOpen = false;
-    _latched = false;
+    _pressed = false;
+    _linger = 0;
   }
 
   @override
   void update(double dt) {
     super.update(dt);
+    // Runs before the scene asks again this frame, so the moment the grace
+    // runs out is picked up by the next `hold` and the door makes its noise.
+    if (!_pressed && _linger > 0) _linger = max(0, _linger - dt);
     _open = (_open + (wantsOpen ? _speed : -_speed) * dt).clamp(0.0, 1.0);
   }
 

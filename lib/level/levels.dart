@@ -114,18 +114,22 @@ abstract final class Levels {
     plates: const [
       PlateSpec(area: Rect.fromLTRB(-340, 608, -240, 620), opens: 'gate'),
     ],
-    // Latched. Without it the level is a stopwatch: the door is held open only
-    // for as long as you happened to stand on the plate, that window arrives
-    // exactly five seconds later, and the lane you come home along is a
-    // sixteen-unit shelf with your own past walking up it behind you. Arrive a
-    // beat late and there is no door, no room to dodge and nothing to do but
-    // watch yourself arrive. The lesson here is "your old path is deadly, find
-    // another one" — not "hit this one second".
+    // Six seconds of grace. Without any, the level is a stopwatch: the door is
+    // held open only for as long as you happened to stand on the plate, that
+    // window arrives exactly five seconds later, and the lane you come home
+    // along is a sixteen-unit shelf with your own past walking up it behind
+    // you. Arrive a beat late and there is no door, no room to dodge and
+    // nothing to do but watch yourself arrive. The lesson here is "your old
+    // path is deadly, find another one" — not "hit this one second".
+    //
+    // Six and not forever. A door that latches open never shuts again, and a
+    // door that never shuts is not a door your past is holding — that version
+    // was reported back as a bug the day it shipped.
     doors: const [
       DoorSpec(
         id: 'gate',
         closed: Rect.fromLTRB(100, 430, 126, 620),
-        latches: true,
+        lingerSeconds: 6,
       ),
     ],
     goal: const Rect.fromLTRB(200, 548, 280, 620),

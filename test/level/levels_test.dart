@@ -393,6 +393,86 @@ void main() {
     );
   });
 
+  group('a door is something your past is holding', () {
+    // Reported from playing: "the door stays open". It did — the first fix for
+    // level three latched it open forever, which reads as a broken door rather
+    // than as a door somebody is holding. A linger is a grace period, not a
+    // latch, and the proof is that it ends.
+    testWithGame<LevelGame>(
+      'level three opens when your past arrives and shuts again after it goes',
+      build(Levels.notTheSameWayBack),
+      (game) async {
+        await game.ready();
+        final run = start(game);
+        final door = game.doors.first;
+
+        var everOpened = false;
+        var shutAgainAfterOpening = false;
+        // Onto the plate, off it, and then well out of the way, watching the
+        // door for the whole of the shadow's visit and long after it.
+        for (final move in const [
+          Move.left(1.9),
+          Move(1.0),
+          Move.left(0.6),
+          Move(18.0),
+        ]) {
+          final frames = (move.seconds / Playthrough.dt).round();
+          for (var i = 0; i < frames; i++) {
+            run.play([Move(Playthrough.dt, axis: move.axis)]);
+            if (door.openFraction > 0.9) everOpened = true;
+            if (everOpened && door.openFraction == 0) {
+              shutAgainAfterOpening = true;
+            }
+          }
+        }
+
+        expect(everOpened, isTrue, reason: 'never opened at all: ${run.where}');
+        expect(
+          shutAgainAfterOpening,
+          isTrue,
+          reason: 'opened and stayed open forever: ${run.where}',
+        );
+      },
+    );
+
+    // Reported from playing level seven: "I am a bit away from the plate and
+    // it still opens the door as if I were standing on it."
+    testWithGame<LevelGame>(
+      'standing beside a plate with one edge over it does not press it',
+      () => LevelGame(
+        levels: [
+          Level(
+            id: 'footprint',
+            name: 'footprint',
+            teaches: '',
+            delaySeconds: 3,
+            // A body is 44 wide, so a body centred 21 to the right of the
+            // plate's edge is touching it by a single unit and standing
+            // entirely off it.
+            spawnX: 21,
+            floorTop: 620,
+            blocks: [const Rect.fromLTRB(-600, 620, 600, 1200)],
+            plates: const [
+              PlateSpec(area: Rect.fromLTRB(-100, 608, 0, 620), opens: 'gate'),
+            ],
+            doors: const [
+              DoorSpec(id: 'gate', closed: Rect.fromLTRB(300, 430, 326, 620)),
+            ],
+            goal: const Rect.fromLTRB(400, 548, 480, 620),
+          ),
+        ],
+        inputs: [ScriptedInput()],
+      ),
+      (game) async {
+        await game.ready();
+        start(game).play(const [Move(0.5)]);
+
+        expect(game.plates.first.isPressed, isFalse);
+        expect(game.doors.first.openFraction, 0);
+      },
+    );
+  });
+
   group('the campaign holds together', () {
     test('teaches one thing at a time, in order', () {
       expect(Levels.campaign.first.id, 'press-it-early');
