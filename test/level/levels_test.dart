@@ -305,6 +305,94 @@ void main() {
     );
   });
 
+  group('hold your own door', () {
+    testWithGame<LevelGame>(
+      'climb the body that is holding the door, while it is holding it',
+      build(Levels.holdYourOwnDoor),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(walkthroughs['hold-your-own-door']!, stopWhenComplete: true);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    // The lesson, stated as a test: the press is the timer. A short one gets
+    // you all the way onto the shelf and no further, which is a failure the
+    // player can read off the screen without being told anything.
+    testWithGame<LevelGame>(
+      'a one-second press leaves you on the shelf at a shut door',
+      build(Levels.holdYourOwnDoor),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(2.1),
+            Move(1.0), // barely stood on it at all
+            Move.left(0.6),
+            Move(3.6), // wait the same amount, so only the press differs
+            Move.right(0.75, jump: true),
+            Move(0.2),
+            Move.right(0.75, jump: true),
+            Move.right(1.6),
+            Move.right(1.5),
+          ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+        // On the shelf, which is the point: the climb worked and the door is
+        // what stopped you.
+        expect(game.player.y, Levels.holdYourOwnDoor.blocks.last.top);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'the shut door cannot be hopped over from the shelf',
+      build(Levels.holdYourOwnDoor),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(2.1),
+            Move(3.0),
+            Move.left(0.6),
+            Move(1.6),
+            Move.right(0.75, jump: true),
+            Move(0.2),
+            Move.right(0.75, jump: true),
+            Move.right(0.7),
+            Move(3.0), // stand on the shelf and let it shut again
+            Move.right(0.6, jump: true), // then try to jump it
+            Move.right(0.8, jump: true),
+            Move.right(1.5),
+          ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'never touching the plate never gets you off the floor',
+      build(Levels.holdYourOwnDoor),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(1.0),
+            Move(0.5),
+            Move.left(0.6, jump: true),
+            Move.right(0.8, jump: true),
+            Move.right(1.2, jump: true),
+            Move(2.0),
+            Move.right(1.5, jump: true),
+            Move(3.0),
+          ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+  });
+
   group('the campaign holds together', () {
     test('teaches one thing at a time, in order', () {
       expect(Levels.campaign.first.id, 'press-it-early');

@@ -63,7 +63,7 @@ touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 | 1 | Environment, camera, atmosphere, character | ✅ |
 | 2 | The delayed shadow, on a grey-box test scene | ✅ |
 | 3 | Game feel — weight, coyote time, sound, screen shake | ✅ code, tuning open |
-| 4 | Puzzle design, 5–8 levels | 6 built, playtesting open |
+| 4 | Puzzle design, 5–8 levels | 7 built, playtesting open |
 | 5 | Death and retry, level transitions, saving, menus | |
 | 6 | Polish and release | |
 

@@ -188,11 +188,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
     await world.addAll([
       if (_lit) ..._scenery().world(),
-      Blocks(
-        level.blocks,
-        look: look,
-        view: _lit ? () => camera.visibleWorldRect : null,
-      ),
+      Blocks(level.blocks, look: look),
       ...plates,
       ...doors,
       ...goals,

@@ -1,30 +1,20 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flutter/foundation.dart';
 
-import '../game/config.dart';
 import '../shadow/shadow_recorder.dart';
 import 'level.dart';
 
 /// Every immovable block in one component. They never change within a level,
 /// so there is no reason for each to carry its own transform.
 class Blocks extends PositionComponent {
-  Blocks(
-    this.rects, {
-    this.look = LevelLook.greyBox,
-    this.view,
-    super.priority = -10,
-  });
+  Blocks(this.rects, {this.look = LevelLook.greyBox, super.priority = -10});
 
   final List<Rect> rects;
   final LevelLook look;
-
-  /// The camera's rectangle, when the ground needs to reach the edge of it.
-  /// Null on the bench, where a level ending in mid-air is just a level ending
-  /// in mid-air.
-  final ValueGetter<Rect>? view;
 
   bool get _lit => look == LevelLook.silhouette;
 
@@ -37,31 +27,56 @@ class Blocks extends PositionComponent {
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
 
-  /// The ground, drawn out past the edge of the screen.
+  /// How far the backlight spills over a lit edge into the air above it.
+  static const double _bloom = 22;
+
+  /// The face shading and the light spilling over the top edge, one pair per
+  /// rectangle.
   ///
-  /// A level's floor is a rectangle with ends, and in the lit scene those ends
-  /// are a hole: walk far enough and the sunset shows through the ground you
-  /// are standing on. Any slab that already falls off the bottom of the world
-  /// is ground rather than a ledge, so its *fill* is stretched to the camera's
-  /// edges. Only the fill — the warm cap stays on the real rectangle, so the
-  /// lit edge is still exactly where the floor stops being standable.
-  Rect _fillFor(Rect rect, Rect? visible) {
-    if (!_lit || visible == null || rect.bottom < WarayaConfig.worldHeight) {
-      return rect;
-    }
-    return Rect.fromLTRB(
-      min(rect.left, visible.left - 64),
-      rect.top,
-      max(rect.right, visible.right + 64),
-      rect.bottom,
+  /// Flat near-black on a photograph reads as a hole cut in the picture rather
+  /// than as a thing standing in front of it — reported from playing as the
+  /// blocks looking "detached from the background". Two cheap gradients fix
+  /// it: the face is not one flat value, and the edge the light is coming from
+  /// glows a little into the air, which is what an edge lit from behind does.
+  ///
+  /// Built once. They are vertical, so they do not care where the rectangle is
+  /// horizontally, which is what lets the ground fill stretch to the camera
+  /// without rebuilding anything.
+  late final List<(Paint, Paint)> _shading = [
+    for (final rect in rects) (_faceFor(rect), _bloomFor(rect)),
+  ];
+
+  Paint _faceFor(Rect rect) => Paint()
+    ..shader = ui.Gradient.linear(
+      Offset(0, rect.top),
+      Offset(0, rect.top + min(140, rect.height)),
+      const [Color(0xFF191020), Color(0x00191020)],
     );
-  }
+
+  Paint _bloomFor(Rect rect) => Paint()
+    ..shader = ui.Gradient.linear(
+      Offset(0, rect.top - _bloom),
+      Offset(0, rect.top),
+      const [Color(0x00E8B55E), Color(0x38E8B55E)],
+    );
 
   @override
   void render(Canvas canvas) {
-    final visible = view?.call();
-    for (final rect in rects) {
-      canvas.drawRect(_fillFor(rect, visible), _fill);
+    for (final (i, rect) in rects.indexed) {
+      final body = rect;
+      if (_lit) {
+        final (face, bloom) = _shading[i];
+        // On the real rectangle, not the stretched fill: the glow belongs to
+        // the lit edge, and the lit edge stops where the floor does.
+        canvas.drawRect(
+          Rect.fromLTRB(rect.left, rect.top - _bloom, rect.right, rect.top),
+          bloom,
+        );
+        canvas.drawRect(body, _fill);
+        canvas.drawRect(body, face);
+      } else {
+        canvas.drawRect(body, _fill);
+      }
       // A lighter cap on the standable face, so "you can land here" reads
       // without any art. Lit from behind it is doing more than that: it is
       // the only thing separating one black shape from the next.
