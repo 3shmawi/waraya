@@ -145,21 +145,30 @@ class _WarayaLevelsState extends State<WarayaLevels> {
               ),
             },
           ),
-          // The only way into the menu on a touch screen, and a reminder on a
-          // keyboard that escape does something. Small and top centre: the
-          // readout owns the left corner and the level's name owns the right.
-          _MenuHandle(onTap: _openMenu),
+          // The only way to retry or reach the menu on a touch screen, and on
+          // a keyboard a reminder that R and escape do something.
+          //
+          // Top centre, not down with the thumbs: the readout owns the left
+          // corner and the level's name owns the right, and more to the point
+          // an accidental retry is a level thrown away. Both of these are
+          // deliberate acts and are worth reaching for.
+          _TopBar(onRetry: _game.reload, onMenu: _openMenu),
         ],
       ),
     );
   }
 }
 
-/// The button that opens the level list, hung above the game.
-class _MenuHandle extends StatelessWidget {
-  const _MenuHandle({required this.onTap});
+/// Retry and the level list, hung above the game.
+///
+/// `reload` had exactly one route for a player — the **R key** — which meant
+/// a phone had no retry at all. Level four is *designed* around failing into a
+/// hole you get out of with R, so on a phone it was a hole you stayed in.
+class _TopBar extends StatelessWidget {
+  const _TopBar({required this.onRetry, required this.onMenu});
 
-  final VoidCallback onTap;
+  final VoidCallback onRetry;
+  final VoidCallback onMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -168,25 +177,44 @@ class _MenuHandle extends StatelessWidget {
         alignment: Alignment.topCenter,
         child: Padding(
           padding: const EdgeInsets.only(top: 10),
-          child: GestureDetector(
-            onTap: onTap,
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                color: const Color(0x33140E08),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: const Color(0x40FFE7B0)),
-              ),
-              child: const Text(
-                'المراحل',
-                style: TextStyle(
-                  fontFamily: arabicFontFamily,
-                  fontSize: 13,
-                  color: Color(0xE6FFE7B0),
-                ),
-              ),
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _Pill(label: 'من الأول', onTap: onRetry),
+              const SizedBox(width: 8),
+              _Pill(label: 'المراحل', onTap: onMenu),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0x33140E08),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: const Color(0x40FFE7B0)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontFamily: arabicFontFamily,
+            fontSize: 13,
+            color: Color(0xE6FFE7B0),
           ),
         ),
       ),

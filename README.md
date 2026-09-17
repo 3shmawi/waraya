@@ -81,7 +81,8 @@ the level back if you have painted yourself into a corner — which in one of
 them is the intended way to find out you did. On a phone there are four drawn
 buttons: two arrows bottom left, jump and crouch bottom right.
 
-**Escape** (or the button at the top) opens the level list. Progress is kept
+**R** (or «من الأول» at the top) puts the level back. **Escape** (or
+«المراحل») opens the level list. Progress is kept
 per level id, so closing the tab and coming back puts you where you stopped.
 
 The game says none of the controls: no prompts, no tutorial, and that stays a

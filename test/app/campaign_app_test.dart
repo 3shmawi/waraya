@@ -25,9 +25,11 @@ void main() {
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    // The menu handle is the only way in on a touch screen, so its absence is
-    // a game nobody can get out of.
+    // Both are the only routes there are on a touch screen. Retry especially:
+    // it had none at all until now, and level four is designed around needing
+    // one.
     expect(find.text('المراحل'), findsOneWidget);
+    expect(find.text('من الأول'), findsOneWidget);
   });
 
   testWidgets('a returning player resumes rather than starting over', (

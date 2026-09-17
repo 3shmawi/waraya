@@ -196,6 +196,20 @@ def door() -> Samples:
     return normalise(mix(grind, gain(rumble, 0.7)), 0.75)
 
 
+def reset() -> Samples:
+    """The level being taken back.
+
+    Downward, and further down than anything else in the set: every other sound
+    is something happening *in* the world, and this one is the world being
+    wound back. Short, because it fires the instant you die and a long sound
+    would still be playing while you are moving again.
+    """
+    rng = random.Random(59)
+    fall = envelope(sweep(0.36, 300, 70, curve=0.6), 0.004, 0.32, curve=2.0)
+    air = envelope(lowpass(noise(0.3, rng), 900), 0.006, 0.26, curve=2.6)
+    return normalise(mix(fall, gain(air, 0.4)), 0.8)
+
+
 SOUNDS = {
     "step_1.wav": lambda: step(1),
     "step_2.wav": lambda: step(2),
@@ -204,6 +218,7 @@ SOUNDS = {
     "land.wav": land,
     "plate.wav": plate,
     "door.wav": door,
+    "reset.wav": reset,
 }
 
 

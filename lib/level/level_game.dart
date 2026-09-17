@@ -20,6 +20,7 @@ import '../shadow/shadow_figure.dart';
 import '../shadow/shadow_recorder.dart';
 import '../ui/level_hud.dart';
 import '../ui/level_title.dart';
+import '../ui/reset_flash.dart';
 import 'level.dart';
 import 'player.dart';
 import 'props.dart';
@@ -93,6 +94,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   final FixedTicker ticker = FixedTicker();
   final ScreenShake shake = ScreenShake();
   final StepDetector steps = StepDetector();
+  final ResetFlash resetFlash = ResetFlash();
 
   late final InputController input;
   late Player player;
@@ -160,7 +162,11 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
     await _build();
     final hud = LevelHud(game: this);
-    await camera.viewport.addAll([hud, LevelTitle(game: this, hud: hud)]);
+    await camera.viewport.addAll([
+      resetFlash,
+      hud,
+      LevelTitle(game: this, hud: hud),
+    ]);
   }
 
   /// Tears the current level down and puts the next one up.
@@ -175,6 +181,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     shake.reset();
     _completed = false;
     _advanceIn = 0;
+    resetFlash.clear();
 
     // The level seeds the tunables; the debug panel can still override them
     // live, which is the whole point of the panel.
@@ -461,6 +468,11 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     _completed = false;
     _advanceIn = 0;
     reloads++;
+    // Seen and heard. Being put back used to happen between two frames with
+    // nothing to mark it, which reads as the game glitching rather than as
+    // dying.
+    resetFlash.show();
+    audio.play(Sfx.reset, volume: 0.45);
   }
 }
 

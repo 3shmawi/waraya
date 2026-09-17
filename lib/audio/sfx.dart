@@ -23,7 +23,12 @@ enum Sfx {
   jump('jump.wav'),
   land('land.wav'),
   plate('plate.wav'),
-  door('door.wav');
+  door('door.wav'),
+
+  /// The level being taken back. One at a time: two overlapping resets would
+  /// mean the level was reset twice in a third of a second, which is a bug
+  /// rather than something to mix.
+  reset('reset.wav', voices: 1);
 
   const Sfx(this.file, {this.voices = 2});
 
