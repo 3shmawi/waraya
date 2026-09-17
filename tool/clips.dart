@@ -123,16 +123,25 @@ void main() {
   for (final clip in clips) {
     if (only != null && only != clip.slug && only != '${clip.number}') continue;
     test('clip ${clip.name}', () async {
-      final frames = await render(clip);
-      expect(frames, greaterThan(60), reason: 'clip ${clip.name} came out empty');
+      final shot = await render(clip);
+      // A clip that runs the whole script and never reaches the goal is a
+      // clip of somebody failing the level. Louder here than on the phone.
+      expect(
+        shot.finished,
+        isTrue,
+        reason: '${clip.levelId} was not finished in ${shot.frames} frames',
+      );
       // ignore: avoid_print
-      print('${clip.name}: $frames frames -> $outRoot/${clip.name}');
+      print(
+        '${clip.name}: ${shot.frames} frames '
+        '(${(shot.frames / fps).toStringAsFixed(1)}s) -> $outRoot/${clip.name}',
+      );
     }, timeout: const Timeout(Duration(minutes: 10)));
   }
 }
 
-/// Plays [clip] and writes one PNG per frame. Returns how many it wrote.
-Future<int> render(Clip clip) async {
+/// Plays [clip] and writes one PNG per frame.
+Future<({int frames, bool finished})> render(Clip clip) async {
   final dir = Directory('$outRoot/${clip.name}');
   if (dir.existsSync()) dir.deleteSync(recursive: true);
   dir.createSync(recursive: true);
@@ -186,8 +195,9 @@ Future<int> render(Clip clip) async {
     await step(InputIntent.none);
   }
 
+  final finished = game.completed || game.levelIndex != clip.levelIndex;
   game.onRemove();
-  return frame;
+  return (frames: frame, finished: finished);
 }
 
 /// Paints one frame of [game] to [path].
