@@ -63,8 +63,8 @@ touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 | 1 | Environment, camera, atmosphere, character | ✅ |
 | 2 | The delayed shadow, on a grey-box test scene | ✅ |
 | 3 | Game feel — weight, coyote time, sound, screen shake | ✅ code, tuning open |
-| 4 | Puzzle design, 5–8 levels | 7 built, playtesting open |
-| 5 | Death and retry, level transitions, saving, menus | |
+| 4 | Puzzle design, 5–8 levels | ✅ 7 built |
+| 5 | Death and retry, level transitions, saving, menus | saving and a level list in |
 | 6 | Polish and release | |
 
 It is a hobby project, built one day a week. The plan it follows, and the
@@ -81,8 +81,11 @@ the level back if you have painted yourself into a corner — which in one of
 them is the intended way to find out you did. On a phone there are four drawn
 buttons: two arrows bottom left, jump and crouch bottom right.
 
-The game itself says none of that: no menu, no prompts, and that stays a Phase
-5 question rather than something bolted onto a level. So the two places a
+**Escape** (or the button at the top) opens the level list. Progress is kept
+per level id, so closing the tab and coming back puts you where you stopped.
+
+The game says none of the controls: no prompts, no tutorial, and that stays a
+Phase 5 question rather than something bolted onto a level. So the two places a
 player is already waiting or reading say it instead — the landing page, and the
 loading splash. A CanvasKit build takes a couple of megabytes to paint the
 first frame, and that wait is the one moment in the whole game with room for a
