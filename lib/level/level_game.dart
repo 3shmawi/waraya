@@ -50,6 +50,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     this.onBeaten,
     this.onCampaignFinished,
     this.onMenuRequested,
+    this.readoutDetail = true,
   }) : settings = settings ?? LabSettings(),
        _index = startAt.clamp(0, levels.length - 1),
        assert(levels.isNotEmpty, 'a game needs at least one level');
@@ -89,6 +90,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
   /// Called when the player asks for the level list from the keyboard.
   final void Function()? onMenuRequested;
+
+  /// Whether the corner readout prints its developer lines. See [LevelHud].
+  final bool readoutDetail;
 
   final ShadowRecorder recorder = ShadowRecorder();
   final FixedTicker ticker = FixedTicker();
@@ -161,7 +165,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     await _build();
-    final hud = LevelHud(game: this);
+    final hud = LevelHud(game: this, detail: readoutDetail);
     await camera.viewport.addAll([
       resetFlash,
       hud,

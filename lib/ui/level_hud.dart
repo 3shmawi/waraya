@@ -13,10 +13,17 @@ import '../licenses.dart';
 /// the shadow, and **the delay number visible on screen**. A number burned
 /// into the frame needs no caption and no voiceover.
 class LevelHud extends PositionComponent {
-  LevelHud({required this.game})
+  LevelHud({required this.game, this.detail = true})
     : super(position: Vector2.all(12), priority: 1000);
 
   final LevelGame game;
+
+  /// Whether to print the developer lines under the delay.
+  ///
+  /// Off for recording: the delay number is the one thing on screen that
+  /// explains the game without a word of caption, and `level 2 / 7`,
+  /// `reloads 3` and an fps counter next to it are noise in a clip.
+  final bool detail;
 
   static final _big = TextPaint(
     style: const TextStyle(
@@ -54,7 +61,7 @@ class LevelHud extends PositionComponent {
       position: Vector2(10, 48),
       priority: 1,
     );
-    await addAll([_delayText, _statusText]);
+    await addAll([_delayText, if (detail) _statusText]);
   }
 
   @override
@@ -81,6 +88,10 @@ class LevelHud extends PositionComponent {
     final waiting = recorder.secondsUntilPlaying;
 
     _delayText.text = 'delay ${settings.delaySeconds.toStringAsFixed(1)}s';
+    if (!detail) {
+      size = Vector2(_delayText.size.x + 20, _delayText.size.y + 20);
+      return;
+    }
     final many = game.levels.length > 1;
     _statusText.text = [
       if (many) 'level      ${game.levelIndex + 1} / ${game.levels.length}',
