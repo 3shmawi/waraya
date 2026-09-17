@@ -47,3 +47,21 @@ from `gstatic.com` — required behind a restrictive network, and worth measurin
 either way since the plan treats web download size as the main risk. A `--wasm`
 build (skwasm, ~1.1 MB versus CanvasKit's ~1.5 MB) passes the dry run and is
 worth testing once real assets exist.
+
+
+## إضافة plugin وبناء الويب
+
+لو ضفت dependency فيها plugin (`shared_preferences`، `audioplayers`، أي حاجة
+ليها كود native أو web)، **اعمل `flutter clean` قبل ما تبني للويب**.
+
+الـweb plugin registrant بيتولّد مرة وبيتخزّن في `.dart_tool`، وإضافة plugin
+جديدة **مش** بتعتبر البيلد القديم باظ. فـ`flutter build web` بيفضل يطلّع bundle
+مسجّل فيه الـplugins اللي كانت موجودة **قبل** الإضافة، والنتيجة:
+
+```
+MissingPluginException(No implementation found for method getAll
+on channel plugins.flutter.io/shared_preferences)
+```
+
+الكود سليم، والتستات بتعدّي، والـanalyze نضيف — وبس ميشتغلش في المتصفح.
+`flutter clean && flutter pub get && flutter build web` بيحلّها.

@@ -45,7 +45,12 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     this.audio = const SilentAudio(),
     this.inputs,
     this.look = LevelLook.greyBox,
+    int startAt = 0,
+    this.onBeaten,
+    this.onCampaignFinished,
+    this.onMenuRequested,
   }) : settings = settings ?? LabSettings(),
+       _index = startAt.clamp(0, levels.length - 1),
        assert(levels.isNotEmpty, 'a game needs at least one level');
 
   /// Played in order. One entry is a bench; several is a campaign.
@@ -71,6 +76,19 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
   bool get _lit => look == LevelLook.silhouette;
 
+  /// Called with the level that was just finished, before the next one loads.
+  ///
+  /// The game does not know what saving is and should not: it reports, and
+  /// whatever built it decides whether that is worth writing down.
+  final void Function(Level level)? onBeaten;
+
+  /// Called once the last level in the list has been finished and there is
+  /// nowhere left to advance to.
+  final void Function()? onCampaignFinished;
+
+  /// Called when the player asks for the level list from the keyboard.
+  final void Function()? onMenuRequested;
+
   final ShadowRecorder recorder = ShadowRecorder();
   final FixedTicker ticker = FixedTicker();
   final ScreenShake shake = ScreenShake();
@@ -84,7 +102,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   final List<Door> doors = [];
   final List<Goal> goals = [];
 
-  int _index = 0;
+  int _index;
   int get levelIndex => _index;
   Level get level => levels[_index];
 
@@ -128,7 +146,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       await addAll([input, keyboard]);
       await camera.viewport.add(touch);
     }
-    await add(_Hotkeys(reload));
+    await add(_Hotkeys(onReload: reload, onMenu: onMenuRequested));
 
     // The scene the levels stand in, added once. The world half is rebuilt per
     // level — `_build` empties the world — but the sky and the air do not
@@ -320,6 +338,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       if (goal.endsLevel) {
         _completed = true;
         _advanceIn = _advanceDelay;
+        onBeaten?.call(level);
       }
     }
 
@@ -357,9 +376,21 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     _advanceIn -= dt;
     if (_advanceIn > 0) return;
     _advanceIn = 0;
-    if (_index + 1 >= levels.length) return;
+    if (_index + 1 >= levels.length) {
+      onCampaignFinished?.call();
+      return;
+    }
     _index++;
     _build();
+  }
+
+  /// Jumps to a level by position, from a menu. Everything is rebuilt, so the
+  /// buffer, the shadow and the doors all start where a fresh level expects
+  /// to find them.
+  Future<void> goTo(int index) async {
+    _index = index.clamp(0, levels.length - 1);
+    reloads = 0;
+    await _build();
   }
 
   void _playMovementSounds() {
@@ -433,18 +464,23 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 }
 
-/// R reloads the level. Kept out of `InputSource` deliberately: reloading is a
-/// debug affordance, not something the shared input abstraction should learn
-/// about and then have to carry forever.
+/// R reloads the level, escape asks for the level list. Kept out of
+/// `InputSource` deliberately: neither is a movement, and the shared input
+/// abstraction should not learn about them and then have to carry them
+/// forever.
 class _Hotkeys extends Component with KeyboardHandler {
-  _Hotkeys(this.onReload);
+  _Hotkeys({required this.onReload, this.onMenu});
 
   final void Function() onReload;
+  final void Function()? onMenu;
 
   @override
   bool onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
-    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyR) {
-      onReload();
+    if (event is! KeyDownEvent) return true;
+    if (event.logicalKey == LogicalKeyboardKey.keyR) onReload();
+    if (event.logicalKey == LogicalKeyboardKey.escape ||
+        event.logicalKey == LogicalKeyboardKey.keyM) {
+      onMenu?.call();
     }
     return true;
   }
