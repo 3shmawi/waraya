@@ -18,10 +18,27 @@ class LabControls extends StatefulWidget {
     super.key,
     required this.settings,
     required this.onReload,
+    this.onReread,
+    this.onDump,
+    this.status,
   });
 
   final LabSettings settings;
   final VoidCallback onReload;
+
+  /// Read the level back off the disk. Null unless the bench was pointed at a
+  /// folder — there is nothing to re-read otherwise.
+  final VoidCallback? onReread;
+
+  /// Print the level on screen as JSON, to start a new one from.
+  final VoidCallback? onDump;
+
+  /// The last thing the two above had to say, good or bad.
+  ///
+  /// Authoring in JSON means mistakes are typos rather than compile errors,
+  /// and a typo whose only symptom is that the reload button did nothing is
+  /// the worst of both. Whatever went wrong belongs where the button is.
+  final String? status;
 
   @override
   State<LabControls> createState() => _LabControlsState();
@@ -48,7 +65,11 @@ class _LabControlsState extends State<LabControls> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [_header(), if (_expanded) ..._body()],
+                    children: [
+                      _header(),
+                      if (widget.status != null) _status(widget.status!),
+                      if (_expanded) ..._body(),
+                    ],
                   ),
                 ),
               ),
@@ -72,6 +93,22 @@ class _LabControlsState extends State<LabControls> {
           ),
         ),
       ),
+      if (widget.onDump != null)
+        IconButton(
+          tooltip: 'print this level as JSON',
+          onPressed: widget.onDump,
+          icon: const Icon(Icons.code, size: 18, color: Color(0xFFEDEDED)),
+        ),
+      if (widget.onReread != null)
+        IconButton(
+          tooltip: 'read the levels back off the disk',
+          onPressed: widget.onReread,
+          icon: const Icon(
+            Icons.folder_open,
+            size: 18,
+            color: Color(0xFFEDEDED),
+          ),
+        ),
       IconButton(
         tooltip: 'reload scene (R)',
         onPressed: widget.onReload,
@@ -87,6 +124,19 @@ class _LabControlsState extends State<LabControls> {
         ),
       ),
     ],
+  );
+
+  Widget _status(String text) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+    child: Text(
+      text,
+      style: const TextStyle(
+        color: Color(0xFFE8B96A),
+        fontFamily: 'LiberationMono',
+        fontSize: 11,
+        height: 1.4,
+      ),
+    ),
   );
 
   List<Widget> _body() {

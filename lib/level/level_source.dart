@@ -35,17 +35,23 @@ class BuiltInLevels implements LevelSource {
 
 /// Levels from a string of JSON — a file, an asset, or a response body.
 class JsonLevels implements LevelSource {
-  const JsonLevels(this.source, {this.label = 'json'});
+  const JsonLevels(this.source, {this.label = 'json', this.onSkipped});
 
   final String source;
 
   @override
   final String label;
 
+  /// Told about each level left out because it needs a mechanic this build
+  /// does not have. The player is not: they get the levels that do work, and
+  /// a game that refuses to open because one level was ahead of it would be a
+  /// worse game. A debug build can shout through this.
+  final void Function(LevelUnsupportedException skipped)? onSkipped;
+
   @override
   Future<List<Level>> load() async {
     try {
-      return levelsFromJson(jsonDecode(source));
+      return levelsFromJson(jsonDecode(source), onSkipped: onSkipped);
     } on FormatException catch (error) {
       throw LevelFormatException('$label is not valid JSON: ${error.message}');
     }

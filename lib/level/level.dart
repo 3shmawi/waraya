@@ -69,6 +69,31 @@ class Level {
 
   /// Where the ground is, for spawning and for falling out of the world.
   final double floorTop;
+
+  /// The names of the mechanics **this build knows how to play**.
+  ///
+  /// Everything a level could hold when this set was written — blocks, plates,
+  /// doors, markers, one delay — is the baseline and is not named here. The
+  /// set is for what comes *after*: a mechanic gets its name added in the same
+  /// commit that implements it, never before.
+  ///
+  /// It exists for one failure that has no other cure. A level served from
+  /// somewhere else can reach a client older than the mechanic it uses, and
+  /// the old parser does the worst possible thing with a field it has never
+  /// heard of: it **ignores it in silence** and puts up a level that is either
+  /// unsolvable or solvable without ever touching the thing the puzzle is
+  /// about. Neither says anything is wrong. A level that names what it needs
+  /// can be refused instead, which is the only honest answer.
+  static const Set<String> knownMechanics = <String>{};
+
+  /// What this level needs beyond the baseline, worked out from its contents.
+  ///
+  /// Derived rather than stored, so it cannot be forgotten: the level says
+  /// what it needs because the code that can see what it holds says it, not
+  /// because whoever wrote the file remembered to. Empty today, because
+  /// nothing in [Level] is yet past the baseline — this is the hook the next
+  /// mechanic hangs itself on.
+  Set<String> get requires => const <String>{};
 }
 
 /// A pressure plate, and the door it holds open while something stands on it.
@@ -197,6 +222,7 @@ extension LevelJson on Level {
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
+    'requires': requires.toList()..sort(),
     'teaches': teaches,
     'delaySeconds': delaySeconds,
     'spawnX': spawnX,
@@ -237,10 +263,42 @@ class LevelFormatException implements Exception {
   String toString() => 'LevelFormatException: $message';
 }
 
-/// Builds a [Level] from decoded JSON, or throws [LevelFormatException].
+/// Thrown when a level is well-formed but asks for a mechanic this build does
+/// not have.
+///
+/// Separate from [LevelFormatException] because it is not a mistake: the level
+/// is fine, this copy of the game is simply older than it. The right response
+/// is to leave that one level out, not to throw the batch away.
+class LevelUnsupportedException implements Exception {
+  LevelUnsupportedException(this.levelId, this.missing);
+
+  final String levelId;
+
+  /// The names this build does not know. See [Level.knownMechanics].
+  final Set<String> missing;
+
+  @override
+  String toString() =>
+      'LevelUnsupportedException: level "$levelId" needs '
+      '${missing.join(', ')}, which this build does not have';
+}
+
+/// Builds a [Level] from decoded JSON.
+///
+/// Throws [LevelFormatException] if the data does not describe a level, and
+/// [LevelUnsupportedException] if it describes one this build cannot play.
 Level levelFromJson(Object? source) {
   final json = _asMap(source, 'level');
   final id = _asString(json['id'], 'id');
+
+  // Before anything else is read. A level that needs a mechanic this build
+  // has never heard of cannot be parsed into a *smaller* level and played
+  // anyway — that is the whole failure this guards.
+  final missing = _stringList(json['requires'], 'requires')
+      .toSet()
+      .difference(Level.knownMechanics);
+  if (missing.isNotEmpty) throw LevelUnsupportedException(id, missing);
+
   try {
     return Level(
       id: id,
@@ -289,10 +347,29 @@ Level levelFromJson(Object? source) {
   }
 }
 
-/// Builds a whole campaign from decoded JSON.
-List<Level> levelsFromJson(Object? source) => [
-  for (final entry in _asList(source, 'levels')) levelFromJson(entry),
-];
+/// Builds a whole campaign from decoded JSON — a list of levels, or one on
+/// its own, which is what a file somebody is authoring usually holds.
+///
+/// A level this build cannot play is **left out**, and [onSkipped] is told.
+/// Dropping one level is safe; dropping the batch it arrived in would lose
+/// nineteen good levels because the twentieth was ahead of this build, and
+/// silently dropping a *field* — the thing [Level.knownMechanics] exists to
+/// prevent — is the only version of this that is actually dangerous.
+List<Level> levelsFromJson(
+  Object? source, {
+  void Function(LevelUnsupportedException skipped)? onSkipped,
+}) {
+  final entries = source is Map ? [source] : _asList(source, 'levels');
+  final levels = <Level>[];
+  for (final entry in entries) {
+    try {
+      levels.add(levelFromJson(entry));
+    } on LevelUnsupportedException catch (error) {
+      onSkipped?.call(error);
+    }
+  }
+  return levels;
+}
 
 Map<String, Object?> _asMap(Object? value, String field) => value is Map
     ? value.cast<String, Object?>()
@@ -328,6 +405,11 @@ Rect _rectFromJson(Object? value, String field) {
   }
   return Rect.fromLTRB(n[0], n[1], n[2], n[3]);
 }
+
+List<String> _stringList(Object? value, String field) => [
+  for (final (i, entry) in _asList(value, field).indexed)
+    _asString(entry, '$field[$i]'),
+];
 
 List<Rect> _rectList(Object? value, String field) => [
   for (final (i, entry) in _asList(value, field).indexed)

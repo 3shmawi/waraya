@@ -57,7 +57,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
        assert(levels.isNotEmpty, 'a game needs at least one level');
 
   /// Played in order. One entry is a bench; several is a campaign.
-  final List<Level> levels;
+  ///
+  /// Not final only so [replaceLevels] can swap it. Nothing else writes it.
+  List<Level> levels;
 
   final LabSettings settings;
 
@@ -412,6 +414,30 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
     _index++;
     _build();
+  }
+
+  /// Swaps the whole list under a running game, for the authoring loop.
+  ///
+  /// Keeps your place **by id**, not by position — the same reason saving does
+  /// (`Progress`). While a level is being written the list is exactly what is
+  /// churning: one gets inserted, another renamed, a third deleted, and an
+  /// index means you land somewhere else every time you press reload. An id
+  /// means you land back in the level you are editing.
+  ///
+  /// An empty list is ignored rather than obeyed. It means the folder was
+  /// emptied or every level in it was refused, and a game with no level is a
+  /// crash; keeping the last good one on screen is the answer that lets you
+  /// fix the file and press the button again.
+  Future<void> replaceLevels(List<Level> next) async {
+    if (next.isEmpty) return;
+    final wasOn = level.id;
+    levels = next;
+    final found = next.indexWhere((level) => level.id == wasOn);
+    _index = found < 0 ? 0 : found;
+    reloads = 0;
+    _advanceIn = 0;
+    fade.blackout();
+    await _build();
   }
 
   /// Jumps to a level by position, from a menu. Everything is rebuilt, so the
