@@ -7,7 +7,9 @@ import '../licenses.dart';
 ///
 /// Phase 5's job is the joins between levels, and this is the first of them.
 /// Deliberately not a title screen: someone handed the link lands *in* level
-/// one, and only ever sees this if they ask for it or finish the campaign.
+/// one, and only ever sees this if they ask for it. Finishing the campaign
+/// gets [CampaignEnd] instead — this list used to do that job with a changed
+/// heading, which answered the one earned moment in the game with a menu.
 /// A menu in front of a game is friction for the person who just clicked
 /// through to it.
 ///
@@ -21,7 +23,6 @@ class LevelSelect extends StatelessWidget {
     required this.current,
     required this.onPick,
     required this.onClose,
-    this.finished = false,
   });
 
   final List<Level> levels;
@@ -35,10 +36,6 @@ class LevelSelect extends StatelessWidget {
 
   final void Function(int index) onPick;
   final VoidCallback onClose;
-
-  /// True when this is the screen after the last level rather than a menu the
-  /// player asked for.
-  final bool finished;
 
   static const Color _ink = Color(0xFFF3E2C6);
   static const Color _dim = Color(0xFF9A8B7A);
@@ -55,7 +52,7 @@ class LevelSelect extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              _Header(finished: finished, onClose: onClose),
+              _Header(onClose: onClose),
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
@@ -64,7 +61,7 @@ class LevelSelect extends StatelessWidget {
                     number: i + 1,
                     level: levels[i],
                     locked: i >= unlocked,
-                    playing: i == current && !finished,
+                    playing: i == current,
                     onTap: i >= unlocked ? null : () => onPick(i),
                   ),
                 ),
@@ -78,9 +75,8 @@ class LevelSelect extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.finished, required this.onClose});
+  const _Header({required this.onClose});
 
-  final bool finished;
   final VoidCallback onClose;
 
   @override
@@ -93,20 +89,18 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  finished ? 'خلصت السبعة' : 'المراحل',
-                  style: const TextStyle(
+                const Text(
+                  'المراحل',
+                  style: TextStyle(
                     fontFamily: arabicFontFamily,
                     fontSize: 26,
                     color: LevelSelect._ink,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  finished
-                      ? 'ارجع لأي واحدة، أو جرّب تحلّها بطريقة تانية.'
-                      : 'اختار واحدة، أو كمّل اللي انت فيها.',
-                  style: const TextStyle(
+                const Text(
+                  'اختار واحدة، أو كمّل اللي انت فيها.',
+                  style: TextStyle(
                     fontFamily: arabicFontFamily,
                     fontSize: 14,
                     color: LevelSelect._dim,

@@ -16,8 +16,11 @@ import 'config.dart';
 class SkyBackdrop extends PositionComponent {
   SkyBackdrop() : super(priority: -1000);
 
-  static const _stops = <double>[0.0, 0.35, 0.62, 0.82, 1.0];
-  static const _colors = <Color>[
+  /// Public so anything else that has to paint this sky — the mark on the
+  /// campaign's ending, say — paints *this* sky rather than a second copy of
+  /// these numbers that quietly stops matching.
+  static const stops = <double>[0.0, 0.35, 0.62, 0.82, 1.0];
+  static const colors = <Color>[
     Color(0xFFF7C032), // high dust
     Color(0xFFF1AD0C), // measured at 0.30 of the frame
     Color(0xFFE59D00), // 0.50
@@ -40,8 +43,8 @@ class SkyBackdrop extends PositionComponent {
     _paint.shader = ui.Gradient.linear(
       Offset.zero,
       Offset(0, horizonOnScreen),
-      _colors,
-      _stops,
+      colors,
+      stops,
     );
   }
 

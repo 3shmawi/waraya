@@ -18,6 +18,7 @@ import '../lab/lab_settings.dart';
 import '../shadow/fixed_ticker.dart';
 import '../shadow/shadow_figure.dart';
 import '../shadow/shadow_recorder.dart';
+import '../ui/level_fade.dart';
 import '../ui/level_hud.dart';
 import '../ui/level_title.dart';
 import '../ui/reset_flash.dart';
@@ -99,6 +100,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   final ScreenShake shake = ScreenShake();
   final StepDetector steps = StepDetector();
   final ResetFlash resetFlash = ResetFlash();
+  final LevelFade fade = LevelFade();
 
   late final InputController input;
   late Player player;
@@ -119,7 +121,13 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// Seconds left before the next level replaces this one. Gives the goal a
   /// beat to fill in, so finishing reads as finishing rather than as a cut.
   double _advanceIn = 0;
-  static const double _advanceDelay = 0.9;
+
+  /// The beat between touching the goal and the next level replacing it.
+  ///
+  /// Public so a test can check it is still longer than the fade that has to
+  /// fit inside it: if the cover ever starts the moment the goal is touched,
+  /// the one piece of feedback that says *you did it* is never seen.
+  static const double advanceDelay = 0.9;
 
   /// Longest frame the simulation will believe, in seconds.
   ///
@@ -170,6 +178,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       resetFlash,
       hud,
       LevelTitle(game: this, hud: hud),
+      fade,
     ]);
   }
 
@@ -232,6 +241,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
     _frameVertically();
     camera.follow(player, horizontalOnly: true);
+    // Whatever put this level up — the level before it finishing, or the menu
+    // — the new one arrives out of the dark rather than appearing in it.
+    fade.reveal();
   }
 
   /// The environment, standing on this level's floor.
@@ -348,7 +360,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       goal.reached = true;
       if (goal.endsLevel) {
         _completed = true;
-        _advanceIn = _advanceDelay;
+        _advanceIn = advanceDelay;
         onBeaten?.call(level);
       }
     }
@@ -380,14 +392,21 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     return overlap >= min(_footprint, trigger.width);
   }
 
-  /// Moves on once the goal has had its beat. The last level simply stays
-  /// finished: where to go after the campaign is a Phase 5 question.
+  /// Moves on once the goal has had its beat.
+  ///
+  /// The beat is in two halves: the goal fills in, and then the screen goes
+  /// dark over the rest of it, so the swap itself happens on a black frame.
   void _advance(double dt) {
     if (_advanceIn <= 0) return;
     _advanceIn -= dt;
+    if (_advanceIn <= LevelFade.startsAt) fade.cover();
     if (_advanceIn > 0) return;
     _advanceIn = 0;
     if (_index + 1 >= levels.length) {
+      // Nothing left to build, so nothing is going to call `reveal` — and a
+      // screen left black under whatever the campaign's ending puts up is a
+      // screen that stays black if that ending is ever dismissed.
+      fade.reveal();
       onCampaignFinished?.call();
       return;
     }
@@ -401,6 +420,11 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   Future<void> goTo(int index) async {
     _index = index.clamp(0, levels.length - 1);
     reloads = 0;
+    _advanceIn = 0;
+    // Straight to black first: picking from the menu is not the end of a
+    // level, so there is no cover already running — but the level still
+    // arrives out of the dark, the same way every other one does.
+    fade.blackout();
     await _build();
   }
 

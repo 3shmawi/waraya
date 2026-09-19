@@ -8,6 +8,7 @@ import 'level/level_source.dart';
 import 'licenses.dart';
 import 'progress/progress.dart';
 import 'progress/stored_progress.dart';
+import 'ui/campaign_end.dart';
 import 'ui/level_select.dart';
 
 /// The puzzles, in teaching order.
@@ -66,6 +67,7 @@ class WarayaLevels extends StatefulWidget {
 
 class _WarayaLevelsState extends State<WarayaLevels> {
   static const String _menu = 'levels';
+  static const String _end = 'campaign-end';
 
   late final Set<String> _beaten = {...widget.beaten};
   late final LevelGame _game;
@@ -87,7 +89,7 @@ class _WarayaLevelsState extends State<WarayaLevels> {
       // and everyone else carries on.
       startAt: resumeIndex(widget.levels, _beaten),
       onBeaten: _remember,
-      onCampaignFinished: () => _openMenu(finished: true),
+      onCampaignFinished: _showEnd,
       onMenuRequested: _openMenu,
     );
   }
@@ -99,11 +101,8 @@ class _WarayaLevelsState extends State<WarayaLevels> {
     if (_beaten.add(level.id)) setState(() {});
   }
 
-  bool _finished = false;
-
-  void _openMenu({bool finished = false}) {
+  void _openMenu() {
     if (_game.overlays.isActive(_menu)) return;
-    setState(() => _finished = finished);
     // Paused, or your shadow keeps walking while you read — and in the level
     // where it kills you, reading the menu would be fatal.
     _game.pauseEngine();
@@ -118,6 +117,23 @@ class _WarayaLevelsState extends State<WarayaLevels> {
   void _pick(int index) {
     _closeMenu();
     _game.goTo(index);
+  }
+
+  void _showEnd() {
+    if (_game.overlays.isActive(_end)) return;
+    _game.pauseEngine();
+    _game.overlays.add(_end);
+  }
+
+  /// Leaves the ending and puts the game back where the button says.
+  void _leaveEnd({required int? goTo}) {
+    _game.overlays.remove(_end);
+    _game.resumeEngine();
+    if (goTo != null) {
+      _game.goTo(goTo);
+    } else {
+      _openMenu();
+    }
   }
 
   @override
@@ -139,9 +155,13 @@ class _WarayaLevelsState extends State<WarayaLevels> {
                 levels: widget.levels,
                 unlocked: unlockedCount(widget.levels, _beaten),
                 current: game.levelIndex,
-                finished: _finished,
                 onPick: _pick,
                 onClose: _closeMenu,
+              ),
+              _end: (context, game) => CampaignEnd(
+                levels: widget.levels,
+                onLevels: () => _leaveEnd(goTo: null),
+                onRestart: () => _leaveEnd(goTo: 0),
               ),
             },
           ),
