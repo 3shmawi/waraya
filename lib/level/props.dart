@@ -104,8 +104,11 @@ class PressurePlate extends PositionComponent {
 
   bool get isPressed => pressedByPlayer || pressedByShadow;
 
-  /// Id of the door this plate holds open.
+  /// Id of the door this plate holds open — or, if it [inverts], holds shut.
   String get opens => spec.opens;
+
+  /// Whether a body on this plate holds its door shut instead of open.
+  bool get inverts => spec.inverts;
 
   Rect get trigger => spec.trigger;
 
@@ -117,18 +120,118 @@ class PressurePlate extends PositionComponent {
   @override
   void render(Canvas canvas) {
     final rect = isPressed ? spec.area.translate(0, 6) : spec.area;
+    // An inverted plate reads as the same slab with its two states swapped
+    // round, because that is what it is. Lit up under a body means "this one
+    // is doing its thing"; on this plate its thing is holding the door shut.
+    final lively = inverts ? !isPressed : isPressed;
     canvas.drawRect(
       rect,
       Paint()
         ..color = _lit
-            ? (isPressed
-                  ? SilhouettePalette.plateDown
-                  : SilhouettePalette.plateUp)
-            : (isPressed ? Palette.plateDown : Palette.plateUp),
+            ? (lively ? SilhouettePalette.plateDown : SilhouettePalette.plateUp)
+            : (lively ? Palette.plateDown : Palette.plateUp),
     );
     if (_lit) return;
     canvas.drawRect(
       rect,
+      Paint()
+        ..color = Palette.blockEdge
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
+}
+
+/// A key. Flips its door the moment a body steps onto it — yours, or the one
+/// walking your path D seconds behind you.
+///
+/// The edge is the whole thing. [PressurePlate] answers *is anyone standing
+/// here* every frame; this answers *did anyone just arrive* and then keeps its
+/// answer. Standing on it for a second and standing on it for a minute do
+/// exactly the same thing, which is what makes it a key and not a plate.
+class Toggle extends PositionComponent {
+  Toggle(this.spec, {this.look = LevelLook.greyBox, super.priority = -6});
+
+  final ToggleSpec spec;
+  final LevelLook look;
+
+  bool get _lit => look == LevelLook.silhouette;
+
+  /// Which way this key is currently asking its door to be.
+  bool flipped = false;
+
+  bool _playerOn = false;
+  bool _shadowOn = false;
+
+  /// Id of the door this flips.
+  String get flips => spec.flips;
+
+  Rect get trigger => spec.trigger;
+
+  /// Feeds this frame's contacts in and returns true if the state changed,
+  /// which is what the scene listens to so a key clicks once rather than
+  /// every frame.
+  ///
+  /// Both arriving on the same frame flips it twice, which is no flip at all.
+  /// That is not a special case being handled, it is the rule applied twice —
+  /// and it is the same arithmetic that makes two of your own crossings cancel
+  /// each other out.
+  bool touch({required bool player, required bool shadow}) {
+    var changed = false;
+    if (player && !_playerOn) {
+      flipped = !flipped;
+      changed = true;
+    }
+    if (shadow && !_shadowOn) {
+      flipped = !flipped;
+      changed = true;
+    }
+    _playerOn = player;
+    _shadowOn = shadow;
+    return changed;
+  }
+
+  void reset() {
+    flipped = false;
+    _playerOn = false;
+    _shadowOn = false;
+  }
+
+  /// How far the lever leans, so which way it is thrown reads at a glance
+  /// from across the level.
+  static const double _lean = 26;
+
+  @override
+  void render(Canvas canvas) {
+    final base = spec.area;
+    canvas.drawRect(
+      base,
+      Paint()
+        ..color = _lit
+            ? (flipped
+                  ? SilhouettePalette.plateDown
+                  : SilhouettePalette.plateUp)
+            : (flipped ? Palette.plateDown : Palette.plateUp),
+    );
+    // The lever. A plate says what it is by sinking; a key has nothing to sink
+    // and has to say it some other way, so it leans — one way thrown, the
+    // other way not.
+    final foot = Offset(base.center.dx, base.top);
+    canvas.drawLine(
+      foot,
+      Offset(foot.dx + (flipped ? _lean : -_lean), base.top - 34),
+      Paint()
+        ..color = _lit
+            ? (flipped
+                  ? SilhouettePalette.plateDown
+                  : SilhouettePalette.blockTop)
+            : Palette.blockEdge
+        ..strokeWidth = 5
+        ..strokeCap = StrokeCap.round,
+    );
+    if (_lit) return;
+    canvas.drawRect(
+      base,
       Paint()
         ..color = Palette.blockEdge
         ..style = PaintingStyle.stroke
@@ -165,14 +268,31 @@ class Door extends PositionComponent {
 
   String get id => spec.id;
 
-  /// Ask the door to be open this frame because a plate is held.
+  /// Ask the door what it should be this frame.
+  ///
+  /// [open] is any plate held down or key thrown its way. [forcedShut] is an
+  /// inverted plate with a body on it, and it beats everything — the other
+  /// plates, the key, and the linger that would otherwise carry the door a few
+  /// seconds past the moment it was let go. The order is the rule:
+  ///
+  /// 1. an inverted plate pressed → shut, whatever else is true;
+  /// 2. otherwise a plate held or a key thrown → open;
+  /// 3. otherwise shut, after [DoorSpec.lingerSeconds].
   ///
   /// Returns true if the answer changed, which is what the scene listens to so
   /// a door makes its noise once rather than every frame.
-  bool hold(bool pressed) {
-    _pressed = pressed;
-    if (pressed) _linger = spec.lingerSeconds;
-    final wanted = pressed || _linger > 0;
+  bool hold(bool open, {bool forcedShut = false}) {
+    if (forcedShut) {
+      // The grace goes with it. A door being held shut that drifts open again
+      // a moment later because something was standing on a plate six seconds
+      // ago is not a door anybody is holding.
+      _pressed = false;
+      _linger = 0;
+    } else {
+      _pressed = open;
+      if (open) _linger = spec.lingerSeconds;
+    }
+    final wanted = !forcedShut && (_pressed || _linger > 0);
     if (wanted == wantsOpen) return false;
     wantsOpen = wanted;
     return true;

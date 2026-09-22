@@ -24,30 +24,82 @@ void main() {
 
   final sample = Levels.campaign.first;
 
-  test('a level written today needs nothing beyond the baseline', () {
+  test('a level declares exactly what it holds, and nothing else', () {
     for (final level in Levels.campaign) {
-      expect(level.requires, isEmpty);
-      expect(level.toJson()['requires'], isEmpty);
+      // Rectangles, plates, doors, one delay: the baseline, and none of it is
+      // named. The seven levels written before this vocabulary existed still
+      // declare nothing, which is what keeps them readable by any build.
+      final expected = <String>{
+        if (level.toggles.isNotEmpty) 'toggles',
+        if (level.plates.any((plate) => plate.inverts)) 'inverted-plates',
+      };
+      expect(level.requires, expected, reason: level.id);
+      expect(level.toJson()['requires'], expected.toList()..sort());
+      expect(
+        level.requires.difference(Level.knownMechanics),
+        isEmpty,
+        reason: '${level.id} asks this build for something it has not got',
+      );
     }
+    expect(
+      Levels.campaign.where((l) => l.requires.contains('toggles')).map(
+        (l) => l.id,
+      ),
+      ['close-what-you-opened'],
+      reason: 'the level the key was added for is the one that declares it',
+    );
   });
 
   test('a level is refused by name when it asks for what is not here', () {
+    // `lights` is the next mechanic in the plan and is not built. A name from
+    // the plan rather than a nonsense one on purpose: this is exactly the
+    // shape of the accident — a level authored against a newer build.
     expect(
-      () => levelFromJson(jsonOf(sample, requires: ['toggles'])),
+      () => levelFromJson(jsonOf(sample, requires: ['lights'])),
       throwsA(
         isA<LevelUnsupportedException>()
             .having((e) => e.levelId, 'levelId', sample.id)
-            .having((e) => e.missing, 'missing', {'toggles'}),
+            .having((e) => e.missing, 'missing', {'lights'}),
       ),
     );
   });
 
   test('and is not refused for something this build does have', () {
-    // Nothing is past the baseline yet, so the empty declaration is the whole
-    // of what can be honestly asked for. When a mechanic lands, its name joins
-    // `knownMechanics` in the same commit — never before it works.
-    expect(Level.knownMechanics, isEmpty);
+    // A name joins `knownMechanics` in the same commit as the code that plays
+    // it, never before: a name here without the code behind it means a level
+    // is accepted and then played wrong, which is the whole failure this
+    // guards against.
+    expect(Level.knownMechanics, {'toggles', 'inverted-plates'});
     expect(levelFromJson(jsonOf(sample, requires: const [])).id, sample.id);
+    expect(
+      levelFromJson(jsonOf(Levels.closeWhatYouOpened)).toggles,
+      hasLength(1),
+      reason: 'the level that needs the key reads back with the key on it',
+    );
+  });
+
+  test('a build without the key would have refused the level, not thinned it',
+      () {
+    // What this is all for, spelled out. Strip `toggles` from the set — which
+    // is what an older build *is* — and the level that is entirely about a key
+    // no longer parses at all. The alternative, and the reason any of this
+    // exists, is the same JSON quietly becoming a level with a door nothing
+    // can open and no word said anywhere.
+    final json = jsonOf(Levels.closeWhatYouOpened);
+    expect(json['requires'], contains('toggles'));
+    expect(json['toggles'], hasLength(1));
+
+    final older = {...json, 'requires': ['toggles', 'something-else']};
+    expect(
+      () => levelFromJson(older),
+      throwsA(
+        isA<LevelUnsupportedException>().having(
+          (e) => e.missing,
+          'missing',
+          {'something-else'},
+        ),
+      ),
+    );
   });
 
   test('one level ahead of this build does not take the batch with it', () {

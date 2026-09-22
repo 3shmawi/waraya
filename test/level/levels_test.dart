@@ -497,6 +497,210 @@ void main() {
     );
   });
 
+  group('close what you opened', () {
+    testWithGame<LevelGame>(
+      'touch the key and leave, because the door is already counting down',
+      build(Levels.closeWhatYouOpened),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(
+            walkthroughs['close-what-you-opened']!,
+            stopWhenComplete: true,
+          );
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    // The wrong idea, and the reason this level exists. Six levels have taught
+    // one move — leave a body somewhere and let it press what you cannot reach
+    // — so the instinct on finding a key is to stand on it and wait for
+    // yourself to arrive and hold it down. On a key that arrival is the flip
+    // that shuts the door, and it shuts it for good: the shadow is standing on
+    // the key now, and a body already standing on one is not an arrival.
+    testWithGame<LevelGame>(
+      'waiting on the key for your past to hold it shuts the door instead',
+      build(Levels.closeWhatYouOpened),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(1.7), // out to the key
+            Move(5.2), // and wait there, the way a plate would want
+            Move.right(3.2), // then go — to a door that shut behind you
+          ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+        expect(
+          game.toggles.first.flipped,
+          isFalse,
+          reason: 'your own arrival put the key back',
+        );
+        expect(game.doors.first.openFraction, 0);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'and holding one direction gets you a shut door either way',
+      build(Levels.closeWhatYouOpened),
+      (game) async {
+        await game.ready();
+        // Right is the way out, and the door is shut because nothing has been
+        // touched. Left is the key, and the key is at a wall with nothing
+        // behind it. Neither is a level you can hold one arrow through — the
+        // failure the first draft of `pressItEarly` had.
+        final run = start(game)..play(const [Move.right(8)]);
+        expect(run.finishedAt, isNull, reason: run.where);
+        expect(game.doors.first.openFraction, 0);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'crossing the key twice puts it back where it was',
+      build(Levels.closeWhatYouOpened),
+      (game) async {
+        await game.ready();
+        // The arithmetic the level is built on, and the reason there is a wall
+        // past the key: a flip is a flip, so two of them are none. Standing on
+        // the key here and stepping off and on again is the same undoing your
+        // shadow does, only sooner.
+        final run = start(game)..play(const [Move.left(1.2)]);
+        expect(game.toggles.first.flipped, isTrue, reason: run.where);
+
+        run
+          ..play(const [Move.right(1.0)]) // off it, back towards the door
+          ..play(const [Move.left(1.0)]); // and onto it a second time
+        expect(game.toggles.first.flipped, isFalse, reason: run.where);
+      },
+    );
+  });
+
+  // The other half of the same vocabulary, and the half with no campaign level
+  // of its own yet: a plate that holds its door **shut**. Proved here on a
+  // level built for the purpose, because what has to be true of it is a rule
+  // rather than a puzzle — and because the two readings of it differ by one
+  // flag, which is exactly what a test can hold still.
+  group('a plate that inverts', () {
+    /// A plate at the spawn that opens the gate, an inverted plate three
+    /// hundred units to the right, and a delay long enough that the shadow
+    /// arrives at the first one while the player is standing on the second.
+    LevelGame Function() bench({bool inverts = true, double linger = 0}) =>
+        () => LevelGame(
+          levels: [
+            Level(
+              id: 'inverted',
+              name: 'inverted',
+              teaches: '',
+              delaySeconds: 3,
+              spawnX: -450,
+              floorTop: 620,
+              blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
+              plates: [
+                const PlateSpec(
+                  area: Rect.fromLTRB(-500, 608, -400, 620),
+                  opens: 'gate',
+                ),
+                PlateSpec(
+                  area: const Rect.fromLTRB(-160, 608, -40, 620),
+                  opens: 'gate',
+                  inverts: inverts,
+                ),
+              ],
+              doors: [
+                DoorSpec(
+                  id: 'gate',
+                  closed: const Rect.fromLTRB(300, 360, 326, 620),
+                  lingerSeconds: linger,
+                ),
+              ],
+              goal: const Rect.fromLTRB(400, 548, 480, 620),
+            ),
+          ],
+          inputs: [ScriptedInput()],
+        );
+
+    /// Stand on the first plate for three seconds, then walk right onto the
+    /// second one and stay there. Three seconds is the delay, so from then on
+    /// the shadow is standing on the opening plate for as long as the player
+    /// stood on it — and the player is on the inverted one throughout.
+    void walkOntoIt(Playthrough run) =>
+        run.play(const [Move(3.0), Move.right(1.6), Move(0.4)]);
+
+    testWithGame<LevelGame>(
+      'a body on it beats the past holding the plate that opens the door',
+      bench(),
+      (game) async {
+        await game.ready();
+        final run = start(game);
+        walkOntoIt(run);
+
+        expect(
+          game.plates.first.pressedByShadow,
+          isTrue,
+          reason: 'the shadow should be on the opening plate by now',
+        );
+        expect(game.plates.last.pressedByPlayer, isTrue, reason: run.where);
+        expect(
+          game.doors.first.openFraction,
+          0,
+          reason: 'held shut while a body is on the inverted plate',
+        );
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'and the same level with the flag off opens exactly as it used to',
+      bench(inverts: false),
+      (game) async {
+        await game.ready();
+        final run = start(game);
+        walkOntoIt(run);
+
+        expect(
+          game.doors.first.openFraction,
+          greaterThan(0.9),
+          reason: 'two plates, neither inverted, one open door: ${run.where}',
+        );
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'it beats the linger too, which is the point of it beating anything',
+      bench(linger: 6),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          // A second on the opening plate arms six seconds of grace, and then
+          // the player walks onto the inverted one. A door that drifted open
+          // again because something stood on a plate six seconds ago is not a
+          // door anybody is holding.
+          ..play(const [Move(1.0), Move.right(1.6), Move(0.6)]);
+
+        expect(game.doors.first.openFraction, 0, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'and lets go the moment the body steps off it',
+      bench(),
+      (game) async {
+        await game.ready();
+        final run = start(game);
+        walkOntoIt(run);
+        // Off it, and still inside the window where the shadow is holding the
+        // opening plate down.
+        run.play(const [Move.right(0.6)]);
+
+        expect(
+          game.doors.first.openFraction,
+          greaterThan(0),
+          reason: run.where,
+        );
+      },
+    );
+  });
+
   group('the campaign holds together', () {
     test('teaches one thing at a time, in order', () {
       expect(Levels.campaign.first.id, 'press-it-early');

@@ -55,6 +55,19 @@ void main() {
           copy.plates.map((p) => p.opens),
           level.plates.map((p) => p.opens),
         );
+        // Which way round a plate works is the difference between a door you
+        // can open and one you cannot, and it is one bool in the middle of a
+        // list of rectangles — exactly the kind of thing a round trip drops
+        // without anything looking wrong.
+        expect(
+          copy.plates.map((p) => p.inverts),
+          level.plates.map((p) => p.inverts),
+        );
+        expect(
+          copy.toggles.map((t) => (t.area, t.flips)),
+          level.toggles.map((t) => (t.area, t.flips)),
+        );
+        expect(copy.requires, level.requires);
         expect(copy.doors.map((d) => d.id), level.doors.map((d) => d.id));
       }
     });

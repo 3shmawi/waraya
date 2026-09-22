@@ -176,4 +176,12 @@ const walkthroughs = <String, List<Move>>{
     Move.right(1.6), // along the shelf, through the door you are holding open
     Move.right(1.5), // to the way out
   ],
+  'close-what-you-opened': [
+    // The whole level, and it is two keys. The thinking is in knowing not to
+    // wait: the door has been open since the moment the key was touched, and
+    // the only thing that shuts it is the body four and a half seconds behind
+    // coming to touch it again.
+    Move.left(1.7), // out to the key — the opposite way from the door
+    Move.right(2.8), // straight back, and through, before your past arrives
+  ],
 };

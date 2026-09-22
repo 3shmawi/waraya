@@ -302,6 +302,55 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(420, 358, 500, 430),
   );
 
+  /// **Use seven: the key.** The first thing in the game your past *undoes*.
+  ///
+  /// Six levels have taught one shape of the same idea: leave a body
+  /// somewhere and it presses what you cannot reach. A plate is a question
+  /// the door asks every frame, and the answer your past gives is always a
+  /// gift. A key is not that. It flips on the edge — the instant a body
+  /// arrives — and it flips for the body walking your path four and a half
+  /// seconds back exactly as it flips for you. So the door it opens is a door
+  /// that shuts itself, on a timer you cannot see and did not set, and the
+  /// thing that shuts it is you.
+  ///
+  /// Which makes the habit the trap. The move the last six levels drilled is
+  /// *wait for your past to come and hold it*, and waiting on this is the one
+  /// thing that cannot work: stand on the key until your shadow arrives and
+  /// its arrival is the flip that shuts the door for good. The level is won by
+  /// touching the key and leaving — knowing the door behind you is already
+  /// counting down.
+  ///
+  /// Nothing kills here and nothing is timed tightly: the walk from the key to
+  /// the door is a little over two seconds out of four and a half, so a beat
+  /// spent thinking costs nothing. What costs is misreading what the key is.
+  ///
+  /// The wall past the key is not decoration. A crossing flips, so crossing it
+  /// twice flips it back — walk over the key, past it, and turn round, and you
+  /// have shut the door you just opened without touching anything else. The
+  /// wall turns you round while you are still standing on it, so a trip to the
+  /// key is always exactly one flip. (It is 320 tall: a body standing on a
+  /// shadow reaches 232, so it cannot be climbed either.)
+  static final Level closeWhatYouOpened = Level(
+    id: 'close-what-you-opened',
+    name: 'اللي بتفتحه بتقفله',
+    teaches: 'المفتاح مش زرار. بيفتح دلوقتي — وماضيك جاي يقفله.',
+    delaySeconds: 4.5,
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [
+      _ground(-700, 700),
+      // The end wall, right against the key.
+      const Rect.fromLTRB(-360, 300, -320, 620),
+    ],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-320, 608, -200, 620), flips: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(160, 360, 186, 620)),
+    ],
+    goal: const Rect.fromLTRB(260, 548, 340, 620),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -311,6 +360,7 @@ abstract final class Levels {
     bothAtOnce,
     goInLow,
     holdYourOwnDoor,
+    closeWhatYouOpened,
   ];
 
   /// The Phase 2 tuning bench, as a level so it runs on the same code as the

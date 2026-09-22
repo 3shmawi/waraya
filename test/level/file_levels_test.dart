@@ -109,8 +109,11 @@ void main() {
     });
 
     test('a level ahead of this build is left out and reported', () async {
+      // `lights` is the next mechanic in the plan and is not built yet, which
+      // is what makes it the honest stand-in for a level authored against a
+      // newer build than this one.
       write('ahead.json', Levels.campaign.first.toJson()..['requires'] = [
-        'toggles',
+        'lights',
       ]);
       write('here.json', Levels.campaign[1].toJson());
 
@@ -121,7 +124,7 @@ void main() {
       ).load();
 
       expect(levels.single.id, Levels.campaign[1].id);
-      expect(skipped.single.missing, {'toggles'});
+      expect(skipped.single.missing, {'lights'});
     });
   });
 

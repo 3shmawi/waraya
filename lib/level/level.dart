@@ -20,6 +20,7 @@ class Level {
     required this.goal,
     this.blocks = const [],
     this.plates = const [],
+    this.toggles = const [],
     this.doors = const [],
     this.markers = const [],
     this.shadowIsSolid = true,
@@ -54,6 +55,7 @@ class Level {
   final List<Rect> blocks;
 
   final List<PlateSpec> plates;
+  final List<ToggleSpec> toggles;
   final List<DoorSpec> doors;
 
   /// Squares that fill in when touched but end nothing. Scenery with feedback:
@@ -84,29 +86,87 @@ class Level {
   /// unsolvable or solvable without ever touching the thing the puzzle is
   /// about. Neither says anything is wrong. A level that names what it needs
   /// can be refused instead, which is the only honest answer.
-  static const Set<String> knownMechanics = <String>{};
+  static const Set<String> knownMechanics = <String>{
+    // Both landed in the commit that made them play, which is the only order
+    // that is safe: a name in here before the code behind it means a level is
+    // accepted and then played wrong, which is the exact failure this set
+    // exists to prevent.
+    'toggles',
+    'inverted-plates',
+  };
 
   /// What this level needs beyond the baseline, worked out from its contents.
   ///
   /// Derived rather than stored, so it cannot be forgotten: the level says
   /// what it needs because the code that can see what it holds says it, not
-  /// because whoever wrote the file remembered to. Empty today, because
-  /// nothing in [Level] is yet past the baseline — this is the hook the next
-  /// mechanic hangs itself on.
-  Set<String> get requires => const <String>{};
+  /// because whoever wrote the file remembered to.
+  ///
+  /// A plate that inverts is named as well as a key, and for the more
+  /// dangerous of the two reasons. An older build that drops `toggles` puts up
+  /// a level with no way to open the door, which is at least obviously broken;
+  /// one that drops `inverts` puts up a level whose door simply opens when it
+  /// should have been held shut, and that plays like a level — a slightly easy
+  /// one — with nothing anywhere saying it is the wrong puzzle.
+  Set<String> get requires => {
+    if (toggles.isNotEmpty) 'toggles',
+    if (plates.any((plate) => plate.inverts)) 'inverted-plates',
+  };
 }
 
 /// A pressure plate, and the door it holds open while something stands on it.
 class PlateSpec {
-  const PlateSpec({required this.area, required this.opens});
+  const PlateSpec({
+    required this.area,
+    required this.opens,
+    this.inverts = false,
+  });
 
   /// The slab itself, as drawn.
   final Rect area;
 
-  /// Id of the [DoorSpec] this plate holds open.
+  /// Id of the [DoorSpec] this plate holds open — or, with [inverts], holds
+  /// shut.
   final String opens;
 
+  /// Holds the door **shut** while a body rests on it, instead of open.
+  ///
+  /// It beats everything else, which is what makes it worth having: a door
+  /// with an inverted plate held down cannot be opened by any plate, any key
+  /// or any linger. The point is not the extra rule, it is what it does to
+  /// the shadow. Every mechanic up to here makes your past an *asset* —
+  /// something that presses what you cannot reach. This one makes it a
+  /// liability: a place you must not have been standing, D seconds ago.
+  final bool inverts;
+
   /// Slightly taller than the slab, so a body resting on it counts as on it.
+  Rect get trigger =>
+      Rect.fromLTRB(area.left, area.top - 28, area.right, area.bottom + 2);
+}
+
+/// A key: step on it and the door it names flips, once, whoever stepped.
+///
+/// Not a plate. A plate is a question the door asks every frame — *is anyone
+/// standing here?* — and a key is an event: the door changes state on the edge
+/// and stays changed after you walk off. How long you stand on it makes no
+/// difference at all.
+///
+/// The whole of its value is what that means for the shadow. Your past walks
+/// the same path you did, so it steps on the same key D seconds later and
+/// flips it **back**. A key opens a door for exactly D seconds, no matter what
+/// you do, and the thing it teaches is the one sentence six levels of plates
+/// cannot: what you open, you close.
+class ToggleSpec {
+  const ToggleSpec({required this.area, required this.flips});
+
+  /// The slab itself, as drawn.
+  final Rect area;
+
+  /// Id of the [DoorSpec] this flips.
+  final String flips;
+
+  /// Slightly taller than the slab, so a body resting on it counts as on it.
+  /// The same shape as a plate's, deliberately: these two are read at a glance
+  /// by what they do, not by how closely you have to stand on them.
   Rect get trigger =>
       Rect.fromLTRB(area.left, area.top - 28, area.right, area.bottom + 2);
 }
@@ -234,7 +294,15 @@ extension LevelJson on Level {
     'markers': markers.map(_rectToJson).toList(),
     'plates': [
       for (final plate in plates)
-        {'area': _rectToJson(plate.area), 'opens': plate.opens},
+        {
+          'area': _rectToJson(plate.area),
+          'opens': plate.opens,
+          'inverts': plate.inverts,
+        },
+    ],
+    'toggles': [
+      for (final toggle in toggles)
+        {'area': _rectToJson(toggle.area), 'flips': toggle.flips},
     ],
     'doors': [
       for (final door in doors)
@@ -322,6 +390,25 @@ Level levelFromJson(Object? source) {
             opens: _asString(
               _asMap(entry, 'plates[$i]')['opens'],
               'plates[$i].opens',
+            ),
+            // Absent means a plate that opens, which is every plate written
+            // before this field existed.
+            inverts: _asBool(
+              _asMap(entry, 'plates[$i]')['inverts'] ?? false,
+              'plates[$i].inverts',
+            ),
+          ),
+      ],
+      toggles: [
+        for (final (i, entry) in _asList(json['toggles'], 'toggles').indexed)
+          ToggleSpec(
+            area: _rectFromJson(
+              _asMap(entry, 'toggles[$i]')['area'],
+              'toggles[$i].area',
+            ),
+            flips: _asString(
+              _asMap(entry, 'toggles[$i]')['flips'],
+              'toggles[$i].flips',
             ),
           ),
       ],

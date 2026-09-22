@@ -109,6 +109,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   late ShadowFigure shadow;
 
   final List<PressurePlate> plates = [];
+  final List<Toggle> toggles = [];
   final List<Door> doors = [];
   final List<Goal> goals = [];
 
@@ -188,6 +189,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   Future<void> _build() async {
     world.removeWhere((_) => true);
     plates.clear();
+    toggles.clear();
     doors.clear();
     goals.clear();
     recorder.clear();
@@ -205,6 +207,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     settings.shadowKills = level.shadowKills;
 
     plates.addAll(level.plates.map((spec) => PressurePlate(spec, look: look)));
+    toggles.addAll(level.toggles.map((spec) => Toggle(spec, look: look)));
     doors.addAll(level.doors.map((spec) => Door(spec, look: look)));
     goals
       ..add(Goal(area: level.goal, look: look))
@@ -230,6 +233,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       if (_lit) ..._scenery().world(),
       Blocks(level.blocks, look: look),
       ...plates,
+      ...toggles,
       ...doors,
       ...goals,
       ShadowTrail(
@@ -350,11 +354,33 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       if (plate.isPressed != wasPressed) audio.play(Sfx.plate, volume: 0.5);
     }
 
+    for (final toggle in toggles) {
+      // Contacts in, not state: the key decides for itself whether an arrival
+      // happened, because the edge is the whole of what it is.
+      final clicked = toggle.touch(
+        player: _standsOn(playerBox, toggle.trigger),
+        shadow: shadowBox != null && _standsOn(shadowBox, toggle.trigger),
+      );
+      // Louder than a plate. A plate's click is a question being answered and
+      // will be answered again in a moment; this one is the only announcement
+      // the door's state ever gets, and the body that made it is often walking
+      // away from the door at the time.
+      if (clicked) audio.play(Sfx.plate, volume: 0.7);
+    }
+
     for (final door in doors) {
-      final pressed = plates
-          .where((plate) => plate.opens == door.id)
-          .any((plate) => plate.isPressed);
-      if (door.hold(pressed)) audio.play(Sfx.door, volume: 0.4);
+      final mine = plates.where((plate) => plate.opens == door.id);
+      // The order is the rule. An inverted plate under a body beats a plate
+      // held, a key thrown, and the linger — see `Door.hold`.
+      final forcedShut = mine.any((plate) => plate.inverts && plate.isPressed);
+      final open =
+          mine.any((plate) => !plate.inverts && plate.isPressed) ||
+          toggles.any(
+            (toggle) => toggle.flips == door.id && toggle.flipped,
+          );
+      if (door.hold(open, forcedShut: forcedShut)) {
+        audio.play(Sfx.door, volume: 0.4);
+      }
     }
 
     for (final goal in goals) {
@@ -513,6 +539,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
     for (final plate in plates) {
       plate.reset();
+    }
+    for (final toggle in toggles) {
+      toggle.reset();
     }
     for (final goal in goals) {
       goal.reset();
