@@ -341,8 +341,9 @@ void main() {
 
         expect(run.finishedAt, isNull, reason: run.where);
         // On the shelf, which is the point: the climb worked and the door is
-        // what stopped you.
-        expect(game.player.y, Levels.holdYourOwnDoor.blocks.last.top);
+        // what stopped you. The shelf by name, not `blocks.last` — the last
+        // block is the wall that closes the shelf's far end now.
+        expect(game.player.y, Levels.holdYourOwnDoor.blocks[1].top);
       },
     );
 
@@ -1141,6 +1142,14 @@ void main() {
         Levels.minDoorHeight,
         greaterThan(reach),
         reason: 'the rule itself has to clear the boost',
+      );
+      // And the number the rest of the game reasons with is the same number.
+      // `gravity` and `jumpSpeed` are not to be touched, and this is what
+      // says so out loud if somebody does.
+      expect(
+        Levels.ladderReach,
+        closeTo(reach, 1),
+        reason: 'the climb is not 232 above the floor any more',
       );
       for (final level in [...Levels.campaign, Levels.lab]) {
         // Two shadows stack — stand on the near one's head and the far one

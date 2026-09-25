@@ -34,6 +34,22 @@ abstract final class Levels {
   /// door to it so a new one cannot quietly reintroduce the shortcut.
   static const double minDoorHeight = 250;
 
+  /// How far above its own floor a body standing on a shadow can get its feet:
+  /// the body's height plus a jump, 96 + 136.
+  ///
+  /// This one number is where every "can this be climbed" bug in the game has
+  /// come from, twice now. It broke every door in the campaign once
+  /// (`minDoorHeight`), and then it broke levels six and seven from the side —
+  /// a shadow is a ladder **wherever there is room to stand**, so any open
+  /// ground within about [ladderCarry] of a surface no higher than this is a
+  /// second way onto that surface. Ask it of every surface in a level, from
+  /// every patch of open floor, not only of the thing being added.
+  static const double ladderReach = 232;
+
+  /// How far a jump off a shadow's head carries sideways while still above a
+  /// surface 64 below the head. The reach of that second way up.
+  static const double ladderCarry = 145;
+
   /// The same rule for a level with two shadows, where the staircase has one
   /// more step in it.
   ///
@@ -359,6 +375,19 @@ abstract final class Levels {
         Move(0.6, jump: true),
         Move(2.0),
       ],
+      // Or — reported from playing, and it used to work — never crouch at
+      // all: leave a body standing out in the open at the spawn and climb
+      // onto the roof from the wrong end. The lip is what stops it.
+      [
+        Move(2.5),
+        Move.right(0.7),
+        Move(1.2),
+        Move.left(0.12),
+        Move.left(0.55, jump: true),
+        Move(0.1),
+        Move.left(0.6, jump: true),
+        Move.left(1.4),
+      ],
     ],
     name: 'خُش واطي',
     teaches: 'تحت السقف مفيش وقوف. المكان الوحيد اللي تقف فيه هو مكان السلّمة.',
@@ -368,16 +397,36 @@ abstract final class Levels {
     blocks: [
       _ground(-600, 600),
       // The roof, in two pieces. Its underside is eighty above the floor —
-      // crouched fits, standing does not. Its top is a hundred and sixty
-      // above, and a jump lifts a hundred and thirty, so the floor cannot
-      // reach it and the only way up is over something.
-      const Rect.fromLTRB(-420, 460, -180, 540),
+      // crouched fits, standing does not.
+      //
+      // The left piece is **thick**: its top is 260 above the floor, and a
+      // body standing on a shadow reaches 232, so it cannot be climbed at
+      // all. It is a ceiling, not a place.
+      const Rect.fromLTRB(-420, 360, -180, 540),
+      // The right piece is the one the way out sits on, and its top is a
+      // hundred and sixty above the floor: out of reach of a jump from the
+      // floor, in reach of a jump from your own head.
       const Rect.fromLTRB(0, 460, 220, 540),
+      // And the lip on its right edge, which is the whole reason this level
+      // still asks a question.
+      //
+      // Reported from playing: "levels six and seven are the same, I went
+      // right instead of left". They were right, and it was worse than that.
+      // The spawn is out in the open past the end of the roof, so a body left
+      // standing **there** was a step up onto the roof from the wrong side —
+      // the level finished in 5.7 seconds without the player ever crouching.
+      // A shadow is a ladder wherever there is room to stand, which makes
+      // every open patch next to a climbable surface a second front door.
+      // The lip is 160 tall, so a jump off a shadow (232) cannot clear it.
+      const Rect.fromLTRB(190, 300, 220, 460),
     ],
     // The gap between those two, -180 to 0, is the only headroom in the level.
     // A hundred and eighty wide: two forty-four-wide bodies, the one you leave
     // and the one that climbs it, with room to take a step.
-    goal: const Rect.fromLTRB(120, 388, 200, 460),
+    //
+    // The way out sits short of the lip, so the walk along the roof ends at it
+    // rather than at a wall.
+    goal: const Rect.fromLTRB(100, 388, 180, 460),
   );
 
   /// **Use six: the two jobs at once, from one second of your past.** You end
@@ -425,6 +474,20 @@ abstract final class Levels {
         Move.right(1.6),
         Move.right(1.5),
       ],
+      // And the one that used to finish the level without touching it:
+      // out past the end of the shelf, leave a body on the open floor, and
+      // climb on from the right, behind the door. The wall is what stops it.
+      [
+        Move.right(1.0),
+        Move(2.5),
+        Move.right(0.7),
+        Move(2.2),
+        Move.left(0.12),
+        Move.left(0.55, jump: true),
+        Move(0.1),
+        Move.left(0.6, jump: true),
+        Move.left(1.0),
+      ],
     ],
     name: 'واقف على اللي فاتحلك',
     teaches: 'قد ما وقفت على الزرار، قد ما الباب هيفضل مفتوح.',
@@ -437,6 +500,19 @@ abstract final class Levels {
       // hundred and thirty, so the floor cannot reach it from anywhere along
       // its length.
       const Rect.fromLTRB(60, 430, 520, 470),
+      // The wall on its far end, and the level does not exist without it.
+      //
+      // Reported from playing: the shelf could be climbed from the **right**,
+      // where the open floor runs past the end of it. A body left standing out
+      // there is a step onto the shelf on the wrong side of the door — the
+      // level finished in 7.7 seconds with the door never once open and the
+      // plate never once pressed, which is the entire level skipped. A shadow
+      // is a ladder wherever there is room to stand, so a shelf with open
+      // ground off the end of it has two ways up.
+      //
+      // As tall as the door, and for the same reason: 260 above the shelf is
+      // past anything a jump off a shadow can reach.
+      const Rect.fromLTRB(520, 170, 560, 470),
     ],
     // Far to the left of everything, in the open: you need floor to take a
     // run at your own head from, and the shelf overhead would cap the jump.
