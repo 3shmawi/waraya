@@ -5,7 +5,7 @@ import 'package:waraya/game/config.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 
-import '../level/solution.dart';
+import 'package:waraya/level/playthrough.dart';
 
 /// How the world is framed on a screen, which is not the same question on a
 /// desktop window and on a phone held upright.

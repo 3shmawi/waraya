@@ -8,7 +8,7 @@ import 'package:waraya/level/level.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 
-import 'solution.dart';
+import 'package:waraya/level/playthrough.dart';
 
 /// Levels read off the disk, which is what makes "a level is data, not code"
 /// true in practice rather than on paper.
@@ -140,7 +140,7 @@ void main() {
       await game.replaceLevels(await FileLevels(file.path).load());
 
       final run = Playthrough(game, game.input.sources.first as ScriptedInput)
-        ..play(walkthroughs[level.id]!, stopWhenComplete: true);
+        ..play(level.solution, stopWhenComplete: true);
       expect(run.finishedAt, isNotNull, reason: run.where);
     },
   );

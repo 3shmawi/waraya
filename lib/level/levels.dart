@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../lab/lab_scene.dart';
 import 'level.dart';
+import 'playthrough.dart';
 
 /// The puzzles.
 ///
@@ -72,6 +73,17 @@ abstract final class Levels {
   /// thing is the idea.
   static final Level pressItEarly = Level(
     id: 'press-it-early',
+    solution: const [
+      Move.right(1.8), // out to the plate, the wrong way from the door
+      Move(1.2), // stand on it
+      Move.left(4.8), // all the way to the door, and wait there
+    ],
+    wrongIdeas: const [
+      // Hold one arrow and walk at the door. The first draft of this level
+      // could be finished exactly like this, because the plate sat on the way
+      // — you crossed it, and three seconds later so did your shadow.
+      [Move.left(8)],
+    ],
     name: 'قبل ما تحتاجه',
     teaches: 'الزرار محتاج حد يقف عليه. مفيش حد غيرك.',
     delaySeconds: 3.5,
@@ -101,6 +113,26 @@ abstract final class Levels {
   /// and come back to a body that is now furniture.
   static final Level standOnYourself = Level(
     id: 'stand-on-yourself',
+    solution: const [
+      Move.left(3.3), // out to the mark, under the ledge
+      Move(2.5), // stand there long enough to leave a solid shadow
+      Move.right(0.9), // get out of your own way
+      Move(0.8), // wait for it to appear
+      Move.left(0.45), // run at it
+      Move.left(0.55, jump: true), // up onto its head
+      Move.left(0.6, jump: true), // and off the head onto the ledge
+      Move.left(1.5), // along to the way out
+    ],
+    wrongIdeas: const [
+      // Run at the ledge and jump at it, twice, on your own legs.
+      [
+        Move.left(3),
+        Move.left(0.8, jump: true),
+        Move.left(2),
+        Move.left(0.8, jump: true),
+        Move.left(2),
+      ],
+    ],
     name: 'اوقف على نفسك',
     teaches: 'انت الوحيد اللي ممكن تبقى السلّمة.',
     delaySeconds: 3.5,
@@ -118,6 +150,22 @@ abstract final class Levels {
   /// steps is the obvious move and it is fatal, which is the lesson.
   static final Level notTheSameWayBack = Level(
     id: 'not-the-same-way-back',
+    solution: const [
+      Move.left(1.9), // into the corridor, onto the plate
+      Move(1.0), // hold it down
+      Move.left(0.5), // on to the dead end
+      Move.left(0.5, jump: true), // up onto the step
+      Move(0.25),
+      Move.right(0.3), // a run at the gap
+      Move.right(0.75, jump: true), // across onto the upper lane
+      Move.right(1.7), // home, above your own footprints
+      Move.right(2.5), // down off the end and through the door
+    ],
+    wrongIdeas: const [
+      // Straight back out the way you came in, and wait by the door — which
+      // is standing in the corridor your own past is walking up.
+      [Move.left(1.9), Move(1.0), Move.right(2.5), Move(4)],
+    ],
     name: 'مش نفس السكة',
     teaches: 'ظلك جاي في نفس السكة. دوّر على سكة تانية.',
     // Five seconds, and the layout does the forcing rather than the number.
@@ -177,6 +225,19 @@ abstract final class Levels {
   /// That is the point. The cost is commitment, not damage.
   static final Level takeItWithYou = Level(
     id: 'take-it-with-you',
+    solution: const [
+      Move.right(1.9), // out to the plate, away from the drop
+      Move(2.5), // stand on it long enough to be worth something
+      Move.left(2.9), // back along the shelf
+      Move.left(0.7), // off the end, committing
+      Move.left(1.0), // to the door at the bottom
+      Move.left(1.2), // through it, once your past opens it
+    ],
+    wrongIdeas: const [
+      // Off the shelf without leaving anything behind: a hole, a shut door,
+      // and only R.
+      [Move.left(9)],
+    ],
     name: 'خُد قرارك واقفز',
     teaches: 'اللي تحت مفيش رجوع منه. اتأكد إنك سيبت حاجة وراك.',
     delaySeconds: 4.5,
@@ -209,6 +270,24 @@ abstract final class Levels {
   /// order they come back in.
   static final Level bothAtOnce = Level(
     id: 'both-at-once',
+    solution: const [
+      Move.left(1.1), // back to the plate
+      Move(1.2), // hold it
+      Move.right(2.0), // to the door, and wait at it
+      Move.right(1.2), // through, once the shadow takes over the plate
+      Move.right(0.6), // out to the mark, short of the ledge
+      Move(2.0), // stand there: this is the second job
+      Move.left(0.9), // out of your own way
+      Move(0.6),
+      Move.right(0.45), // run at what you left behind
+      Move.right(0.55, jump: true), // onto its head
+      Move.right(0.6, jump: true), // and off the head onto the ledge
+      Move.right(1.5), // along to the way out
+    ],
+    wrongIdeas: const [
+      // Straight at the door, having pressed nothing.
+      [Move.right(8)],
+    ],
     name: 'الاتنين مع بعض',
     teaches: 'ظل واحد، مهمتين. الترتيب اللي عملتهم بيه هو اللي راجع بيه.',
     delaySeconds: 3,
@@ -248,6 +327,39 @@ abstract final class Levels {
   /// giving less time to do it in.
   static final Level goInLow = Level(
     id: 'go-in-low',
+    solution: const [
+      Move.left(0.5), // out to the mouth of the roof
+      Move.left(2.9, crouch: true), // under it, bent over, to the gap
+      Move(2.0), // stand up: the only place in the level you are allowed to
+      Move.left(1.2, crouch: true), // back under the roof, out of your own way
+      Move(0.8), // wait for it
+      Move.right(1.2, crouch: true), // back to the mouth of the gap
+      Move(0.2),
+      Move.right(0.5, jump: true), // up onto your own head
+      Move.right(0.6, jump: true), // and off it onto the roof
+      Move.right(1.2), // along to the way out
+    ],
+    wrongIdeas: const [
+      // Walk in standing, and the roof says no.
+      [
+        Move.left(0.5),
+        Move.left(3.5),
+        Move(1.0),
+        Move.right(0.6, jump: true),
+        Move.right(0.6, jump: true),
+        Move(2.0),
+      ],
+      // Or jump at the way out from underneath it, which does not reach.
+      [
+        Move.left(0.9),
+        Move(0.3),
+        Move(0.6, jump: true),
+        Move(0.6, jump: true),
+        Move.left(0.4, crouch: true),
+        Move(0.6, jump: true),
+        Move(2.0),
+      ],
+    ],
     name: 'خُش واطي',
     teaches: 'تحت السقف مفيش وقوف. المكان الوحيد اللي تقف فيه هو مكان السلّمة.',
     delaySeconds: 4,
@@ -288,6 +400,32 @@ abstract final class Levels {
   /// Nothing kills here. Getting it wrong costs the walk back, not a life.
   static final Level holdYourOwnDoor = Level(
     id: 'hold-your-own-door',
+    solution: const [
+      Move.left(2.1), // out to the plate, the wrong way from everything
+      Move(3.0), // hold it. this is how long the door will be open for
+      Move.left(0.6), // on past it, into the open, out of your own way
+      Move(1.6), // and wait there for yourself to arrive
+      Move.right(0.75, jump: true), // a running jump onto your own head
+      Move(0.2),
+      Move.right(0.75, jump: true), // off it onto the shelf
+      Move.right(1.6), // along the shelf, through the door you are holding
+      Move.right(1.5), // to the way out
+    ],
+    wrongIdeas: const [
+      // The same run with a one-second press: up onto the shelf, and a shut
+      // door at the end of it. The press is the timer.
+      [
+        Move.left(2.1),
+        Move(1.0),
+        Move.left(0.6),
+        Move(3.6),
+        Move.right(0.75, jump: true),
+        Move(0.2),
+        Move.right(0.75, jump: true),
+        Move.right(1.6),
+        Move.right(1.5),
+      ],
+    ],
     name: 'واقف على اللي فاتحلك',
     teaches: 'قد ما وقفت على الزرار، قد ما الباب هيفضل مفتوح.',
     delaySeconds: 5,
@@ -344,6 +482,18 @@ abstract final class Levels {
   /// shadow reaches 232, so it cannot be climbed either.)
   static final Level closeWhatYouOpened = Level(
     id: 'close-what-you-opened',
+    solution: const [
+      Move.left(1.7), // out to the key — the opposite way from the door
+      Move.right(2.8), // straight back, and through, before your past arrives
+    ],
+    wrongIdeas: const [
+      // The habit six levels of plates have drilled: stand on it and wait for
+      // your past to come and hold it down. On a key that arrival is the flip
+      // that shuts the door, and then it is shut for good.
+      [Move.left(1.7), Move(5.2), Move.right(3.2)],
+      // Or hold one arrow at the way out, with the key untouched.
+      [Move.right(8)],
+    ],
     name: 'اللي بتفتحه بتقفله',
     teaches: 'المفتاح مش زرار. بيفتح دلوقتي — وماضيك جاي يقفله.',
     delaySeconds: 4.5,
@@ -389,6 +539,32 @@ abstract final class Levels {
   /// top it either.
   static final Level yourShadowIsNotHere = Level(
     id: 'your-shadow-is-not-here',
+    solution: const [
+      Move.left(1.58), // out to the mark, past the lit ground
+      Move(2.2), // stand there, leaving something to climb
+      Move.left(0.6), // out of your own way
+      Move(1.3), // and wait for yourself to arrive
+      Move.right(0.12), // a short run — any longer and you sail over it
+      Move.right(0.55, jump: true), // onto it
+      Move(0.1),
+      Move.right(0.6, jump: true), // off it onto the shelf
+      Move.right(1.6), // along to the way out
+    ],
+    wrongIdeas: const [
+      // Leave the body in the obvious place, hard against the shelf, which is
+      // the lit place. You come back and go straight through it.
+      [
+        Move.left(1.3),
+        Move(2.2),
+        Move.left(0.6),
+        Move(1.3),
+        Move.right(0.12),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.6, jump: true),
+        Move.right(1.6),
+      ],
+    ],
     name: 'ضلّك مش هنا',
     teaches: 'في النور مفيش ظل. سيب جسمك في الضلمة.',
     delaySeconds: 4,
@@ -438,6 +614,39 @@ abstract final class Levels {
   /// [minDoorHeightTwoShadows].
   static final Level twoNotOne = Level(
     id: 'two-not-one',
+    solution: const [
+      Move.left(3.1), // out to the far plate, past the near one
+      Move(1.8), // stand on it: this is how wide the window will be
+      Move.right(2.5), // back to the near plate
+      Move(1.8), // and stand on that one
+      Move.right(1.3), // up to the gate
+      Move(1.6), // wait for both of you to arrive
+      Move.right(1.6), // through, while both of them are standing
+    ],
+    wrongIdeas: const [
+      // Step off the far plate and take your time about the walk. Your pasts
+      // are four seconds apart whatever you do, so the far one has been and
+      // gone before the near one arrives.
+      [
+        Move.left(3.1),
+        Move(1.8),
+        Move.right(0.8),
+        Move(2.5),
+        Move.right(1.7),
+        Move(1.8),
+        Move.right(1.3),
+        Move(1.6),
+        Move.right(1.6),
+      ],
+      // Or press the near plate alone, which opens half a gate.
+      [
+        Move.left(0.8),
+        Move(2.0),
+        Move.right(1.4),
+        Move(4.0),
+        Move.right(1.6),
+      ],
+    ],
     name: 'اتنين مش واحد',
     teaches: 'البوابة عايزة الزرارين مع بعض، وانت واحد. بس ماضيك اتنين.',
     delays: const [3, 7],

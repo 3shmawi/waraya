@@ -7,7 +7,7 @@ import 'package:waraya/level/level.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 
-import 'solution.dart';
+import 'package:waraya/level/playthrough.dart';
 
 /// Every level ships with a recorded solution, and a recording of the obvious
 /// wrong idea.
@@ -33,7 +33,7 @@ void main() {
       build(Levels.pressItEarly),
       (game) async {
         await game.ready();
-        final run = start(game)..play(walkthroughs['press-it-early']!);
+        final run = start(game)..play(Levels.pressItEarly.solution);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -58,7 +58,7 @@ void main() {
       build(Levels.standOnYourself),
       (game) async {
         await game.ready();
-        final run = start(game)..play(walkthroughs['stand-on-yourself']!);
+        final run = start(game)..play(Levels.standOnYourself.solution);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -89,7 +89,7 @@ void main() {
       build(Levels.notTheSameWayBack),
       (game) async {
         await game.ready();
-        final run = start(game)..play(walkthroughs['not-the-same-way-back']!);
+        final run = start(game)..play(Levels.notTheSameWayBack.solution);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -132,9 +132,9 @@ void main() {
           await game.ready();
           final run = start(game)
             ..play([
-              ...walkthroughs['not-the-same-way-back']!.take(7),
+              ...Levels.notTheSameWayBack.solution.take(7),
               Move(pause),
-              ...walkthroughs['not-the-same-way-back']!.skip(7),
+              ...Levels.notTheSameWayBack.solution.skip(7),
             ], stopWhenComplete: true);
 
           expect(run.finishedAt, isNotNull, reason: run.where);
@@ -151,7 +151,7 @@ void main() {
       (game) async {
         await game.ready();
         final run = start(game)
-          ..play(walkthroughs['go-in-low']!, stopWhenComplete: true);
+          ..play(Levels.goInLow.solution, stopWhenComplete: true);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -178,7 +178,7 @@ void main() {
       (game) async {
         await game.ready();
         final run = start(game)
-          ..play(walkthroughs['go-in-low']!, stopWhenComplete: true);
+          ..play(Levels.goInLow.solution, stopWhenComplete: true);
 
         // Not a corridor: take the thing to climb away and the identical run
         // ends on the floor.
@@ -232,7 +232,7 @@ void main() {
       build(Levels.takeItWithYou),
       (game) async {
         await game.ready();
-        final run = start(game)..play(walkthroughs['take-it-with-you']!);
+        final run = start(game)..play(Levels.takeItWithYou.solution);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -262,7 +262,7 @@ void main() {
       build(Levels.bothAtOnce),
       (game) async {
         await game.ready();
-        final run = start(game)..play(walkthroughs['both-at-once']!);
+        final run = start(game)..play(Levels.bothAtOnce.solution);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -312,7 +312,7 @@ void main() {
       (game) async {
         await game.ready();
         final run = start(game)
-          ..play(walkthroughs['hold-your-own-door']!, stopWhenComplete: true);
+          ..play(Levels.holdYourOwnDoor.solution, stopWhenComplete: true);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -505,7 +505,7 @@ void main() {
         await game.ready();
         final run = start(game)
           ..play(
-            walkthroughs['close-what-you-opened']!,
+            Levels.closeWhatYouOpened.solution,
             stopWhenComplete: true,
           );
 
@@ -709,7 +709,7 @@ void main() {
         await game.ready();
         final run = start(game)
           ..play(
-            walkthroughs['your-shadow-is-not-here']!,
+            Levels.yourShadowIsNotHere.solution,
             stopWhenComplete: true,
           );
 
@@ -951,7 +951,7 @@ void main() {
       (game) async {
         await game.ready();
         final run = start(game)
-          ..play(walkthroughs['two-not-one']!, stopWhenComplete: true);
+          ..play(Levels.twoNotOne.solution, stopWhenComplete: true);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -977,7 +977,7 @@ void main() {
         expect(game.shadows, hasLength(1));
 
         final run = start(game)
-          ..play(walkthroughs['two-not-one']!, stopWhenComplete: true);
+          ..play(Levels.twoNotOne.solution, stopWhenComplete: true);
 
         expect(run.finishedAt, isNull, reason: run.where);
         expect(
@@ -1056,6 +1056,54 @@ void main() {
         expect(run.finishedAt, isNull, reason: run.where);
       },
     );
+  });
+
+  // The rule every level in this project is held to, as a test rather than as
+  // a paragraph: a level ships with a run that finishes it and a run that does
+  // not. The second is the one that matters — the first draft of the first
+  // level could be beaten by holding one arrow, and only a recording of that
+  // idea failing said so.
+  //
+  // Both live in the level now, which means both travel in the JSON, which is
+  // what lets the gate in front of a level from somewhere else replay them
+  // through this same harness and take the level's word for nothing.
+  group('every level comes with its own proof', () {
+    test('nothing ships without both recordings', () {
+      for (final level in [...Levels.campaign, Levels.lab]) {
+        if (level.id == Levels.lab.id) {
+          // The bench is not a level to be won and has nothing to record.
+          expect(level.canBeChecked, isFalse);
+          continue;
+        }
+        expect(level.canBeChecked, isTrue, reason: level.id);
+        expect(
+          level.solution,
+          isNotEmpty,
+          reason: '${level.id} has no recorded solution',
+        );
+        expect(
+          level.wrongIdeas,
+          isNotEmpty,
+          reason: '${level.id} has no recorded wrong idea, which is the half '
+              'that keeps it a puzzle',
+        );
+      }
+    });
+
+    for (final level in Levels.campaign) {
+      for (final (i, idea) in level.wrongIdeas.indexed) {
+        testWithGame<LevelGame>(
+          '${level.id}: recorded wrong idea ${i + 1} does not finish it',
+          build(level),
+          (game) async {
+            await game.ready();
+            final run = start(game)..play(idea, stopWhenComplete: true);
+
+            expect(run.finishedAt, isNull, reason: run.where);
+          },
+        );
+      }
+    }
   });
 
   group('the campaign holds together', () {
