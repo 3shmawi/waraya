@@ -18,6 +18,7 @@ import '../lab/lab_settings.dart';
 import '../shadow/fixed_ticker.dart';
 import '../shadow/shadow_figure.dart';
 import '../shadow/shadow_recorder.dart';
+import '../ui/level_fade.dart';
 import '../ui/level_hud.dart';
 import '../ui/level_title.dart';
 import '../ui/reset_flash.dart';
@@ -50,12 +51,15 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     this.onBeaten,
     this.onCampaignFinished,
     this.onMenuRequested,
+    this.readoutDetail = true,
   }) : settings = settings ?? LabSettings(),
        _index = startAt.clamp(0, levels.length - 1),
        assert(levels.isNotEmpty, 'a game needs at least one level');
 
   /// Played in order. One entry is a bench; several is a campaign.
-  final List<Level> levels;
+  ///
+  /// Not final only so [replaceLevels] can swap it. Nothing else writes it.
+  List<Level> levels;
 
   final LabSettings settings;
 
@@ -90,17 +94,22 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// Called when the player asks for the level list from the keyboard.
   final void Function()? onMenuRequested;
 
+  /// Whether the corner readout prints its developer lines. See [LevelHud].
+  final bool readoutDetail;
+
   final ShadowRecorder recorder = ShadowRecorder();
   final FixedTicker ticker = FixedTicker();
   final ScreenShake shake = ScreenShake();
   final StepDetector steps = StepDetector();
   final ResetFlash resetFlash = ResetFlash();
+  final LevelFade fade = LevelFade();
 
   late final InputController input;
   late Player player;
   late ShadowFigure shadow;
 
   final List<PressurePlate> plates = [];
+  final List<Toggle> toggles = [];
   final List<Door> doors = [];
   final List<Goal> goals = [];
 
@@ -115,7 +124,13 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// Seconds left before the next level replaces this one. Gives the goal a
   /// beat to fill in, so finishing reads as finishing rather than as a cut.
   double _advanceIn = 0;
-  static const double _advanceDelay = 0.9;
+
+  /// The beat between touching the goal and the next level replacing it.
+  ///
+  /// Public so a test can check it is still longer than the fade that has to
+  /// fit inside it: if the cover ever starts the moment the goal is touched,
+  /// the one piece of feedback that says *you did it* is never seen.
+  static const double advanceDelay = 0.9;
 
   /// Longest frame the simulation will believe, in seconds.
   ///
@@ -161,11 +176,12 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     await _build();
-    final hud = LevelHud(game: this);
+    final hud = LevelHud(game: this, detail: readoutDetail);
     await camera.viewport.addAll([
       resetFlash,
       hud,
       LevelTitle(game: this, hud: hud),
+      fade,
     ]);
   }
 
@@ -173,6 +189,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   Future<void> _build() async {
     world.removeWhere((_) => true);
     plates.clear();
+    toggles.clear();
     doors.clear();
     goals.clear();
     recorder.clear();
@@ -190,6 +207,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     settings.shadowKills = level.shadowKills;
 
     plates.addAll(level.plates.map((spec) => PressurePlate(spec, look: look)));
+    toggles.addAll(level.toggles.map((spec) => Toggle(spec, look: look)));
     doors.addAll(level.doors.map((spec) => Door(spec, look: look)));
     goals
       ..add(Goal(area: level.goal, look: look))
@@ -215,6 +233,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       if (_lit) ..._scenery().world(),
       Blocks(level.blocks, look: look),
       ...plates,
+      ...toggles,
       ...doors,
       ...goals,
       ShadowTrail(
@@ -228,6 +247,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
     _frameVertically();
     camera.follow(player, horizontalOnly: true);
+    // Whatever put this level up — the level before it finishing, or the menu
+    // — the new one arrives out of the dark rather than appearing in it.
+    fade.reveal();
   }
 
   /// The environment, standing on this level's floor.
@@ -332,11 +354,33 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       if (plate.isPressed != wasPressed) audio.play(Sfx.plate, volume: 0.5);
     }
 
+    for (final toggle in toggles) {
+      // Contacts in, not state: the key decides for itself whether an arrival
+      // happened, because the edge is the whole of what it is.
+      final clicked = toggle.touch(
+        player: _standsOn(playerBox, toggle.trigger),
+        shadow: shadowBox != null && _standsOn(shadowBox, toggle.trigger),
+      );
+      // Louder than a plate. A plate's click is a question being answered and
+      // will be answered again in a moment; this one is the only announcement
+      // the door's state ever gets, and the body that made it is often walking
+      // away from the door at the time.
+      if (clicked) audio.play(Sfx.plate, volume: 0.7);
+    }
+
     for (final door in doors) {
-      final pressed = plates
-          .where((plate) => plate.opens == door.id)
-          .any((plate) => plate.isPressed);
-      if (door.hold(pressed)) audio.play(Sfx.door, volume: 0.4);
+      final mine = plates.where((plate) => plate.opens == door.id);
+      // The order is the rule. An inverted plate under a body beats a plate
+      // held, a key thrown, and the linger — see `Door.hold`.
+      final forcedShut = mine.any((plate) => plate.inverts && plate.isPressed);
+      final open =
+          mine.any((plate) => !plate.inverts && plate.isPressed) ||
+          toggles.any(
+            (toggle) => toggle.flips == door.id && toggle.flipped,
+          );
+      if (door.hold(open, forcedShut: forcedShut)) {
+        audio.play(Sfx.door, volume: 0.4);
+      }
     }
 
     for (final goal in goals) {
@@ -344,7 +388,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       goal.reached = true;
       if (goal.endsLevel) {
         _completed = true;
-        _advanceIn = _advanceDelay;
+        _advanceIn = advanceDelay;
         onBeaten?.call(level);
       }
     }
@@ -376,19 +420,50 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     return overlap >= min(_footprint, trigger.width);
   }
 
-  /// Moves on once the goal has had its beat. The last level simply stays
-  /// finished: where to go after the campaign is a Phase 5 question.
+  /// Moves on once the goal has had its beat.
+  ///
+  /// The beat is in two halves: the goal fills in, and then the screen goes
+  /// dark over the rest of it, so the swap itself happens on a black frame.
   void _advance(double dt) {
     if (_advanceIn <= 0) return;
     _advanceIn -= dt;
+    if (_advanceIn <= LevelFade.startsAt) fade.cover();
     if (_advanceIn > 0) return;
     _advanceIn = 0;
     if (_index + 1 >= levels.length) {
+      // Nothing left to build, so nothing is going to call `reveal` — and a
+      // screen left black under whatever the campaign's ending puts up is a
+      // screen that stays black if that ending is ever dismissed.
+      fade.reveal();
       onCampaignFinished?.call();
       return;
     }
     _index++;
     _build();
+  }
+
+  /// Swaps the whole list under a running game, for the authoring loop.
+  ///
+  /// Keeps your place **by id**, not by position — the same reason saving does
+  /// (`Progress`). While a level is being written the list is exactly what is
+  /// churning: one gets inserted, another renamed, a third deleted, and an
+  /// index means you land somewhere else every time you press reload. An id
+  /// means you land back in the level you are editing.
+  ///
+  /// An empty list is ignored rather than obeyed. It means the folder was
+  /// emptied or every level in it was refused, and a game with no level is a
+  /// crash; keeping the last good one on screen is the answer that lets you
+  /// fix the file and press the button again.
+  Future<void> replaceLevels(List<Level> next) async {
+    if (next.isEmpty) return;
+    final wasOn = level.id;
+    levels = next;
+    final found = next.indexWhere((level) => level.id == wasOn);
+    _index = found < 0 ? 0 : found;
+    reloads = 0;
+    _advanceIn = 0;
+    fade.blackout();
+    await _build();
   }
 
   /// Jumps to a level by position, from a menu. Everything is rebuilt, so the
@@ -397,6 +472,11 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   Future<void> goTo(int index) async {
     _index = index.clamp(0, levels.length - 1);
     reloads = 0;
+    _advanceIn = 0;
+    // Straight to black first: picking from the menu is not the end of a
+    // level, so there is no cover already running — but the level still
+    // arrives out of the dark, the same way every other one does.
+    fade.blackout();
     await _build();
   }
 
@@ -459,6 +539,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
     for (final plate in plates) {
       plate.reset();
+    }
+    for (final toggle in toggles) {
+      toggle.reset();
     }
     for (final goal in goals) {
       goal.reset();

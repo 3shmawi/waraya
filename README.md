@@ -64,11 +64,23 @@ touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 | 2 | The delayed shadow, on a grey-box test scene | ✅ |
 | 3 | Game feel — weight, coyote time, sound, screen shake | ✅ code, tuning open |
 | 4 | Puzzle design, 5–8 levels | ✅ 7 built |
-| 5 | Death and retry, level transitions, saving, menus | saving and a level list in |
-| 6 | Polish and release | |
+| 5 | Death and retry, level transitions, saving, menus | ✅ |
+| 6 | Level vocabulary — new data a level can be made of | keys and inverted plates in |
+| 7 | The hard levels, built out of that vocabulary | |
+| 8 | Server, submissions, authoring | |
+| 9 | Polish and release | |
+
+Phase 6 adds **vocabulary, not levels**. Seven levels used up most of what
+rectangles, plates and doors can say, and "harder" with the same pieces only
+means longer walks. The first of the new pieces is a **key**: it flips its door
+on the edge, the instant a body steps on it — and the body four seconds behind
+you steps on it too. So it is the first thing in the game your past *undoes*
+rather than does, and the level that proves it is won by touching it and
+walking away rather than by waiting for yourself to arrive.
 
 It is a hobby project, built one day a week. The plan it follows, and the
-reasoning behind each phase, is in [`CLAUDE.md`](CLAUDE.md).
+reasoning behind each phase, is in [`CLAUDE.md`](CLAUDE.md), with the current
+phase in [`docs/phase-6-vocabulary.md`](docs/phase-6-vocabulary.md).
 
 ## Playing it
 

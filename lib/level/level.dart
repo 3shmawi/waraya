@@ -20,6 +20,7 @@ class Level {
     required this.goal,
     this.blocks = const [],
     this.plates = const [],
+    this.toggles = const [],
     this.doors = const [],
     this.markers = const [],
     this.shadowIsSolid = true,
@@ -54,6 +55,7 @@ class Level {
   final List<Rect> blocks;
 
   final List<PlateSpec> plates;
+  final List<ToggleSpec> toggles;
   final List<DoorSpec> doors;
 
   /// Squares that fill in when touched but end nothing. Scenery with feedback:
@@ -69,19 +71,102 @@ class Level {
 
   /// Where the ground is, for spawning and for falling out of the world.
   final double floorTop;
+
+  /// The names of the mechanics **this build knows how to play**.
+  ///
+  /// Everything a level could hold when this set was written — blocks, plates,
+  /// doors, markers, one delay — is the baseline and is not named here. The
+  /// set is for what comes *after*: a mechanic gets its name added in the same
+  /// commit that implements it, never before.
+  ///
+  /// It exists for one failure that has no other cure. A level served from
+  /// somewhere else can reach a client older than the mechanic it uses, and
+  /// the old parser does the worst possible thing with a field it has never
+  /// heard of: it **ignores it in silence** and puts up a level that is either
+  /// unsolvable or solvable without ever touching the thing the puzzle is
+  /// about. Neither says anything is wrong. A level that names what it needs
+  /// can be refused instead, which is the only honest answer.
+  static const Set<String> knownMechanics = <String>{
+    // Both landed in the commit that made them play, which is the only order
+    // that is safe: a name in here before the code behind it means a level is
+    // accepted and then played wrong, which is the exact failure this set
+    // exists to prevent.
+    'toggles',
+    'inverted-plates',
+  };
+
+  /// What this level needs beyond the baseline, worked out from its contents.
+  ///
+  /// Derived rather than stored, so it cannot be forgotten: the level says
+  /// what it needs because the code that can see what it holds says it, not
+  /// because whoever wrote the file remembered to.
+  ///
+  /// A plate that inverts is named as well as a key, and for the more
+  /// dangerous of the two reasons. An older build that drops `toggles` puts up
+  /// a level with no way to open the door, which is at least obviously broken;
+  /// one that drops `inverts` puts up a level whose door simply opens when it
+  /// should have been held shut, and that plays like a level — a slightly easy
+  /// one — with nothing anywhere saying it is the wrong puzzle.
+  Set<String> get requires => {
+    if (toggles.isNotEmpty) 'toggles',
+    if (plates.any((plate) => plate.inverts)) 'inverted-plates',
+  };
 }
 
 /// A pressure plate, and the door it holds open while something stands on it.
 class PlateSpec {
-  const PlateSpec({required this.area, required this.opens});
+  const PlateSpec({
+    required this.area,
+    required this.opens,
+    this.inverts = false,
+  });
 
   /// The slab itself, as drawn.
   final Rect area;
 
-  /// Id of the [DoorSpec] this plate holds open.
+  /// Id of the [DoorSpec] this plate holds open — or, with [inverts], holds
+  /// shut.
   final String opens;
 
+  /// Holds the door **shut** while a body rests on it, instead of open.
+  ///
+  /// It beats everything else, which is what makes it worth having: a door
+  /// with an inverted plate held down cannot be opened by any plate, any key
+  /// or any linger. The point is not the extra rule, it is what it does to
+  /// the shadow. Every mechanic up to here makes your past an *asset* —
+  /// something that presses what you cannot reach. This one makes it a
+  /// liability: a place you must not have been standing, D seconds ago.
+  final bool inverts;
+
   /// Slightly taller than the slab, so a body resting on it counts as on it.
+  Rect get trigger =>
+      Rect.fromLTRB(area.left, area.top - 28, area.right, area.bottom + 2);
+}
+
+/// A key: step on it and the door it names flips, once, whoever stepped.
+///
+/// Not a plate. A plate is a question the door asks every frame — *is anyone
+/// standing here?* — and a key is an event: the door changes state on the edge
+/// and stays changed after you walk off. How long you stand on it makes no
+/// difference at all.
+///
+/// The whole of its value is what that means for the shadow. Your past walks
+/// the same path you did, so it steps on the same key D seconds later and
+/// flips it **back**. A key opens a door for exactly D seconds, no matter what
+/// you do, and the thing it teaches is the one sentence six levels of plates
+/// cannot: what you open, you close.
+class ToggleSpec {
+  const ToggleSpec({required this.area, required this.flips});
+
+  /// The slab itself, as drawn.
+  final Rect area;
+
+  /// Id of the [DoorSpec] this flips.
+  final String flips;
+
+  /// Slightly taller than the slab, so a body resting on it counts as on it.
+  /// The same shape as a plate's, deliberately: these two are read at a glance
+  /// by what they do, not by how closely you have to stand on them.
   Rect get trigger =>
       Rect.fromLTRB(area.left, area.top - 28, area.right, area.bottom + 2);
 }
@@ -197,6 +282,7 @@ extension LevelJson on Level {
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
+    'requires': requires.toList()..sort(),
     'teaches': teaches,
     'delaySeconds': delaySeconds,
     'spawnX': spawnX,
@@ -208,7 +294,15 @@ extension LevelJson on Level {
     'markers': markers.map(_rectToJson).toList(),
     'plates': [
       for (final plate in plates)
-        {'area': _rectToJson(plate.area), 'opens': plate.opens},
+        {
+          'area': _rectToJson(plate.area),
+          'opens': plate.opens,
+          'inverts': plate.inverts,
+        },
+    ],
+    'toggles': [
+      for (final toggle in toggles)
+        {'area': _rectToJson(toggle.area), 'flips': toggle.flips},
     ],
     'doors': [
       for (final door in doors)
@@ -237,10 +331,42 @@ class LevelFormatException implements Exception {
   String toString() => 'LevelFormatException: $message';
 }
 
-/// Builds a [Level] from decoded JSON, or throws [LevelFormatException].
+/// Thrown when a level is well-formed but asks for a mechanic this build does
+/// not have.
+///
+/// Separate from [LevelFormatException] because it is not a mistake: the level
+/// is fine, this copy of the game is simply older than it. The right response
+/// is to leave that one level out, not to throw the batch away.
+class LevelUnsupportedException implements Exception {
+  LevelUnsupportedException(this.levelId, this.missing);
+
+  final String levelId;
+
+  /// The names this build does not know. See [Level.knownMechanics].
+  final Set<String> missing;
+
+  @override
+  String toString() =>
+      'LevelUnsupportedException: level "$levelId" needs '
+      '${missing.join(', ')}, which this build does not have';
+}
+
+/// Builds a [Level] from decoded JSON.
+///
+/// Throws [LevelFormatException] if the data does not describe a level, and
+/// [LevelUnsupportedException] if it describes one this build cannot play.
 Level levelFromJson(Object? source) {
   final json = _asMap(source, 'level');
   final id = _asString(json['id'], 'id');
+
+  // Before anything else is read. A level that needs a mechanic this build
+  // has never heard of cannot be parsed into a *smaller* level and played
+  // anyway — that is the whole failure this guards.
+  final missing = _stringList(json['requires'], 'requires')
+      .toSet()
+      .difference(Level.knownMechanics);
+  if (missing.isNotEmpty) throw LevelUnsupportedException(id, missing);
+
   try {
     return Level(
       id: id,
@@ -264,6 +390,25 @@ Level levelFromJson(Object? source) {
             opens: _asString(
               _asMap(entry, 'plates[$i]')['opens'],
               'plates[$i].opens',
+            ),
+            // Absent means a plate that opens, which is every plate written
+            // before this field existed.
+            inverts: _asBool(
+              _asMap(entry, 'plates[$i]')['inverts'] ?? false,
+              'plates[$i].inverts',
+            ),
+          ),
+      ],
+      toggles: [
+        for (final (i, entry) in _asList(json['toggles'], 'toggles').indexed)
+          ToggleSpec(
+            area: _rectFromJson(
+              _asMap(entry, 'toggles[$i]')['area'],
+              'toggles[$i].area',
+            ),
+            flips: _asString(
+              _asMap(entry, 'toggles[$i]')['flips'],
+              'toggles[$i].flips',
             ),
           ),
       ],
@@ -289,10 +434,29 @@ Level levelFromJson(Object? source) {
   }
 }
 
-/// Builds a whole campaign from decoded JSON.
-List<Level> levelsFromJson(Object? source) => [
-  for (final entry in _asList(source, 'levels')) levelFromJson(entry),
-];
+/// Builds a whole campaign from decoded JSON — a list of levels, or one on
+/// its own, which is what a file somebody is authoring usually holds.
+///
+/// A level this build cannot play is **left out**, and [onSkipped] is told.
+/// Dropping one level is safe; dropping the batch it arrived in would lose
+/// nineteen good levels because the twentieth was ahead of this build, and
+/// silently dropping a *field* — the thing [Level.knownMechanics] exists to
+/// prevent — is the only version of this that is actually dangerous.
+List<Level> levelsFromJson(
+  Object? source, {
+  void Function(LevelUnsupportedException skipped)? onSkipped,
+}) {
+  final entries = source is Map ? [source] : _asList(source, 'levels');
+  final levels = <Level>[];
+  for (final entry in entries) {
+    try {
+      levels.add(levelFromJson(entry));
+    } on LevelUnsupportedException catch (error) {
+      onSkipped?.call(error);
+    }
+  }
+  return levels;
+}
 
 Map<String, Object?> _asMap(Object? value, String field) => value is Map
     ? value.cast<String, Object?>()
@@ -328,6 +492,11 @@ Rect _rectFromJson(Object? value, String field) {
   }
   return Rect.fromLTRB(n[0], n[1], n[2], n[3]);
 }
+
+List<String> _stringList(Object? value, String field) => [
+  for (final (i, entry) in _asList(value, field).indexed)
+    _asString(entry, '$field[$i]'),
+];
 
 List<Rect> _rectList(Object? value, String field) => [
   for (final (i, entry) in _asList(value, field).indexed)

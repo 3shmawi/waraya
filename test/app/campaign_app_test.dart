@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/level/levels.dart';
 import 'package:waraya/main_levels.dart';
 import 'package:waraya/progress/progress.dart';
+import 'package:waraya/ui/campaign_end.dart';
 import 'package:waraya/ui/level_select.dart';
 
 /// The campaign app, pumped.
@@ -122,6 +123,52 @@ void main() {
       await tester.tap(find.text(Levels.campaign[0].name));
       await tester.pump();
       expect(picked, 0);
+    });
+  });
+
+  // The screen after the last level. It used to be the level list with a
+  // different heading — a menu handed to somebody who had just earned a
+  // sentence.
+  group('the ending', () {
+    Widget endWith({
+      VoidCallback? onLevels,
+      VoidCallback? onRestart,
+    }) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: MediaQuery(
+        data: const MediaQueryData(size: Size(400, 800)),
+        child: CampaignEnd(
+          levels: Levels.campaign,
+          onLevels: onLevels ?? () {},
+          onRestart: onRestart ?? () {},
+        ),
+      ),
+    );
+
+    testWidgets('says it is over, and says what the game was', (tester) async {
+      await tester.pumpWidget(endWith());
+      expect(find.text('خلصت'), findsOneWidget);
+      expect(
+        find.text('كل باب عدّيت منه،\nانت اللي فتحته من قبل ما تحتاجه.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('both ways onward are wired', (tester) async {
+      var levels = 0;
+      var restart = 0;
+      await tester.pumpWidget(
+        endWith(onLevels: () => levels++, onRestart: () => restart++),
+      );
+
+      await tester.tap(find.text('المراحل'));
+      await tester.pump();
+      expect(levels, 1);
+
+      await tester.tap(find.text('من أول مرحلة'));
+      await tester.pump();
+      expect(restart, 1);
     });
   });
 }
