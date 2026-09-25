@@ -85,7 +85,7 @@ abstract final class Levels {
   ///
   /// The player presses it, sees the door open and shut again as they walk
   /// away, and has to work out that the way to hold it open is to have been
-  /// standing on it three seconds ago. Flat ground, no jumping: the only new
+  /// standing on it two and a half seconds ago. Flat ground, no jumping: the only new
   /// thing is the idea.
   static final Level pressItEarly = Level(
     id: 'press-it-early',
@@ -97,18 +97,20 @@ abstract final class Levels {
     wrongIdeas: const [
       // Hold one arrow and walk at the door. The first draft of this level
       // could be finished exactly like this, because the plate sat on the way
-      // — you crossed it, and three seconds later so did your shadow.
+      // — you crossed it, and two and a half seconds later so did your
+      // shadow.
       [Move.left(8)],
     ],
     name: 'قبل ما تحتاجه',
     teaches: 'الزرار محتاج حد يقف عليه. مفيش حد غيرك.',
-    delaySeconds: 3.5,
+    delaySeconds: 2.5,
     spawnX: 0,
     floorTop: _floor,
     blocks: [_ground(-700, 700)],
     // The plate is the opposite way from the door on purpose. Put it between
     // the player and the door and the level solves itself: you cross it on
-    // your way past, and three seconds later your shadow crosses it too and
+    // your way past, and two and a half seconds later your shadow crosses it
+    // too and
     // opens the door while you happen to be standing there. A puzzle you beat
     // by holding one key teaches nothing, and a test pins that this one
     // cannot be.
@@ -133,8 +135,8 @@ abstract final class Levels {
       Move.left(3.3), // out to the mark, under the ledge
       Move(2.5), // stand there long enough to leave a solid shadow
       Move.right(0.9), // get out of your own way
-      Move(0.8), // wait for it to appear
-      Move.left(0.45), // run at it
+      Move(0.15), // it is already standing there
+      Move.left(0.4), // run at it
       Move.left(0.55, jump: true), // up onto its head
       Move.left(0.6, jump: true), // and off the head onto the ledge
       Move.left(1.5), // along to the way out
@@ -151,7 +153,7 @@ abstract final class Levels {
     ],
     name: 'اوقف على نفسك',
     teaches: 'انت الوحيد اللي ممكن تبقى السلّمة.',
-    delaySeconds: 3.5,
+    delaySeconds: 2.5,
     spawnX: 500,
     floorTop: _floor,
     blocks: [_ground(-900, 900), const Rect.fromLTRB(-700, 430, -280, 470)],
@@ -184,12 +186,12 @@ abstract final class Levels {
     ],
     name: 'مش نفس السكة',
     teaches: 'ظلك جاي في نفس السكة. دوّر على سكة تانية.',
-    // Five seconds, and the layout does the forcing rather than the number.
+    // Four seconds, and the layout does the forcing rather than the number.
     // The player starts beside the door, so the shadow's first steps are
     // through the one spot you would otherwise stand and wait in: leaving the
     // corridor early and loitering by the door is the obvious plan, and it is
     // the plan that walks you into yourself.
-    delaySeconds: 5,
+    delaySeconds: 4,
     spawnX: 60,
     floorTop: _floor,
     shadowKills: true,
@@ -210,7 +212,7 @@ abstract final class Levels {
     ],
     // Six seconds of grace. Without any, the level is a stopwatch: the door is
     // held open only for as long as you happened to stand on the plate, that
-    // window arrives exactly five seconds later, and the lane you come home
+    // window arrives exactly four seconds later, and the lane you come home
     // along is a sixteen-unit shelf with your own past walking up it behind
     // you. Arrive a beat late and there is no door, no room to dodge and
     // nothing to do but watch yourself arrive. The lesson here is "your old
@@ -256,7 +258,7 @@ abstract final class Levels {
     ],
     name: 'خُد قرارك واقفز',
     teaches: 'اللي تحت مفيش رجوع منه. اتأكد إنك سيبت حاجة وراك.',
-    delaySeconds: 4.5,
+    delaySeconds: 3.5,
     // On the shelf, not the floor: this level starts you above the level it
     // is really about.
     spawnX: 0,
@@ -279,7 +281,7 @@ abstract final class Levels {
   );
 
   /// **All of it at once.** A door you need your past for, and then a ledge
-  /// you need your past for, from the same three seconds of history.
+  /// you need your past for, from the same two seconds of history.
   ///
   /// Nothing new is introduced. The only new thing is that both setups are in
   /// flight at the same time, and the order they were laid down in is the
@@ -306,7 +308,7 @@ abstract final class Levels {
     ],
     name: 'الاتنين مع بعض',
     teaches: 'ظل واحد، مهمتين. الترتيب اللي عملتهم بيه هو اللي راجع بيه.',
-    delaySeconds: 3,
+    delaySeconds: 2.2,
     spawnX: -200,
     floorTop: _floor,
     blocks: [
@@ -348,9 +350,8 @@ abstract final class Levels {
       Move.left(2.9, crouch: true), // under it, bent over, to the gap
       Move(2.0), // stand up: the only place in the level you are allowed to
       Move.left(1.2, crouch: true), // back under the roof, out of your own way
-      Move(0.8), // wait for it
-      Move.right(1.2, crouch: true), // back to the mouth of the gap
-      Move(0.2),
+      Move.right(1.2, crouch: true), // and straight back: it is standing there
+      Move(0.1),
       Move.right(0.5, jump: true), // up onto your own head
       Move.right(0.6, jump: true), // and off it onto the roof
       Move.right(1.2), // along to the way out
@@ -391,7 +392,7 @@ abstract final class Levels {
     ],
     name: 'خُش واطي',
     teaches: 'تحت السقف مفيش وقوف. المكان الوحيد اللي تقف فيه هو مكان السلّمة.',
-    delaySeconds: 4,
+    delaySeconds: 3,
     spawnX: 330,
     floorTop: _floor,
     blocks: [
@@ -453,7 +454,7 @@ abstract final class Levels {
       Move.left(2.1), // out to the plate, the wrong way from everything
       Move(3.0), // hold it. this is how long the door will be open for
       Move.left(0.6), // on past it, into the open, out of your own way
-      Move(1.6), // and wait there for yourself to arrive
+      Move(0.6), // and wait there for yourself to arrive
       Move.right(0.75, jump: true), // a running jump onto your own head
       Move(0.2),
       Move.right(0.75, jump: true), // off it onto the shelf
@@ -467,7 +468,7 @@ abstract final class Levels {
         Move.left(2.1),
         Move(1.0),
         Move.left(0.6),
-        Move(3.6),
+        Move(2.6),
         Move.right(0.75, jump: true),
         Move(0.2),
         Move.right(0.75, jump: true),
@@ -491,7 +492,7 @@ abstract final class Levels {
     ],
     name: 'واقف على اللي فاتحلك',
     teaches: 'قد ما وقفت على الزرار، قد ما الباب هيفضل مفتوح.',
-    delaySeconds: 5,
+    delaySeconds: 4,
     spawnX: 400,
     floorTop: _floor,
     blocks: [
@@ -534,7 +535,7 @@ abstract final class Levels {
   /// somewhere and it presses what you cannot reach. A plate is a question
   /// the door asks every frame, and the answer your past gives is always a
   /// gift. A key is not that. It flips on the edge — the instant a body
-  /// arrives — and it flips for the body walking your path four and a half
+  /// arrives — and it flips for the body walking your path three and a half
   /// seconds back exactly as it flips for you. So the door it opens is a door
   /// that shuts itself, on a timer you cannot see and did not set, and the
   /// thing that shuts it is you.
@@ -547,7 +548,7 @@ abstract final class Levels {
   /// counting down.
   ///
   /// Nothing kills here and nothing is timed tightly: the walk from the key to
-  /// the door is a little over two seconds out of four and a half, so a beat
+  /// the door is a little over two seconds out of three and a half, so a beat
   /// spent thinking costs nothing. What costs is misreading what the key is.
   ///
   /// The wall past the key is not decoration. A crossing flips, so crossing it
@@ -572,7 +573,7 @@ abstract final class Levels {
     ],
     name: 'اللي بتفتحه بتقفله',
     teaches: 'المفتاح مش زرار. بيفتح دلوقتي — وماضيك جاي يقفله.',
-    delaySeconds: 4.5,
+    delaySeconds: 3.5,
     spawnX: 0,
     floorTop: _floor,
     blocks: [
@@ -643,7 +644,7 @@ abstract final class Levels {
     ],
     name: 'ضلّك مش هنا',
     teaches: 'في النور مفيش ظل. سيب جسمك في الضلمة.',
-    delaySeconds: 4,
+    delaySeconds: 3,
     spawnX: 300,
     floorTop: _floor,
     blocks: [
@@ -695,9 +696,8 @@ abstract final class Levels {
       Move(1.8), // stand on it: this is how wide the window will be
       Move.right(2.5), // back to the near plate
       Move(1.8), // and stand on that one
-      Move.right(1.3), // up to the gate
-      Move(1.6), // wait for both of you to arrive
-      Move.right(1.6), // through, while both of them are standing
+      Move.right(1.4), // up to the gate, both of them already standing
+      Move.right(1.8), // and straight through, before the near one moves
     ],
     wrongIdeas: const [
       // Step off the far plate and take your time about the walk. Your pasts
@@ -725,14 +725,14 @@ abstract final class Levels {
     ],
     name: 'اتنين مش واحد',
     teaches: 'البوابة عايزة الزرارين مع بعض، وانت واحد. بس ماضيك اتنين.',
-    delays: const [3, 7],
+    delays: const [2, 6],
     spawnX: 120,
     floorTop: _floor,
     blocks: [_ground(-900, 700)],
     plates: const [
-      // The far one, which the seven-second shadow comes back for.
+      // The far one, which the six-second shadow comes back for.
       PlateSpec(area: Rect.fromLTRB(-560, 608, -460, 620), opens: 'far'),
-      // The near one, which the three-second shadow comes back for.
+      // The near one, which the two-second shadow comes back for.
       PlateSpec(area: Rect.fromLTRB(-60, 608, 40, 620), opens: 'near'),
     ],
     doors: const [
