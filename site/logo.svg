@@ -35,10 +35,10 @@
     <!-- Where you were, and where you were before that. Pale and cold: the one
          colour this scene does not have, so the echo never disappears into the
          sunset the way a darker one would. -->
-    <use href="#body" x="70" color="#DCE4EE" opacity="0.30"/>
-    <use href="#body" x="58" color="#DCE4EE" opacity="0.55"/>
+    <use href="#body" x="66.5" color="#DCE4EE" opacity="0.30"/>
+    <use href="#body" x="53.5" color="#DCE4EE" opacity="0.55"/>
     <!-- And where you are. -->
-    <use href="#body" x="44" color="#07050A"/>
+    <use href="#body" x="40.5" color="#07050A"/>
 
     <!-- The ground all three are walking on, lit along its top edge. -->
     <rect x="0" y="78" width="100" height="22" fill="#0E0A10"/>

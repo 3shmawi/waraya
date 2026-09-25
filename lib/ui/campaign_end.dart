@@ -1,12 +1,8 @@
-import 'dart:math' as math;
-import 'dart:ui' as ui;
-
 import 'package:flutter/widgets.dart';
 
-import '../game/character/figure.dart';
-import '../game/sky_backdrop.dart';
 import '../level/level.dart';
 import '../licenses.dart';
+import 'game_mark.dart';
 
 /// What comes up when the last level is finished.
 ///
@@ -57,7 +53,7 @@ class CampaignEnd extends StatelessWidget {
                   const SizedBox(
                     width: 208,
                     height: 128,
-                    child: CustomPaint(painter: _Mark()),
+                    child: CustomPaint(painter: GameMark.panel()),
                   ),
                   const SizedBox(height: 28),
                   const Text(
@@ -136,117 +132,6 @@ String _arabicDigits(int value) => '$value'.replaceAllMapped(
   RegExp(r'[0-9]'),
   (digit) => String.fromCharCode(0x0660 + int.parse(digit[0]!)),
 );
-
-/// The game's mark: you, and the two of you still walking behind.
-///
-/// The same picture as `site/logo.svg`, drawn with the game's own [Figure]
-/// rather than a second set of proportions — so the body on the ending is the
-/// body in the levels, down to the tilt it runs with.
-///
-/// It needs its patch of sunset. The two behind are the shadow's pale cold
-/// colour and the one in front is the player's black, and black on the near
-/// black this screen is painted in would be a gap rather than a body.
-class _Mark extends CustomPainter {
-  const _Mark();
-
-  /// Walking left, out of the frame they came in through.
-  static const double _facing = -1;
-
-  /// Heights and the ground line as fractions of the tile's height, off
-  /// `site/logo.svg`.
-  static const double _bodyHeight = 0.55;
-  static const double _groundY = 0.80;
-
-  /// Where each body stands, across the tile.
-  ///
-  /// Wider apart than the logo has them, because the logo is a square app
-  /// icon and this is not. The bodies are drawn running, and a running stride
-  /// is nearly half a body wide — at the icon's spacing the three of them
-  /// came out as one blur with six legs.
-  static const List<double> _at = [0.78, 0.55, 0.32];
-  /// Oldest first, which is the order these are painted in — [pastFades] is
-  /// nearest first, and it is the same ladder the game fades its shadows with.
-  static List<double> get _alpha => pastFades.reversed.toList();
-
-  /// Half a stride between one body and the next.
-  ///
-  /// Half rather than some prettier fraction because the gait plants a foot
-  /// at 0 and π and lifts the whole body in between: at anything else one of
-  /// the three is caught mid-flight, and a body hanging above the ground in a
-  /// picture that is not moving reads as floating rather than as running.
-  /// Half a stride also alternates which leg is forward, so they do not come
-  /// out as three copies of one pose.
-  static const double _phaseStep = math.pi;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final box = Rect.fromLTWH(0, 0, size.width, size.height);
-    final rounded = RRect.fromRectAndRadius(
-      box,
-      Radius.circular(size.height * 0.18),
-    );
-    canvas.save();
-    canvas.clipRRect(rounded);
-
-    final ground = size.height * _groundY;
-    canvas.drawRect(
-      box,
-      Paint()
-        ..shader = ui.Gradient.linear(
-          Offset.zero,
-          Offset(0, ground),
-          SkyBackdrop.colors,
-          SkyBackdrop.stops,
-        ),
-    );
-
-    // Oldest first, so the body you are now is painted over the top of them.
-    for (var i = 0; i < _at.length; i++) {
-      final ahead = _at.length - 1 - i;
-      canvas.save();
-      canvas.translate(size.width * _at[i], ground);
-      Figure(
-        height: size.height * _bodyHeight,
-        color: i == _at.length - 1
-            ? SilhouettePalette.bodyColor
-            : SilhouettePalette.shadowColor.withValues(alpha: _alpha[i]),
-      ).render(
-        canvas,
-        phase: -ahead * _phaseStep,
-        moving: true,
-        airborne: false,
-        facing: _facing,
-      );
-      canvas.restore();
-    }
-
-    // The ground they are all walking on, lit along its top edge by the same
-    // backlight everything else in this game is cut out of.
-    canvas.drawRect(
-      Rect.fromLTRB(0, ground, size.width, size.height),
-      Paint()..color = SilhouettePalette.blockFill,
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(0, ground, size.width, size.height * 0.016),
-      Paint()..color = SilhouettePalette.blockTop,
-    );
-    canvas.restore();
-
-    // The ground inside the tile and the screen behind it are both very near
-    // black, so without this the mark looks like it stops at the lit line and
-    // the two bottom corners are nowhere.
-    canvas.drawRRect(
-      rounded,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = const Color(0x33FFE7B0),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_Mark oldDelegate) => false;
-}
 
 class _Button extends StatelessWidget {
   const _Button({required this.label, required this.onTap, this.quiet = false});
