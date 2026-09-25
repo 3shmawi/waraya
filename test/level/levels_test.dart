@@ -944,6 +944,120 @@ void main() {
     );
   });
 
+  group('two, not one', () {
+    testWithGame<LevelGame>(
+      'two plates at once, held by the two of you that are four apart',
+      build(Levels.twoNotOne),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(walkthroughs['two-not-one']!, stopWhenComplete: true);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    // The proof that the second delay is load-bearing rather than decoration:
+    // the same level, the same recorded run, one shadow instead of two. A gate
+    // that wants both of its plates at the same moment is a gate one shadow
+    // can never open, because one shadow is in exactly one place — the place
+    // you were standing three seconds ago.
+    testWithGame<LevelGame>(
+      'and with one shadow the same run never opens the gate at all',
+      () => LevelGame(
+        levels: [
+          levelFromJson(
+            Levels.twoNotOne.toJson()..['delays'] = <double>[3],
+          ),
+        ],
+        inputs: [ScriptedInput()],
+      ),
+      (game) async {
+        await game.ready();
+        expect(game.shadows, hasLength(1));
+
+        final run = start(game)
+          ..play(walkthroughs['two-not-one']!, stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+        expect(
+          game.doors.map((door) => door.openFraction),
+          everyElement(lessThan(1)),
+          reason: 'both open at once is the one thing it cannot do',
+        );
+      },
+    );
+
+    // The wrong idea, and the number the whole level is about: your two pasts
+    // are four seconds apart and nothing you do changes that, so the walk
+    // between the two plates has to fit inside four seconds. Step off the far
+    // one, stop to look around, and by the time the near plate is pressed the
+    // far shadow has been and gone.
+    //
+    // Note what is *not* the wrong idea: standing on a plate longer. That
+    // widens the window, here as everywhere else in this game. What costs you
+    // is the gap between leaving one and reaching the other.
+    testWithGame<LevelGame>(
+      'linger on the way between them and the two of you never overlap',
+      build(Levels.twoNotOne),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(3.1),
+            Move(1.8), // the same stand as the solution
+            Move.right(0.8), // off the plate...
+            Move(2.5), // ...and a look around on the way
+            Move.right(1.7),
+            Move(1.8),
+            Move.right(1.3),
+            Move(1.6),
+            Move.right(1.6),
+          ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+
+    // The real cost of a second shadow is not the buffer, it is telling them
+    // apart: two pale cold figures of the same weight is noise, and the
+    // question the player is actually asking is *which* past am I looking at.
+    testWithGame<LevelGame>(
+      "the older of the two is drawn fainter, on the mark's own ladder",
+      build(Levels.twoNotOne),
+      (game) async {
+        await game.ready();
+        start(game).play(const [Move(8.0)]);
+
+        expect(game.shadows, hasLength(2));
+        expect(game.shadows.map((s) => s.fade), pastFades.take(2));
+        expect(
+          game.shadows[1].opacity,
+          lessThan(game.shadows[0].opacity),
+          reason: 'the seven-second one has to read as the older one',
+        );
+        expect(game.shadows.every((s) => s.isActive), isTrue);
+      },
+    );
+    testWithGame<LevelGame>(
+      'the near plate on its own opens half a gate, which is a wall',
+      build(Levels.twoNotOne),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(0.8), // onto the near plate, the one you can see
+            Move(2.0),
+            Move.right(1.4), // and off to the gate with it
+            Move(4.0),
+            Move.right(1.6),
+          ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+  });
+
   group('the campaign holds together', () {
     test('teaches one thing at a time, in order', () {
       expect(Levels.campaign.first.id, 'press-it-early');
@@ -981,24 +1095,49 @@ void main() {
         reason: 'the rule itself has to clear the boost',
       );
       for (final level in [...Levels.campaign, Levels.lab]) {
+        // Two shadows stack — stand on the near one's head and the far one
+        // arrives there four seconds later — so a level with two of them has
+        // one more step under every door.
+        final floor = level.delays.length > 1
+            ? Levels.minDoorHeightTwoShadows
+            : Levels.minDoorHeight;
         for (final door in level.doors) {
           expect(
             door.closed.height,
-            greaterThanOrEqualTo(Levels.minDoorHeight),
+            greaterThanOrEqualTo(floor),
             reason:
                 '${level.id}: a body on a shadow at this door\'s foot reaches '
                 '${reach.toStringAsFixed(0)} above its sill',
           );
         }
       }
+      expect(
+        Levels.minDoorHeightTwoShadows,
+        greaterThan(reach + 96),
+        reason: 'the two-shadow rule has to clear the extra body too',
+      );
     });
 
     test('every level is winnable at a delay the panel can produce', () {
       for (final level in [...Levels.campaign, Levels.lab]) {
+        // The nearest shadow is the one the bench's slider drives; the rest
+        // keep the delays their level gave them, because the gap between two
+        // shadows is the puzzle and a slider that closed it would delete the
+        // level rather than tune it.
         expect(
           level.delaySeconds,
           inInclusiveRange(0.5, 6),
           reason: '${level.id} asks for a delay outside the slider',
+        );
+        expect(
+          level.delays,
+          everyElement(inInclusiveRange(0.5, 12)),
+          reason: '${level.id} asks for a shadow nobody could keep track of',
+        );
+        expect(
+          level.delays,
+          orderedEquals([...level.delays]..sort()),
+          reason: '${level.id} lists its shadows out of order, nearest first',
         );
       }
     });

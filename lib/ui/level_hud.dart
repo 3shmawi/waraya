@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../level/level_game.dart';
 import '../licenses.dart';
+import '../shadow/shadow_recorder.dart';
 
 /// The in-world readout for the shadow lab.
 ///
@@ -84,10 +85,15 @@ class LevelHud extends PositionComponent {
   void update(double dt) {
     super.update(dt);
     final settings = game.settings;
-    final recorder = game.recorder;
-    final waiting = recorder.secondsUntilPlaying;
+    final lines = game.recorders;
 
-    _delayText.text = 'delay ${settings.delaySeconds.toStringAsFixed(1)}s';
+    // Every delay, not just the nearest. The number burned into the frame is
+    // the whole explanation of this game — the plan's note about the clip that
+    // needs no caption says so — and on a level with two shadows the thing
+    // that needs explaining is the *gap* between them.
+    _delayText.text =
+        'delay '
+        '${lines.map((l) => l.delaySeconds.toStringAsFixed(1)).join(' + ')}s';
     if (!detail) {
       size = Vector2(_delayText.size.x + 20, _delayText.size.y + 20);
       return;
@@ -96,9 +102,8 @@ class LevelHud extends PositionComponent {
     _statusText.text = [
       if (many) 'level      ${game.levelIndex + 1} / ${game.levels.length}',
       if (game.completed) 'done       ✓',
-      waiting > 0
-          ? 'shadow     arrives in ${waiting.toStringAsFixed(1)}s'
-          : 'shadow     live · ${recorder.delayTicks} ticks buffered',
+      for (final (i, line) in lines.indexed)
+        _shadowLine(lines.length == 1 ? 'shadow' : 'shadow ${i + 1}', line),
       'solid      ${_onOff(settings.shadowIsSolid)}    '
           'kills ${_onOff(settings.shadowKills)}',
       if (!many)
@@ -114,6 +119,14 @@ class LevelHud extends PositionComponent {
           : _statusText.size.x + 20,
       _statusText.position.y + _statusText.size.y + 10,
     );
+  }
+
+  static String _shadowLine(String label, ShadowRecorder line) {
+    final waiting = line.secondsUntilPlaying;
+    final text = waiting > 0
+        ? 'arrives in ${waiting.toStringAsFixed(1)}s'
+        : 'live · ${line.delayTicks} ticks buffered';
+    return '${label.padRight(10)} $text';
   }
 
   static String _onOff(bool value) => value ? 'on ' : 'off';

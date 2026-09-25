@@ -33,6 +33,18 @@ abstract final class Levels {
   /// door to it so a new one cannot quietly reintroduce the shortcut.
   static const double minDoorHeight = 250;
 
+  /// The same rule for a level with two shadows, where the staircase has one
+  /// more step in it.
+  ///
+  /// Two shadows can be stacked. Stand on the near one's head and you are
+  /// recorded standing at 96; four seconds later the far one arrives *there*,
+  /// so the near one on the floor is a step up to the far one in the air, and
+  /// a jump from that second head clears 96 + 96 + 136 = 328 above the floor.
+  /// Nobody would find that by accident and somebody would find it on
+  /// purpose, which is the same thing that happened to every door in the game
+  /// the first time round.
+  static const double minDoorHeightTwoShadows = 360;
+
   /// Ground from [left] to [right], deep enough that nothing falls through it.
   /// How far past the ends of the play area the ground keeps going.
   ///
@@ -395,6 +407,56 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(380, 358, 460, 430),
   );
 
+  /// **Use nine: two pasts.** The gate has two locks and you are one person.
+  ///
+  /// This is not a new rule. It is the rule twice, and what the second copy
+  /// buys is the one thing a single shadow cannot do at any delay at all: be
+  /// in two places at the same moment. One shadow covers exactly one spot —
+  /// the one you were standing in D ago — so a gate that wants both of its
+  /// plates held *at once* is a gate one shadow can never open, however long
+  /// you stand on either.
+  ///
+  /// Two shadows cover two spots, and the distance between them is fixed at
+  /// four seconds. So the puzzle is not where to stand but **how far apart in
+  /// time** to stand: press the far plate, walk to the near one, and the gap
+  /// between the two things you did has to fit inside the gap between your two
+  /// pasts. The walk between the plates is about two and a half seconds, which
+  /// leaves roughly a second and a half of both-at-once at the gate — and it
+  /// is the player who widens it, by standing longer on each, exactly as in
+  /// every other level here.
+  ///
+  /// The two doors touch, and that is load-bearing. The first draft left
+  /// thirty units between them, which is less than a body — and a body still
+  /// fitted, because fitting is about the gap plus whichever door is open.
+  /// The player could walk through the near one while it was open, stand in
+  /// the middle, and wait for the far one: two doors taken one at a time, and
+  /// no reason left to own two pasts. With no gap at all there is nowhere to
+  /// wait, and the only way through is both at once.
+  ///
+  /// They are also 360 tall rather than 250: two shadows stack, and a body on
+  /// top of a body on top of the floor reaches 328. See
+  /// [minDoorHeightTwoShadows].
+  static final Level twoNotOne = Level(
+    id: 'two-not-one',
+    name: 'اتنين مش واحد',
+    teaches: 'البوابة عايزة الزرارين مع بعض، وانت واحد. بس ماضيك اتنين.',
+    delays: const [3, 7],
+    spawnX: 120,
+    floorTop: _floor,
+    blocks: [_ground(-900, 700)],
+    plates: const [
+      // The far one, which the seven-second shadow comes back for.
+      PlateSpec(area: Rect.fromLTRB(-560, 608, -460, 620), opens: 'far'),
+      // The near one, which the three-second shadow comes back for.
+      PlateSpec(area: Rect.fromLTRB(-60, 608, 40, 620), opens: 'near'),
+    ],
+    doors: const [
+      DoorSpec(id: 'near', closed: Rect.fromLTRB(240, 260, 266, 620)),
+      DoorSpec(id: 'far', closed: Rect.fromLTRB(266, 260, 292, 620)),
+    ],
+    goal: const Rect.fromLTRB(400, 548, 480, 620),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -406,6 +468,7 @@ abstract final class Levels {
     holdYourOwnDoor,
     closeWhatYouOpened,
     yourShadowIsNotHere,
+    twoNotOne,
   ];
 
   /// The Phase 2 tuning bench, as a level so it runs on the same code as the

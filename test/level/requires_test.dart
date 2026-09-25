@@ -33,6 +33,7 @@ void main() {
         if (level.toggles.isNotEmpty) 'toggles',
         if (level.plates.any((plate) => plate.inverts)) 'inverted-plates',
         if (level.lights.isNotEmpty) 'lights',
+        if (level.delays.length > 1) 'delays',
       };
       expect(level.requires, expected, reason: level.id);
       expect(level.toJson()['requires'], expected.toList()..sort());
@@ -45,6 +46,7 @@ void main() {
     for (final MapEntry(key: mechanic, value: id) in const {
       'toggles': 'close-what-you-opened',
       'lights': 'your-shadow-is-not-here',
+      'delays': 'two-not-one',
     }.entries) {
       expect(
         Levels.campaign.where((l) => l.requires.contains(mechanic)).map(
@@ -57,16 +59,17 @@ void main() {
   });
 
   test('a level is refused by name when it asks for what is not here', () {
-    // `delays` — two shadows at once — is the next mechanic in the plan and is
-    // not built. A name from the plan rather than a nonsense one on purpose:
-    // this is exactly the shape of the accident, a level authored against a
-    // newer build than the one reading it.
+    // `crates` — a box you can push — is named in the plan and deliberately
+    // left out of this phase: it would put a new height under every door in
+    // the campaign. A name from the plan rather than a nonsense one on
+    // purpose, because this is exactly the shape of the accident — a level
+    // authored against a build newer than the one reading it.
     expect(
-      () => levelFromJson(jsonOf(sample, requires: ['delays'])),
+      () => levelFromJson(jsonOf(sample, requires: ['crates'])),
       throwsA(
         isA<LevelUnsupportedException>()
             .having((e) => e.levelId, 'levelId', sample.id)
-            .having((e) => e.missing, 'missing', {'delays'}),
+            .having((e) => e.missing, 'missing', {'crates'}),
       ),
     );
   });
@@ -76,7 +79,12 @@ void main() {
     // it, never before: a name here without the code behind it means a level
     // is accepted and then played wrong, which is the whole failure this
     // guards against.
-    expect(Level.knownMechanics, {'toggles', 'inverted-plates', 'lights'});
+    expect(Level.knownMechanics, {
+      'toggles',
+      'inverted-plates',
+      'lights',
+      'delays',
+    });
     expect(levelFromJson(jsonOf(sample, requires: const [])).id, sample.id);
     expect(
       levelFromJson(jsonOf(Levels.closeWhatYouOpened)).toggles,
@@ -112,7 +120,7 @@ void main() {
   test('one level ahead of this build does not take the batch with it', () {
     final ahead = jsonOf(
       Levels.campaign[1],
-      requires: ['delays'],
+      requires: ['crates'],
     )..['id'] = 'from-the-future';
 
     final skipped = <LevelUnsupportedException>[];

@@ -65,7 +65,7 @@ touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 | 3 | Game feel — weight, coyote time, sound, screen shake | ✅ code, tuning open |
 | 4 | Puzzle design, 5–8 levels | ✅ 7 built |
 | 5 | Death and retry, level transitions, saving, menus | ✅ |
-| 6 | Level vocabulary — new data a level can be made of | keys, inverted plates and light in |
+| 6 | Level vocabulary — new data a level can be made of | ✅ keys, inverted plates, light, two shadows |
 | 7 | The hard levels, built out of that vocabulary | |
 | 8 | Server, submissions, authoring | |
 | 9 | Polish and release | |
@@ -84,6 +84,11 @@ needs dark to be a thing. Light that erased it, or moved it, or blinked on a
 timer was refused: the first two want a shader, the third is a stopwatch, and
 all three turn one sentence a player already holds — *that is me, four seconds
 ago* — into two systems to model at once.
+
+The third is **a second shadow**, at its own delay. That is not a new rule, it
+is the rule twice — and what the second copy buys is the one thing one shadow
+cannot do at any delay: be in two places at the same moment. A gate with two
+locks, held by the two of you that are four seconds apart.
 
 It is a hobby project, built one day a week. The plan it follows, and the
 reasoning behind each phase, is in [`CLAUDE.md`](CLAUDE.md), with the current
