@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 
-import 'solution.dart';
+import 'package:waraya/level/playthrough.dart';
 
 /// The whole campaign, start to finish, in one game.
 ///
@@ -30,7 +30,7 @@ void main() {
           reason: 'expected to be on ${level.id} by now (${run.where})',
         );
 
-        run.play(walkthroughs[level.id]!, stopWhenComplete: true);
+        run.play(level.solution, stopWhenComplete: true);
         expect(
           game.completed,
           isTrue,

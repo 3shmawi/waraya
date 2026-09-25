@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'playthrough.dart';
+
 /// A puzzle, as data.
 ///
 /// Phase 4 is about designing puzzles, and a puzzle you can only read by
@@ -28,6 +30,8 @@ class Level {
     this.shadowIsSolid = true,
     this.shadowKills = false,
     this.floorTop = 620,
+    this.solution = const [],
+    this.wrongIdeas = const [],
   }) : assert(
          (delaySeconds == null) != (delays == null),
          'a level sets either delaySeconds or delays, never both',
@@ -110,6 +114,36 @@ class Level {
 
   /// Where the ground is, for spawning and for falling out of the world.
   final double floorTop;
+
+  /// A run that finishes this level, and runs that do not.
+  ///
+  /// Part of the level, not of a test, and the reason is the whole of how this
+  /// project stays changeable. The recorded solution proves the puzzle can
+  /// still be finished; the recorded wrong idea proves it still has to be
+  /// **thought about**, and the second is the one that matters. The first
+  /// draft of the first level could be beaten by holding one arrow — the plate
+  /// happened to sit on the way to the door — and only a recording of that
+  /// idea failing says so.
+  ///
+  /// They travel in the JSON because a level can arrive from somewhere else,
+  /// and a level nobody can check is a level nobody should publish: the gate
+  /// in front of `docs/backend-plan.md` replays exactly these, through exactly
+  /// the harness the tests use, and takes the level's word for nothing.
+  final List<Move> solution;
+
+  /// The obvious ideas that do not work. Each is a run that must **not**
+  /// finish the level.
+  final List<List<Move>> wrongIdeas;
+
+  /// Whether this level can be checked by somebody who did not write it.
+  ///
+  /// A level with no recorded solution cannot be shown to be finishable, and
+  /// one with no recorded wrong idea cannot be shown to be a puzzle rather
+  /// than a corridor. The gate in front of published levels replays both
+  /// through the same harness the tests use — `Playthrough` — and a level that
+  /// carries neither gives it nothing to replay, so it is refused rather than
+  /// taken on trust.
+  bool get canBeChecked => solution.isNotEmpty && wrongIdeas.isNotEmpty;
 
   /// The names of the mechanics **this build knows how to play**.
   ///
@@ -355,6 +389,11 @@ extension LevelJson on Level {
     'floorTop': floorTop,
     'shadowIsSolid': shadowIsSolid,
     'shadowKills': shadowKills,
+    'solution': [for (final move in solution) _moveToJson(move)],
+    'wrongIdeas': [
+      for (final idea in wrongIdeas)
+        [for (final move in idea) _moveToJson(move)],
+    ],
     'goal': _rectToJson(goal),
     'blocks': blocks.map(_rectToJson).toList(),
     'lights': lights.map(_rectToJson).toList(),
@@ -383,6 +422,17 @@ extension LevelJson on Level {
 }
 
 List<double> _rectToJson(Rect r) => [r.left, r.top, r.right, r.bottom];
+
+/// Short keys, because a recorded run is a hundred of these and four letters
+/// of noise each would be most of the file. `s` seconds, `x` the direction,
+/// `j` jump, `c` crouch — and everything that is not held is left out, so a
+/// move that is only standing still is `{"s": 1.2}`.
+Map<String, Object?> _moveToJson(Move move) => {
+  's': move.seconds,
+  if (move.axis != 0) 'x': move.axis,
+  if (move.jump) 'j': true,
+  if (move.crouch) 'c': true,
+};
 
 /// Thrown when level data does not describe a level.
 ///
@@ -447,6 +497,12 @@ Level levelFromJson(Object? source) {
       shadowIsSolid: _asBool(json['shadowIsSolid'] ?? true, 'shadowIsSolid'),
       shadowKills: _asBool(json['shadowKills'] ?? false, 'shadowKills'),
       goal: _rectFromJson(json['goal'], 'goal'),
+      solution: _moveList(json['solution'], 'solution'),
+      wrongIdeas: [
+        for (final (i, idea) in _asList(json['wrongIdeas'], 'wrongIdeas')
+            .indexed)
+          _moveList(idea, 'wrongIdeas[$i]'),
+      ],
       blocks: _rectList(json['blocks'], 'blocks'),
       lights: _rectList(json['lights'], 'lights'),
       markers: _rectList(json['markers'], 'markers'),
@@ -561,6 +617,22 @@ Rect _rectFromJson(Object? value, String field) {
     throw LevelFormatException('$field is inside out or empty');
   }
   return Rect.fromLTRB(n[0], n[1], n[2], n[3]);
+}
+
+List<Move> _moveList(Object? value, String field) => [
+  for (final (i, entry) in _asList(value, field).indexed)
+    _moveFromJson(entry, '$field[$i]'),
+];
+
+Move _moveFromJson(Object? value, String field) {
+  final json = _asMap(value, field);
+  final axis = json['x'] ?? 0;
+  return Move(
+    _asDouble(json['s'], '$field.s'),
+    axis: _asDouble(axis, '$field.x'),
+    jump: _asBool(json['j'] ?? false, '$field.j'),
+    crouch: _asBool(json['c'] ?? false, '$field.c'),
+  );
 }
 
 List<double> _doubleList(Object? value, String field) {

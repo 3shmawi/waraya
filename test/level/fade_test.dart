@@ -5,7 +5,7 @@ import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 import 'package:waraya/ui/level_fade.dart';
 
-import 'solution.dart';
+import 'package:waraya/level/playthrough.dart';
 
 /// The join between two levels.
 ///
@@ -28,7 +28,7 @@ void main() {
       final source = game.input.sources.first as ScriptedInput;
       final run = Playthrough(game, source);
 
-      run.play(walkthroughs[game.level.id]!, stopWhenComplete: true);
+      run.play(game.level.solution, stopWhenComplete: true);
       expect(game.completed, isTrue, reason: run.where);
       expect(
         game.fade.darkness,
@@ -78,7 +78,7 @@ void main() {
       final source = game.input.sources.first as ScriptedInput;
       final run = Playthrough(game, source);
 
-      run.play(walkthroughs[game.level.id]!, stopWhenComplete: true);
+      run.play(game.level.solution, stopWhenComplete: true);
       expect(game.completed, isTrue, reason: run.where);
 
       // Nothing gets built after the last level, so nothing would call

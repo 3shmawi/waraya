@@ -65,8 +65,8 @@ touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 | 3 | Game feel — weight, coyote time, sound, screen shake | ✅ code, tuning open |
 | 4 | Puzzle design, 5–8 levels | ✅ 7 built |
 | 5 | Death and retry, level transitions, saving, menus | ✅ |
-| 6 | Level vocabulary — new data a level can be made of | ✅ keys, inverted plates, light, two shadows |
-| 7 | The hard levels, built out of that vocabulary | |
+| 6 | Level vocabulary — new data a level can be made of | ✅ |
+| 7 | The hard levels, built out of that vocabulary | current |
 | 8 | Server, submissions, authoring | |
 | 9 | Polish and release | |
 
@@ -89,6 +89,14 @@ The third is **a second shadow**, at its own delay. That is not a new rule, it
 is the rule twice — and what the second copy buys is the one thing one shadow
 cannot do at any delay: be in two places at the same moment. A gate with two
 locks, held by the two of you that are four seconds apart.
+
+Every level carries its own recorded solution **and a recorded wrong idea**,
+in its own data and out through the JSON with everything else. The first
+proves the puzzle can still be finished; the second proves it still has to be
+thought about, and that one matters more — the first draft of the first level
+could be beaten by holding one arrow, and only a recording of that idea
+failing said so. One harness replays them: the tests, the clip renderer, and
+whatever decides to publish a level somebody else wrote.
 
 It is a hobby project, built one day a week. The plan it follows, and the
 reasoning behind each phase, is in [`CLAUDE.md`](CLAUDE.md), with the current

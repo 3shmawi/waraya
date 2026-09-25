@@ -7,7 +7,7 @@ import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 import 'package:waraya/progress/progress.dart';
 
-import '../level/solution.dart';
+import 'package:waraya/level/playthrough.dart';
 
 Level _level(String id) => Level(
   id: id,
@@ -97,14 +97,14 @@ void main() {
         await game.ready();
         final run = Playthrough(game, game.input.sources.first as ScriptedInput);
 
-        run.play(walkthroughs['press-it-early']!, stopWhenComplete: true);
+        run.play(Levels.pressItEarly.solution, stopWhenComplete: true);
         expect(_beaten, ['press-it-early']);
         expect(_finished, 0, reason: 'there is another level to go to');
 
         run.play(const [Move(1.2)]);
         expect(game.levelIndex, 1);
 
-        run.play(walkthroughs['stand-on-yourself']!, stopWhenComplete: true);
+        run.play(Levels.standOnYourself.solution, stopWhenComplete: true);
         run.play(const [Move(1.5)]);
         expect(_beaten, ['press-it-early', 'stand-on-yourself']);
         expect(_finished, 1, reason: 'nothing left to advance to');

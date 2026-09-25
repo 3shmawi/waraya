@@ -10,7 +10,8 @@
 // So the frames are made the way golden tests are made: step the game at a
 // fixed dt, paint each step into a PictureRecorder, write the PNG. Nothing is
 // timed against a wall clock, so the result is exact and the same every run.
-// The walkthroughs are the ones the tests already replay, so a clip cannot
+// The runs are the levels' own recorded solutions, the ones the tests replay,
+// so a clip cannot
 // show a solution the game no longer has.
 import 'dart:io';
 import 'dart:typed_data';
@@ -25,7 +26,7 @@ import 'package:waraya/level/level.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 
-import '../test/level/solution.dart';
+import 'package:waraya/level/playthrough.dart';
 
 /// Where the frames land. Outside the repo: these are build output.
 final String outRoot =
@@ -92,7 +93,7 @@ class Clip {
 
   String get name => '${number.toString().padLeft(2, '0')}-$slug';
   int get levelIndex => Levels.campaign.indexWhere((l) => l.id == levelId);
-  List<Move> get script => moves ?? walkthroughs[levelId]!;
+  List<Move> get script => moves ?? Levels.campaign[levelIndex].solution;
 }
 
 const clips = <Clip>[

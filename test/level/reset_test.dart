@@ -4,7 +4,7 @@ import 'package:waraya/audio/sfx.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 
-import 'solution.dart';
+import 'package:waraya/level/playthrough.dart';
 
 /// Every sound the game asked for, in order.
 class _Heard implements AudioOut {

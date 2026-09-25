@@ -7,7 +7,7 @@ import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/level_source.dart';
 import 'package:waraya/level/levels.dart';
 
-import 'solution.dart';
+import 'package:waraya/level/playthrough.dart';
 
 /// A level that survives a round trip through JSON is not one whose fields
 /// compare equal — it is one that can still be finished. So that is what these
@@ -27,10 +27,13 @@ void main() {
         () => LevelGame(levels: [roundTrip(level)], inputs: [ScriptedInput()]),
         (game) async {
           await game.ready();
+          // The copy's own solution, off the copy, not the original's. The
+          // recorded run travels in the JSON now, and a run that did not
+          // survive the trip is a level nothing on the other side can check.
           final run = Playthrough(
             game,
             game.input.sources.first as ScriptedInput,
-          )..play(walkthroughs[level.id]!, stopWhenComplete: true);
+          )..play(game.level.solution, stopWhenComplete: true);
 
           expect(run.finishedAt, isNotNull, reason: run.where);
         },
@@ -71,6 +74,8 @@ void main() {
         // plays as an easier level, with nothing anywhere saying so.
         expect(copy.lights, level.lights);
         expect(copy.requires, level.requires);
+        expect(copy.solution, level.solution);
+        expect(copy.wrongIdeas, level.wrongIdeas);
         expect(copy.doors.map((d) => d.id), level.doors.map((d) => d.id));
       }
     });
