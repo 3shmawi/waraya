@@ -142,6 +142,93 @@ class PressurePlate extends PositionComponent {
   }
 }
 
+/// A shaft of light, and the only place in the game where the shadow is not a
+/// thing.
+///
+/// Drawn behind the bodies rather than over them, so a player standing in it
+/// is still a clean silhouette — the beam is the air being lit, not a filter
+/// laid over the character. The shadow keeps its own drawing and simply goes
+/// faint, which is the feedback that matters: the rule is about the shadow, so
+/// the shadow is what has to look different.
+///
+/// Three gradients and no shader. The atmosphere in this game is painted with
+/// blend modes and layers on purpose — a fragment shader is the one thing the
+/// web build cannot be trusted with — and god rays are already in the art
+/// direction, so a lit column strengthens the scene rather than fighting it.
+class LightZone extends PositionComponent {
+  LightZone(this.area, {this.look = LevelLook.greyBox, super.priority = 60});
+
+  final Rect area;
+  final LevelLook look;
+
+  bool get _lit => look == LevelLook.silhouette;
+
+  /// How deep the pool of light on the floor is.
+  ///
+  /// The beam itself fades out, which is right for air and wrong for a rule:
+  /// the player has to be able to see where the light stops, because that is
+  /// where their shadow starts existing again. The pool has hard sides and
+  /// gives the rectangle an edge you can stand next to.
+  static const double _poolDepth = 54;
+
+  late final Paint _beam = Paint()
+    ..blendMode = _lit ? BlendMode.plus : BlendMode.srcOver
+    ..shader = ui.Gradient.linear(
+      Offset(0, area.top),
+      Offset(0, area.bottom),
+      _lit
+          ? const [Color(0x44E8B55E), Color(0x14E8B55E)]
+          : const [Color(0x40FFFFFF), Color(0x18FFFFFF)],
+    );
+
+  /// A narrower, brighter core, so the column reads as a beam rather than as a
+  /// tinted rectangle.
+  late final Paint _core = Paint()
+    ..blendMode = _lit ? BlendMode.plus : BlendMode.srcOver
+    ..shader = ui.Gradient.linear(
+      Offset(0, area.top),
+      Offset(0, area.bottom),
+      _lit
+          ? const [Color(0x3AFFE7B0), Color(0x00FFE7B0)]
+          : const [Color(0x22FFFFFF), Color(0x00FFFFFF)],
+    );
+
+  late final Paint _pool = Paint()
+    ..blendMode = _lit ? BlendMode.plus : BlendMode.srcOver
+    ..shader = ui.Gradient.linear(
+      Offset(0, area.bottom - _poolDepth),
+      Offset(0, area.bottom),
+      _lit
+          ? const [Color(0x00FFE7B0), Color(0x4CFFE7B0)]
+          : const [Color(0x00FFFFFF), Color(0x33FFFFFF)],
+    );
+
+  @override
+  void render(Canvas canvas) {
+    canvas.drawRect(area, _beam);
+    canvas.drawRect(area.deflate(area.width * 0.28), _core);
+    canvas.drawRect(
+      Rect.fromLTRB(
+        area.left,
+        max(area.top, area.bottom - _poolDepth),
+        area.right,
+        area.bottom,
+      ),
+      _pool,
+    );
+    if (_lit) return;
+    // The bench is for measuring, so there the rectangle has an outline and
+    // you can see exactly where it ends.
+    canvas.drawRect(
+      area,
+      Paint()
+        ..color = const Color(0x66FFFFFF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
+}
+
 /// A key. Flips its door the moment a body steps onto it — yours, or the one
 /// walking your path D seconds behind you.
 ///

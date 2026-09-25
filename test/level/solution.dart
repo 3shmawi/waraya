@@ -184,4 +184,18 @@ const walkthroughs = <String, List<Move>>{
     Move.left(1.7), // out to the key — the opposite way from the door
     Move.right(2.8), // straight back, and through, before your past arrives
   ],
+  'your-shadow-is-not-here': [
+    // The mark is one body's width left of where the beam ends. Further in is
+    // a shadow that does not exist; much further out is a jump that does not
+    // reach.
+    Move.left(1.58), // out to the mark, past the lit ground
+    Move(2.2), // stand there, leaving something to climb
+    Move.left(0.6), // out of your own way
+    Move(1.3), // and wait for yourself to arrive
+    Move.right(0.12), // a short run — any longer and you sail over your head
+    Move.right(0.55, jump: true), // onto it
+    Move(0.1),
+    Move.right(0.6, jump: true), // off it onto the shelf
+    Move.right(1.6), // along to the way out
+  ],
 };

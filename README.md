@@ -65,7 +65,7 @@ touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 | 3 | Game feel — weight, coyote time, sound, screen shake | ✅ code, tuning open |
 | 4 | Puzzle design, 5–8 levels | ✅ 7 built |
 | 5 | Death and retry, level transitions, saving, menus | ✅ |
-| 6 | Level vocabulary — new data a level can be made of | keys and inverted plates in |
+| 6 | Level vocabulary — new data a level can be made of | keys, inverted plates and light in |
 | 7 | The hard levels, built out of that vocabulary | |
 | 8 | Server, submissions, authoring | |
 | 9 | Polish and release | |
@@ -77,6 +77,13 @@ on the edge, the instant a body steps on it — and the body four seconds behind
 you steps on it too. So it is the first thing in the game your past *undoes*
 rather than does, and the level that proves it is won by touching it and
 walking away rather than by waiting for yourself to arrive.
+
+The second piece is **light**. Inside a lit rectangle the shadow is not there
+at all — not solid, pressing nothing, catching nobody — because the shadow
+needs dark to be a thing. Light that erased it, or moved it, or blinked on a
+timer was refused: the first two want a shader, the third is a stopwatch, and
+all three turn one sentence a player already holds — *that is me, four seconds
+ago* — into two systems to model at once.
 
 It is a hobby project, built one day a week. The plan it follows, and the
 reasoning behind each phase, is in [`CLAUDE.md`](CLAUDE.md), with the current

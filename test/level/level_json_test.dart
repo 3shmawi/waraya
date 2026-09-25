@@ -67,6 +67,9 @@ void main() {
           copy.toggles.map((t) => (t.area, t.flips)),
           level.toggles.map((t) => (t.area, t.flips)),
         );
+        // A light that did not survive the trip is a level that plays, and
+        // plays as an easier level, with nothing anywhere saying so.
+        expect(copy.lights, level.lights);
         expect(copy.requires, level.requires);
         expect(copy.doors.map((d) => d.id), level.doors.map((d) => d.id));
       }

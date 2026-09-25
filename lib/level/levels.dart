@@ -351,6 +351,50 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(260, 548, 340, 620),
   );
 
+  /// **Use eight: the light.** The shadow needs dark to be a thing at all.
+  ///
+  /// The way out is on a shelf a hundred and ninety above the floor, and a
+  /// jump lifts a hundred and thirty-six: the only ladder in this game is your
+  /// own body, standing where you left it. The obvious place to leave it is
+  /// hard against the shelf's left edge, where the climb is shortest — and
+  /// that is exactly where the light falls. Stand there, walk away, come back,
+  /// and your shadow is standing in the beam looking like a ghost of itself,
+  /// and you go straight through it.
+  ///
+  /// So the level is one question with one answer: where can a body be left
+  /// that is both out of the light and still close enough to jump from. The
+  /// beam's left edge is at -20 and the far end of what a jump can cross is
+  /// about -63, which is a stretch of dark a body and a half wide, and it is
+  /// exactly the stretch you end up in by walking out of the light and no
+  /// further. Nothing here is timed and nothing kills: stand in the wrong
+  /// place and you fall through yourself onto the floor, which is the lesson
+  /// arriving in the only way it can.
+  ///
+  /// The column on the right is not scenery. Without it the shelf could be
+  /// climbed from its far end instead, in the dark, and the light would be a
+  /// thing to walk around rather than a thing to understand. It is four
+  /// hundred and twenty tall, so a body standing on a shadow — 232 — cannot
+  /// top it either.
+  static final Level yourShadowIsNotHere = Level(
+    id: 'your-shadow-is-not-here',
+    name: 'ضلّك مش هنا',
+    teaches: 'في النور مفيش ظل. سيب جسمك في الضلمة.',
+    delaySeconds: 4,
+    spawnX: 300,
+    floorTop: _floor,
+    blocks: [
+      _ground(-700, 700),
+      // Out of reach from the floor, reachable from your own head.
+      const Rect.fromLTRB(60, 430, 560, 470),
+      // The wall that closes the far end, so the shelf has one way up.
+      const Rect.fromLTRB(560, 200, 620, 620),
+    ],
+    // Hard against the shelf's left edge: the shortest climb in the level, and
+    // the one place a body left behind is worth nothing.
+    lights: const [Rect.fromLTRB(-20, 200, 60, 620)],
+    goal: const Rect.fromLTRB(380, 358, 460, 430),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -361,6 +405,7 @@ abstract final class Levels {
     goInLow,
     holdYourOwnDoor,
     closeWhatYouOpened,
+    yourShadowIsNotHere,
   ];
 
   /// The Phase 2 tuning bench, as a level so it runs on the same code as the

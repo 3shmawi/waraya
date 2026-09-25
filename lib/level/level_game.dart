@@ -117,6 +117,17 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   int get levelIndex => _index;
   Level get level => levels[_index];
 
+  /// True while the shadow is standing in one of the level's lit rectangles,
+  /// where it is not a thing: not solid, pressing nothing, killing nobody.
+  ///
+  /// Decided on the fixed tick rather than per frame, and by the centre of the
+  /// body rather than by an overlap. Both for the same reason: what the shadow
+  /// does has to be exactly what was recorded, replayed the same way every
+  /// time, and a rule evaluated on the render frame is a rule that answers
+  /// differently on a 120Hz screen.
+  bool get shadowInLight => _shadowInLight;
+  bool _shadowInLight = false;
+
   /// True once the player has touched the level's way out.
   bool get completed => _completed;
   bool _completed = false;
@@ -140,6 +151,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// it, because collision here is an overlap test and an overlap test cannot
   /// see a body that jumped the whole obstacle in one frame.
   static const double maxFrameSeconds = 1 / 15;
+
+  /// How much of its usual opacity the shadow keeps while it is in the light.
+  static const double _litShadowOpacity = 0.28;
 
   /// Bumped on every reload, shown in the readout. The only "death" system
   /// this phase gets: no respawn animation, no lives, no checkpoints.
@@ -198,6 +212,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     shake.reset();
     _completed = false;
     _advanceIn = 0;
+    _shadowInLight = false;
     resetFlash.clear();
 
     // The level seeds the tunables; the debug panel can still override them
@@ -232,6 +247,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     await world.addAll([
       if (_lit) ..._scenery().world(),
       Blocks(level.blocks, look: look),
+      ...level.lights.map((area) => LightZone(area, look: look)),
       ...plates,
       ...toggles,
       ...doors,
@@ -310,7 +326,12 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     final step = dt > maxFrameSeconds ? maxFrameSeconds : dt;
     input.refresh();
     recorder.delaySeconds = settings.delaySeconds;
-    shadow.opacity = settings.shadowOpacity;
+    // Faint in the light, and the same number whatever the panel is set to:
+    // this is the one thing on screen that says the shadow is not there, so it
+    // is a fraction of whatever the shadow's opacity is rather than a value of
+    // its own that could be tuned past being visible — or past being faint.
+    shadow.opacity =
+        settings.shadowOpacity * (_shadowInLight ? _litShadowOpacity : 1);
 
     // Record and replay before the world moves, so the shadow's rect is
     // already in place when the player collides with it this frame.
@@ -327,8 +348,12 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   void _fixedTick() {
     recorder.record(player.capture());
     final due = recorder.current;
-    if (due == null) return;
+    if (due == null) {
+      _shadowInLight = false;
+      return;
+    }
     shadow.apply(due);
+    _shadowInLight = _standsInLight(shadow.bounds);
     // A player standing on the shadow travels with it. Without this, a shadow
     // that walks out from under the player leaves them hanging in the air,
     // which reads as a bug rather than as a moving platform.
@@ -344,7 +369,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     final playerBox = player.bounds;
-    final shadowBox = shadow.isActive ? shadow.bounds : null;
+    // What the rest of the level can see. In the light there is nothing here
+    // to press a plate, throw a key, or catch anybody — the shadow is still
+    // drawn, faintly, but that is all it is.
+    final shadowBox = shadow.isActive && !_shadowInLight ? shadow.bounds : null;
 
     for (final plate in plates) {
       final wasPressed = plate.isPressed;
@@ -403,6 +431,15 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       reload();
     }
   }
+
+  /// Whether a body is far enough into a lit rectangle to be in the light.
+  ///
+  /// By its middle. Half a body in the light is a thing a player can see is
+  /// half in the light, and "the middle decides" is the version they can
+  /// predict from the floor — an overlap test would make the rule fire while
+  /// the shadow is visibly still mostly in the dark.
+  bool _standsInLight(Rect body) =>
+      level.lights.any((light) => light.contains(body.center));
 
   /// Whether [body] is standing on [trigger] rather than touching its edge.
   ///
@@ -521,7 +558,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       for (final door in doors)
         if (door.isSolid) door.bounds,
     ],
-    oneWay: [if (settings.shadowIsSolid && shadow.isActive) shadow.bounds],
+    oneWay: [
+      if (settings.shadowIsSolid && shadow.isActive && !_shadowInLight)
+        shadow.bounds,
+    ],
   );
 
   /// The whole death-and-retry system for this phase: put everything back.
@@ -533,6 +573,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     recorder.clear();
     ticker.reset();
     shadow.clear();
+    _shadowInLight = false;
     player.resetToSpawn();
     for (final door in doors) {
       door.reset();
