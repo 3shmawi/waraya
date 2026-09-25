@@ -331,7 +331,7 @@ void main() {
             Move.left(2.1),
             Move(1.0), // barely stood on it at all
             Move.left(0.6),
-            Move(3.6), // wait the same amount, so only the press differs
+            Move(2.6), // wait the same amount, so only the press differs
             Move.right(0.75, jump: true),
             Move(0.2),
             Move.right(0.75, jump: true),
@@ -977,15 +977,21 @@ void main() {
         await game.ready();
         expect(game.shadows, hasLength(1));
 
-        final run = start(game)
-          ..play(Levels.twoNotOne.solution, stopWhenComplete: true);
+        // Checked as the run goes rather than at the end of it: with one
+        // shadow the two windows are two and a half seconds apart, so a
+        // moment of both-at-once would have to happen somewhere in the
+        // middle, not in whatever state the last frame happens to leave.
+        final run = start(game);
+        for (final move in Levels.twoNotOne.solution) {
+          run.play([move], stopWhenComplete: true);
+          expect(
+            game.doors.where((door) => door.openFraction == 1),
+            hasLength(lessThan(2)),
+            reason: 'both open at once is the one thing it cannot do',
+          );
+        }
 
         expect(run.finishedAt, isNull, reason: run.where);
-        expect(
-          game.doors.map((door) => door.openFraction),
-          everyElement(lessThan(1)),
-          reason: 'both open at once is the one thing it cannot do',
-        );
       },
     );
 
