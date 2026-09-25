@@ -36,6 +36,25 @@ glyphs actually used, which would take it to tens of kilobytes. That is a
 modification, so under OFL condition 3 a subset **must be renamed** before it
 can be redistributed — it could not still be called Liberation.
 
+## Sessions in the cloud
+
+`.claude/hooks/session-start.sh` runs at the start of every Claude Code
+session. Besides fetching the branches, on a cloud session it installs the
+Flutter version `.fvmrc` pins into `$HOME/flutter`, puts it on `PATH` through
+`$CLAUDE_ENV_FILE`, and runs `pub get` — so `flutter analyze` and
+`flutter test` work in the first minute rather than the tenth.
+
+It reads the version out of `.fvmrc` rather than keeping a copy, for the same
+reason the CI workflow checks its own copy against it: three places holding
+one number is two places to drift. The download is a couple of minutes and
+happens once per container — a marker file next to the SDK is written **after**
+the unpack, so an install that died halfway is not mistaken for a finished one
+— and the hook skips itself entirely off a cloud session, where the SDK comes
+from FVM instead.
+
+If it cannot install, it says so in as many words. A session that quietly has
+no `flutter` is a session that ships changes nothing has run.
+
 ## Web builds
 
 ```bash
