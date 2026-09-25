@@ -701,6 +701,249 @@ void main() {
     );
   });
 
+  group('your shadow is not here', () {
+    testWithGame<LevelGame>(
+      'leave the body in the dark, and it is something to climb',
+      build(Levels.yourShadowIsNotHere),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(
+            walkthroughs['your-shadow-is-not-here']!,
+            stopWhenComplete: true,
+          );
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    // The wrong idea, and the only one worth recording: leave it in the
+    // obvious place. The obvious place is hard against the shelf, where the
+    // climb is shortest — and it is lit, so what you come back to is a shape
+    // you fall straight through.
+    testWithGame<LevelGame>(
+      'leave it in the beam and you go through it',
+      build(Levels.yourShadowIsNotHere),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(1.3), // out to the mark under the light this time
+            Move(2.2),
+            Move.left(0.6),
+            Move(1.3),
+          ]);
+
+        expect(
+          game.shadowInLight,
+          isTrue,
+          reason: 'the body was left in the beam: ${run.where}',
+        );
+
+        run.play(const [
+          Move.right(0.12),
+          Move.right(0.55, jump: true), // at your own head, in theory
+          Move(0.1),
+          Move.right(0.6, jump: true),
+          Move.right(1.6),
+        ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'and the shelf is out of reach on your own legs',
+      build(Levels.yourShadowIsNotHere),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(const [
+            Move.left(1.0),
+            Move.left(0.8, jump: true),
+            Move(0.6),
+            Move.right(0.8, jump: true),
+            Move(0.6),
+            Move.right(0.8, jump: true),
+            Move(1.0),
+          ]);
+
+        expect(
+          game.player.y,
+          Levels.yourShadowIsNotHere.floorTop,
+          reason: 'got onto something without a body to stand on: ${run.where}',
+        );
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+  });
+
+  // The rule itself, on levels built for it. What the campaign level proves is
+  // that a lit shadow is nothing to stand on; these are the other three halves
+  // of the same sentence, and each is the same level twice with the light
+  // moved out of it.
+  group('a shadow in the light', () {
+    LevelGame Function() plateBench({required bool lit}) =>
+        () => LevelGame(
+          levels: [
+            Level(
+              id: 'lit-plate',
+              name: 'lit-plate',
+              teaches: '',
+              delaySeconds: 2,
+              spawnX: 0,
+              floorTop: 620,
+              blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
+              plates: const [
+                PlateSpec(area: Rect.fromLTRB(-50, 608, 50, 620), opens: 'gate'),
+              ],
+              doors: const [
+                DoorSpec(id: 'gate', closed: Rect.fromLTRB(400, 360, 426, 620)),
+              ],
+              lights: lit
+                  ? const [Rect.fromLTRB(-70, 200, 70, 620)]
+                  : const [],
+              goal: const Rect.fromLTRB(600, 548, 680, 620),
+            ),
+          ],
+          inputs: [ScriptedInput()],
+        );
+
+    /// Stand on the plate for a second, walk off it, and wait for the shadow
+    /// to arrive back on it two seconds later.
+    void standThenLeave(Playthrough run) =>
+        run.play(const [Move(1.0), Move.right(1.0), Move(1.0)]);
+
+    testWithGame<LevelGame>(
+      'presses no plate, so the door it would have opened stays shut',
+      plateBench(lit: true),
+      (game) async {
+        await game.ready();
+        final run = start(game);
+        standThenLeave(run);
+
+        expect(game.shadowInLight, isTrue, reason: run.where);
+        expect(game.plates.first.pressedByShadow, isFalse);
+        expect(game.doors.first.openFraction, 0, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'and with the beam taken away the same body opens it',
+      plateBench(lit: false),
+      (game) async {
+        await game.ready();
+        final run = start(game);
+        standThenLeave(run);
+
+        expect(game.shadowInLight, isFalse);
+        expect(game.plates.first.pressedByShadow, isTrue, reason: run.where);
+        expect(game.doors.first.openFraction, greaterThan(0.9));
+      },
+    );
+
+    LevelGame Function() keyBench({required bool lit}) =>
+        () => LevelGame(
+          levels: [
+            Level(
+              id: 'lit-key',
+              name: 'lit-key',
+              teaches: '',
+              delaySeconds: 2,
+              spawnX: 0,
+              floorTop: 620,
+              blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
+              toggles: const [
+                ToggleSpec(
+                  area: Rect.fromLTRB(-50, 608, 50, 620),
+                  flips: 'gate',
+                ),
+              ],
+              doors: const [
+                DoorSpec(id: 'gate', closed: Rect.fromLTRB(400, 360, 426, 620)),
+              ],
+              lights: lit
+                  ? const [Rect.fromLTRB(-70, 200, 70, 620)]
+                  : const [],
+              goal: const Rect.fromLTRB(600, 548, 680, 620),
+            ),
+          ],
+          inputs: [ScriptedInput()],
+        );
+
+    testWithGame<LevelGame>(
+      'throws no key, so what you opened stays open',
+      keyBench(lit: true),
+      (game) async {
+        await game.ready();
+        final run = start(game);
+        // The player's own arrival threw it on the first frame; the shadow's
+        // arrival is the one that would throw it back.
+        standThenLeave(run);
+
+        expect(game.shadowInLight, isTrue, reason: run.where);
+        expect(game.toggles.first.flipped, isTrue, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'and out of the beam it throws it back, as a key does',
+      keyBench(lit: false),
+      (game) async {
+        await game.ready();
+        final run = start(game);
+        standThenLeave(run);
+
+        expect(game.toggles.first.flipped, isFalse, reason: run.where);
+      },
+    );
+
+    LevelGame Function() killBench({required bool lit}) =>
+        () => LevelGame(
+          levels: [
+            Level(
+              id: 'lit-kill',
+              name: 'lit-kill',
+              teaches: '',
+              delaySeconds: 2,
+              spawnX: 0,
+              floorTop: 620,
+              shadowKills: true,
+              blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
+              lights: lit
+                  ? const [Rect.fromLTRB(-70, 200, 70, 620)]
+                  : const [],
+              goal: const Rect.fromLTRB(600, 548, 680, 620),
+            ),
+          ],
+          inputs: [ScriptedInput()],
+        );
+
+    testWithGame<LevelGame>(
+      'catches nobody: stand still and your past walks into you harmlessly',
+      killBench(lit: true),
+      (game) async {
+        await game.ready();
+        // Standing still means the shadow arrives exactly where the player is.
+        final run = start(game)..play(const [Move(3.0)]);
+
+        expect(game.shadowInLight, isTrue, reason: run.where);
+        expect(game.reloads, 0, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'and in the dark the same standing still is a death',
+      killBench(lit: false),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(const [Move(3.0)]);
+
+        expect(game.reloads, greaterThan(0), reason: run.where);
+      },
+    );
+  });
+
   group('the campaign holds together', () {
     test('teaches one thing at a time, in order', () {
       expect(Levels.campaign.first.id, 'press-it-early');

@@ -22,6 +22,7 @@ class Level {
     this.plates = const [],
     this.toggles = const [],
     this.doors = const [],
+    this.lights = const [],
     this.markers = const [],
     this.shadowIsSolid = true,
     this.shadowKills = false,
@@ -58,6 +59,24 @@ class Level {
   final List<ToggleSpec> toggles;
   final List<DoorSpec> doors;
 
+  /// Where the light falls, and where the shadow therefore is not.
+  ///
+  /// **Inside one of these the shadow is nothing.** It is drawn faint, it is
+  /// not solid, it presses no plate and throws no key, and it cannot kill.
+  /// The shadow needs dark to be a thing at all.
+  ///
+  /// That is the whole of it, and the restraint is the point. Light that
+  /// erases the shadow, or drags it about, or switches on and off on a timer,
+  /// was all considered and refused: the first two need a shader, the third is
+  /// a stopwatch, and every one of them turns a mechanic the player holds in
+  /// one sentence — *that is me, four seconds ago* — into two systems to model
+  /// at once. A rectangle the shadow does not exist in keeps the sentence.
+  ///
+  /// The test is the centre of the shadow's body, not an overlap: a body half
+  /// in the light is somewhere a player can see is half in the light, and
+  /// deciding it by its middle is the version they can predict.
+  final List<Rect> lights;
+
   /// Squares that fill in when touched but end nothing. Scenery with feedback:
   /// the lab uses them to mark the two things worth reaching without turning
   /// itself into a level to be won.
@@ -93,6 +112,7 @@ class Level {
     // exists to prevent.
     'toggles',
     'inverted-plates',
+    'lights',
   };
 
   /// What this level needs beyond the baseline, worked out from its contents.
@@ -110,6 +130,7 @@ class Level {
   Set<String> get requires => {
     if (toggles.isNotEmpty) 'toggles',
     if (plates.any((plate) => plate.inverts)) 'inverted-plates',
+    if (lights.isNotEmpty) 'lights',
   };
 }
 
@@ -291,6 +312,7 @@ extension LevelJson on Level {
     'shadowKills': shadowKills,
     'goal': _rectToJson(goal),
     'blocks': blocks.map(_rectToJson).toList(),
+    'lights': lights.map(_rectToJson).toList(),
     'markers': markers.map(_rectToJson).toList(),
     'plates': [
       for (final plate in plates)
@@ -379,6 +401,7 @@ Level levelFromJson(Object? source) {
       shadowKills: _asBool(json['shadowKills'] ?? false, 'shadowKills'),
       goal: _rectFromJson(json['goal'], 'goal'),
       blocks: _rectList(json['blocks'], 'blocks'),
+      lights: _rectList(json['lights'], 'lights'),
       markers: _rectList(json['markers'], 'markers'),
       plates: [
         for (final (i, entry) in _asList(json['plates'], 'plates').indexed)
