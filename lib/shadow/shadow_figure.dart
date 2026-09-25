@@ -13,13 +13,32 @@ import 'snapshot.dart';
 /// plan records transforms instead of inputs: there is nothing here that can
 /// disagree with what the player actually did.
 class ShadowFigure extends PositionComponent {
-  ShadowFigure({required this.color, this.opacity = 0.5, super.priority = 90})
-    : super(size: Vector2(44, 96), anchor: Anchor.bottomCenter);
+  ShadowFigure({
+    required this.color,
+    this.opacity = 0.5,
+    this.fade = 1,
+    super.priority = 90,
+  }) : super(size: Vector2(44, 96), anchor: Anchor.bottomCenter);
 
   final Color color;
 
   /// Live-tuned from the debug panel, which is also what clamps it.
   double opacity;
+
+  /// Where this one sits in the ladder of pasts, as a fraction of the opacity
+  /// the others are drawn at. 1 for the nearest, less for each one further
+  /// back.
+  ///
+  /// Not decoration. With two shadows on screen the question the player is
+  /// actually asking is *which* past am I looking at, and the only honest
+  /// answer that costs nothing is that the older one is fainter. The numbers
+  /// are the mark's own — `site/logo.svg` is three figures at 0.45, 0.72 and
+  /// 1 — so the game and the thing it is called by say the same thing.
+  final double fade;
+
+  /// True while this one is standing in a lit rectangle, where it is nothing
+  /// at all. Set on the fixed tick by the scene.
+  bool inLight = false;
 
   PoseSnapshot? _snapshot;
   PoseSnapshot? get snapshot => _snapshot;

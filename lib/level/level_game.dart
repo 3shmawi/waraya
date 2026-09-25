@@ -97,7 +97,20 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// Whether the corner readout prints its developer lines. See [LevelHud].
   final bool readoutDetail;
 
-  final ShadowRecorder recorder = ShadowRecorder();
+  /// One per delay, nearest first, all fed the same snapshot every tick.
+  ///
+  /// Two buffers rather than one buffer with two taps: 7 seconds at 60Hz is
+  /// 420 small objects, and the cost of the second copy is nothing next to the
+  /// cost of a delay line that has to answer two questions at once.
+  final List<ShadowRecorder> recorders = [ShadowRecorder()];
+
+  /// One per recorder, nearest first.
+  final List<ShadowFigure> shadows = [];
+
+  /// The nearest shadow's delay line. What "the shadow" means everywhere that
+  /// only ever had one — the readout, the trail, the bench.
+  ShadowRecorder get recorder => recorders.first;
+
   final FixedTicker ticker = FixedTicker();
   final ScreenShake shake = ScreenShake();
   final StepDetector steps = StepDetector();
@@ -106,7 +119,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
   late final InputController input;
   late Player player;
-  late ShadowFigure shadow;
+
+  /// The nearest shadow.
+  ShadowFigure get shadow => shadows.first;
 
   final List<PressurePlate> plates = [];
   final List<Toggle> toggles = [];
@@ -117,16 +132,21 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   int get levelIndex => _index;
   Level get level => levels[_index];
 
-  /// True while the shadow is standing in one of the level's lit rectangles,
-  /// where it is not a thing: not solid, pressing nothing, killing nobody.
+  /// True while the nearest shadow is standing in one of the level's lit
+  /// rectangles, where it is not a thing: not solid, pressing nothing, killing
+  /// nobody.
   ///
   /// Decided on the fixed tick rather than per frame, and by the centre of the
-  /// body rather than by an overlap. Both for the same reason: what the shadow
+  /// body rather than by an overlap. Both for the same reason: what a shadow
   /// does has to be exactly what was recorded, replayed the same way every
   /// time, and a rule evaluated on the render frame is a rule that answers
   /// differently on a 120Hz screen.
-  bool get shadowInLight => _shadowInLight;
-  bool _shadowInLight = false;
+  bool get shadowInLight => shadow.inLight;
+
+  /// Every shadow that is both arrived and out of the light — the ones the
+  /// level can actually feel.
+  Iterable<ShadowFigure> get liveShadows =>
+      shadows.where((s) => s.isActive && !s.inLight);
 
   /// True once the player has touched the level's way out.
   bool get completed => _completed;
@@ -152,7 +172,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// see a body that jumped the whole obstacle in one frame.
   static const double maxFrameSeconds = 1 / 15;
 
-  /// How much of its usual opacity the shadow keeps while it is in the light.
+  /// How much of its usual opacity a shadow keeps while it is in the light.
   static const double _litShadowOpacity = 0.28;
 
   /// Bumped on every reload, shown in the readout. The only "death" system
@@ -206,14 +226,38 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     toggles.clear();
     doors.clear();
     goals.clear();
-    recorder.clear();
     ticker.reset();
     steps.reset();
     shake.reset();
     _completed = false;
     _advanceIn = 0;
-    _shadowInLight = false;
     resetFlash.clear();
+
+    // One delay line and one figure per delay, nearest first. Rebuilt rather
+    // than reused: a level can have a different number of shadows from the one
+    // before it, and a buffer that survived would be replaying somebody else's
+    // level.
+    recorders
+      ..clear()
+      ..addAll(
+        level.delays.map((seconds) => ShadowRecorder(delaySeconds: seconds)),
+      );
+    shadows
+      ..clear()
+      ..addAll([
+        for (final (i, _) in level.delays.indexed)
+          ShadowFigure(
+            color: _lit ? SilhouettePalette.shadowColor : Palette.shadowColor,
+            opacity: settings.shadowOpacity,
+            // The mark's own ladder, so a level with one shadow looks exactly
+            // as it always did and a second one is visibly further back.
+            fade: pastFades[min(i, pastFades.length - 1)],
+            // Nearer in front. Which one is in front matters when they stand
+            // in the same place, which is exactly when the player most needs
+            // to be able to tell them apart.
+            priority: 90 - i,
+          ),
+      ]);
 
     // The level seeds the tunables; the debug panel can still override them
     // live, which is the whole point of the panel.
@@ -232,10 +276,6 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
         ),
       );
 
-    shadow = ShadowFigure(
-      color: _lit ? SilhouettePalette.shadowColor : Palette.shadowColor,
-      opacity: settings.shadowOpacity,
-    );
     player = Player(
       input: input,
       solids: _solids,
@@ -257,7 +297,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
         enabled: () => settings.showTrail,
         look: look,
       ),
-      shadow,
+      ...shadows,
       player,
     ]);
 
@@ -325,13 +365,20 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   void update(double dt) {
     final step = dt > maxFrameSeconds ? maxFrameSeconds : dt;
     input.refresh();
+    // The panel drives the nearest one; the rest keep the delays their level
+    // gave them, because the gap between two shadows is the puzzle and a
+    // slider that closed it would be a slider that deletes the level.
     recorder.delaySeconds = settings.delaySeconds;
-    // Faint in the light, and the same number whatever the panel is set to:
-    // this is the one thing on screen that says the shadow is not there, so it
-    // is a fraction of whatever the shadow's opacity is rather than a value of
-    // its own that could be tuned past being visible — or past being faint.
-    shadow.opacity =
-        settings.shadowOpacity * (_shadowInLight ? _litShadowOpacity : 1);
+    for (final ghost in shadows) {
+      // Faint in the light, and a fraction rather than a value of its own:
+      // this and the fade ladder are the two things on screen saying which
+      // past is which and whether it is there at all, so both stay relative to
+      // whatever opacity the panel is set to.
+      ghost.opacity =
+          settings.shadowOpacity *
+          ghost.fade *
+          (ghost.inLight ? _litShadowOpacity : 1);
+    }
 
     // Record and replay before the world moves, so the shadow's rect is
     // already in place when the player collides with it this frame.
@@ -339,25 +386,47 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     super.update(step);
     _resolveInteractions();
 
-    shadow.alpha = ticker.alpha;
+    for (final ghost in shadows) {
+      ghost.alpha = ticker.alpha;
+    }
     _reactToLanding(step);
     _playMovementSounds();
     _advance(step);
   }
 
   void _fixedTick() {
-    recorder.record(player.capture());
-    final due = recorder.current;
-    if (due == null) {
-      _shadowInLight = false;
-      return;
+    final pose = player.capture();
+    for (final (i, line) in recorders.indexed) {
+      line.record(pose);
+      final due = line.current;
+      final ghost = shadows[i];
+      if (due == null) {
+        ghost.inLight = false;
+        continue;
+      }
+      ghost.apply(due);
+      ghost.inLight = _standsInLight(ghost.bounds);
     }
-    shadow.apply(due);
-    _shadowInLight = _standsInLight(shadow.bounds);
-    // A player standing on the shadow travels with it. Without this, a shadow
+    // A player standing on a shadow travels with it. Without this, a shadow
     // that walks out from under the player leaves them hanging in the air,
-    // which reads as a bug rather than as a moving platform.
-    if (player.isOnShadow) player.carryX += shadow.lastStepX;
+    // which reads as a bug rather than as a moving platform. With two of them
+    // it also has to be the right one: the other is somewhere else entirely.
+    if (player.isOnShadow) player.carryX += _carrier()?.lastStepX ?? 0;
+  }
+
+  /// Which shadow the player is standing on, if any.
+  ///
+  /// By the feet, not by overlap: the player is *on* the one whose top their
+  /// feet are resting on, and with two shadows in the same place only one of
+  /// them is holding anybody up.
+  ShadowFigure? _carrier() {
+    for (final ghost in liveShadows) {
+      final top = ghost.bounds;
+      if ((player.y - top.top).abs() > 2) continue;
+      if (player.x + 22 < top.left || player.x - 22 > top.right) continue;
+      return ghost;
+    }
+    return null;
   }
 
   void _resolveInteractions() {
@@ -369,16 +438,17 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     final playerBox = player.bounds;
-    // What the rest of the level can see. In the light there is nothing here
-    // to press a plate, throw a key, or catch anybody — the shadow is still
+    // What the rest of the level can see. In the light there is nothing there
+    // to press a plate, throw a key or catch anybody — a lit shadow is still
     // drawn, faintly, but that is all it is.
-    final shadowBox = shadow.isActive && !_shadowInLight ? shadow.bounds : null;
+    final ghosts = [for (final ghost in liveShadows) ghost.bounds];
 
     for (final plate in plates) {
       final wasPressed = plate.isPressed;
       plate.pressedByPlayer = _standsOn(playerBox, plate.trigger);
-      plate.pressedByShadow =
-          shadowBox != null && _standsOn(shadowBox, plate.trigger);
+      plate.pressedByShadow = ghosts.any(
+        (ghost) => _standsOn(ghost, plate.trigger),
+      );
       if (plate.isPressed != wasPressed) audio.play(Sfx.plate, volume: 0.5);
     }
 
@@ -387,7 +457,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       // happened, because the edge is the whole of what it is.
       final clicked = toggle.touch(
         player: _standsOn(playerBox, toggle.trigger),
-        shadow: shadowBox != null && _standsOn(shadowBox, toggle.trigger),
+        shadow: ghosts.any((ghost) => _standsOn(ghost, toggle.trigger)),
       );
       // Louder than a plate. A plate's click is a question being answered and
       // will be answered again in a moment; this one is the only announcement
@@ -426,8 +496,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     // in that beat used to wipe the finish and put you back at the start.
     if (settings.shadowKills &&
         !_completed &&
-        shadowBox != null &&
-        playerBox.overlaps(shadowBox)) {
+        ghosts.any(playerBox.overlaps)) {
       reload();
     }
   }
@@ -559,8 +628,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
         if (door.isSolid) door.bounds,
     ],
     oneWay: [
-      if (settings.shadowIsSolid && shadow.isActive && !_shadowInLight)
-        shadow.bounds,
+      if (settings.shadowIsSolid)
+        for (final ghost in liveShadows) ghost.bounds,
     ],
   );
 
@@ -570,10 +639,14 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// past the player no longer has, and would be standing on a plate for
   /// reasons nobody could see.
   void reload() {
-    recorder.clear();
+    for (final line in recorders) {
+      line.clear();
+    }
     ticker.reset();
-    shadow.clear();
-    _shadowInLight = false;
+    for (final ghost in shadows) {
+      ghost.clear();
+      ghost.inLight = false;
+    }
     player.resetToSpawn();
     for (final door in doors) {
       door.reset();

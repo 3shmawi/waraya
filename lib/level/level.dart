@@ -11,11 +11,12 @@ import 'dart:ui';
 /// Everything is in world units, y down, with 0 at the top of the screen and
 /// [Level.floorTop] wherever the level puts its ground.
 class Level {
-  const Level({
+  Level({
     required this.id,
     required this.name,
     required this.teaches,
-    required this.delaySeconds,
+    double? delaySeconds,
+    List<double>? delays,
     required this.spawnX,
     required this.goal,
     this.blocks = const [],
@@ -27,7 +28,15 @@ class Level {
     this.shadowIsSolid = true,
     this.shadowKills = false,
     this.floorTop = 620,
-  });
+  }) : assert(
+         (delaySeconds == null) != (delays == null),
+         'a level sets either delaySeconds or delays, never both',
+       ),
+       assert(
+         delays == null || delays.isNotEmpty,
+         'a level with no delay has no shadow, which is not a level',
+       ),
+       delays = delays ?? [delaySeconds!];
 
   /// Stable key, used by save files later and by test names now.
   final String id;
@@ -40,12 +49,23 @@ class Level {
   /// a first-time player thinking the game is broken.
   final String teaches;
 
-  /// How far behind the shadow runs, for this level only.
+  /// How far behind each shadow runs, nearest first. One entry is one shadow.
   ///
   /// Per level rather than global because the delay *is* a design parameter:
   /// the same layout at 2 seconds and at 5 seconds is two different puzzles,
   /// and the plan lists varying it as one of the mechanic's uses.
-  final double delaySeconds;
+  ///
+  /// Two entries is not a new rule, it is the rule twice — and what it buys is
+  /// the one thing a single shadow cannot do at any delay: **be in two places
+  /// at the same moment**. One shadow covers exactly one spot at a time, the
+  /// spot you were standing in D ago. Two cover two, and the gap between them
+  /// is the gap between the two things you did.
+  final List<double> delays;
+
+  /// The nearest shadow's delay, which is what everything that says "the
+  /// delay" means — the readout, the bench's slider, and every level written
+  /// before there could be more than one.
+  double get delaySeconds => delays.first;
 
   final double spawnX;
 
@@ -113,6 +133,7 @@ class Level {
     'toggles',
     'inverted-plates',
     'lights',
+    'delays',
   };
 
   /// What this level needs beyond the baseline, worked out from its contents.
@@ -131,6 +152,11 @@ class Level {
     if (toggles.isNotEmpty) 'toggles',
     if (plates.any((plate) => plate.inverts)) 'inverted-plates',
     if (lights.isNotEmpty) 'lights',
+    // One delay is the baseline and says nothing. More than one is the
+    // dangerous kind of new field: an older build reading `delaySeconds`
+    // alone puts up a level with one shadow, which is a level that looks
+    // right, plays, and cannot be finished.
+    if (delays.length > 1) 'delays',
   };
 }
 
@@ -241,6 +267,19 @@ enum LevelLook {
   silhouette,
 }
 
+/// How solid each body in a line of pasts is drawn, **nearest first**: the
+/// one you are now at 1, then each past further back.
+///
+/// One ladder in one place, because it gets drawn twice — the game fades its
+/// shadows with it and the ending screen draws the game's own mark with it —
+/// and two copies of a number like this drift the first time one of them is
+/// nudged.
+///
+/// Stronger than the app icon's 0.30 and 0.55 on purpose. The shadow reads in
+/// the game because it is *cold* against a warm sky, and thinning it down
+/// towards the sky's own brightness is exactly what takes that away.
+const List<double> pastFades = [1, 0.72, 0.45];
+
 /// The grey-box palette. Light ground, dark bodies: this is a silhouette game,
 /// and a black character on a dark test scene would tell us nothing about the
 /// shadow's opacity.
@@ -305,7 +344,13 @@ extension LevelJson on Level {
     'name': name,
     'requires': requires.toList()..sort(),
     'teaches': teaches,
+    // Both, always. `delaySeconds` is what a build older than two shadows
+    // reads, and it gets the nearest one — which is the right answer for a
+    // level with one and the wrong level entirely for a level with two, which
+    // is why such a level also declares `delays` in `requires` and is refused
+    // outright rather than quietly thinned.
     'delaySeconds': delaySeconds,
+    'delays': delays,
     'spawnX': spawnX,
     'floorTop': floorTop,
     'shadowIsSolid': shadowIsSolid,
@@ -394,7 +439,9 @@ Level levelFromJson(Object? source) {
       id: id,
       name: _asString(json['name'], 'name'),
       teaches: _asString(json['teaches'], 'teaches'),
-      delaySeconds: _asDouble(json['delaySeconds'], 'delaySeconds'),
+      delays: json['delays'] == null
+          ? [_asDouble(json['delaySeconds'], 'delaySeconds')]
+          : _doubleList(json['delays'], 'delays'),
       spawnX: _asDouble(json['spawnX'], 'spawnX'),
       floorTop: _asDouble(json['floorTop'] ?? 620, 'floorTop'),
       shadowIsSolid: _asBool(json['shadowIsSolid'] ?? true, 'shadowIsSolid'),
@@ -514,6 +561,15 @@ Rect _rectFromJson(Object? value, String field) {
     throw LevelFormatException('$field is inside out or empty');
   }
   return Rect.fromLTRB(n[0], n[1], n[2], n[3]);
+}
+
+List<double> _doubleList(Object? value, String field) {
+  final list = [
+    for (final (i, entry) in _asList(value, field).indexed)
+      _asDouble(entry, '$field[$i]'),
+  ];
+  if (list.isEmpty) throw LevelFormatException('$field is empty');
+  return list;
 }
 
 List<String> _stringList(Object? value, String field) => [

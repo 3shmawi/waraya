@@ -164,10 +164,9 @@ class _Mark extends CustomPainter {
   /// is nearly half a body wide — at the icon's spacing the three of them
   /// came out as one blur with six legs.
   static const List<double> _at = [0.78, 0.55, 0.32];
-  /// Stronger than the logo's 0.30 and 0.55. The shadow reads in the game
-  /// because it is *cold* against a warm sky, and thinning it down towards
-  /// the sky's own brightness is what takes that away.
-  static const List<double> _alpha = [0.45, 0.72, 1.0];
+  /// Oldest first, which is the order these are painted in — [pastFades] is
+  /// nearest first, and it is the same ladder the game fades its shadows with.
+  static List<double> get _alpha => pastFades.reversed.toList();
 
   /// Half a stride between one body and the next.
   ///

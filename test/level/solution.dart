@@ -198,4 +198,18 @@ const walkthroughs = <String, List<Move>>{
     Move.right(0.6, jump: true), // off it onto the shelf
     Move.right(1.6), // along to the way out
   ],
+  'two-not-one': [
+    // The gate wants both plates held at the same moment, and the only pair of
+    // hands that can do that is the two of you that are already four seconds
+    // apart. So the far plate first — it is the one the seven-second shadow
+    // comes back for — and the near one after, and the gap between the two
+    // has to fit inside the gap between them.
+    Move.left(3.1), // out to the far plate, past the near one
+    Move(1.8), // stand on it: this is how wide the window will be
+    Move.right(2.5), // back to the near plate
+    Move(1.8), // and stand on that one
+    Move.right(1.3), // up to the gate
+    Move(1.6), // wait for both of you to arrive
+    Move.right(1.6), // through, while both of them are standing
+  ],
 };

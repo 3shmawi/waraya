@@ -99,8 +99,25 @@ void main() {
       () => expectRefused(valid()..remove('name'), 'name'),
     );
 
+    // Written both ways, and both are checked. A level from before there
+    // could be more than one shadow carries `delaySeconds` alone and is still
+    // read; anything with `delays` is read from that and `delaySeconds` is
+    // along for the ride, for older builds to find.
     test('a delay that is text', () {
-      expectRefused(valid()..['delaySeconds'] = 'soon', 'delaySeconds');
+      expectRefused(
+        valid()
+          ..remove('delays')
+          ..['delaySeconds'] = 'soon',
+        'delaySeconds',
+      );
+    });
+
+    test('a list of delays with text in it', () {
+      expectRefused(valid()..['delays'] = [3, 'soon'], 'delays[1]');
+    });
+
+    test('a list of delays with nothing in it', () {
+      expectRefused(valid()..['delays'] = <double>[], 'delays');
     });
 
     test('a rectangle with three numbers', () {
