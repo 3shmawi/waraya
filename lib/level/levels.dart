@@ -1056,6 +1056,117 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(1000, 108, 1080, 180),
   );
 
+  /// **Phase 7.** What your past opens, your past shuts — the order in
+  /// `Door.hold`, played as a level.
+  ///
+  /// Three rules decide a door, in order: an inverted plate under a body
+  /// shuts it whatever else is true; otherwise a plate held or a key thrown
+  /// opens it; otherwise it drifts shut after its grace. Every level so far
+  /// has used one line of that at a time. This one walks you down all three.
+  ///
+  /// The first room is the key, as a reminder: touch it and leave, because
+  /// your past is coming to flip it back. The second room is the other two
+  /// lines at once. A plate on a balcony holds the far gate open, with three
+  /// seconds of grace — plenty for the long walk. But the corridor to that
+  /// gate has an inverted plate on its floor, and it beats the plate *and*
+  /// the grace. You can walk over it all you like; it is your past walking
+  /// over it two and a half seconds later that slams the gate, and by then
+  /// you are still a walk away. So the thing to do is not to have been
+  /// there: jump it.
+  ///
+  /// The corridor past it is longer than the delay on purpose. If the walk
+  /// from the inverted plate to the gate were shorter than two and a half
+  /// seconds, you would be through before your past stepped on it, and the
+  /// plate would be scenery.
+  ///
+  /// The balcony is for the reason `threeGatesOnePast` found: a plate on the
+  /// floor of the only corridor is a plate everybody crosses, and a crossing
+  /// with three seconds of grace behind it opens the gate for free.
+  static final Level yourPastShutsIt = Level(
+    id: 'your-past-shuts-it',
+    solution: const [
+      Move.left(0.7), // onto the key, against the wall
+      Move.right(1.82), // and straight out through the gate, before you return
+      Move.right(1.2), // on past the balcony
+      Move.left(0.55, jump: true), // up onto it
+      Move.left(0.25),
+      Move(1.0), // stand on the plate: this holds the far gate
+      Move.right(1.15), // off the balcony
+      Move.right(0.55, jump: true), // over the plate on the floor
+      Move.right(6), // and the long way to the far gate
+    ],
+    wrongIdeas: const [
+      // Everything right, and walk across the plate on the floor instead of
+      // over it. Two and a half seconds later your past walks across it too,
+      // and it holds the far gate shut — which beats the plate on the
+      // balcony and wipes the grace with it. You arrive at a shut gate.
+      [
+        Move.left(0.7),
+        Move.right(1.82),
+        Move.right(1.2),
+        Move.left(0.55, jump: true),
+        Move.left(0.25),
+        Move(1.0),
+        Move.right(1.15),
+        Move.right(0.55),
+        Move.right(6),
+      ],
+      // Step on the key and wait for your past to come and hold it, the way
+      // every plate is held. On a key its arrival is the second flip.
+      [
+        Move.left(0.7),
+        Move(3.0),
+        Move.right(1.82),
+        Move.right(1.2),
+        Move.left(0.55, jump: true),
+        Move.left(0.25),
+        Move(1.0),
+        Move.right(1.15),
+        Move.right(0.55, jump: true),
+        Move.right(6),
+      ],
+    ],
+    name: 'اللي ماضيك بيفتحه بيقفله',
+    teaches: 'المعكوس بيغلب كل حاجة. متكونش كنت واقف عليه.',
+    delaySeconds: 2.5,
+    spawnX: -200,
+    floorTop: _floor,
+    blocks: [
+      _ground(-500, 1500),
+      // The wall against the key, which turns you round while you are still
+      // on it: one trip to the key is exactly one flip.
+      const Rect.fromLTRB(-400, 200, -360, 620),
+      // The balcony, head height and a hop up. Walking under it presses
+      // nothing.
+      const Rect.fromLTRB(120, 506, 220, 522),
+    ],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-360, 608, -260, 620), flips: 'near'),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(130, 494, 210, 506), opens: 'far'),
+      // Sixty wide rather than a hundred, so a plain running jump clears it.
+      // A body counts as on a plate with sixteen units over it, and a jump is
+      // above the trigger for about a hundred units of travel — a full-width
+      // plate would be a jump that has to be timed, and this is a level about
+      // knowing to jump at all.
+      PlateSpec(
+        area: Rect.fromLTRB(470, 608, 530, 620),
+        opens: 'far',
+        inverts: true,
+      ),
+    ],
+    doors: const [
+      DoorSpec(id: 'near', closed: Rect.fromLTRB(0, 360, 26, 620)),
+      DoorSpec(
+        id: 'far',
+        closed: Rect.fromLTRB(1200, 360, 1226, 620),
+        lingerSeconds: 3,
+      ),
+    ],
+    goal: const Rect.fromLTRB(1300, 548, 1380, 620),
+  );
+
   /// **Phase 7.** Light has a bottom.
   ///
   /// `yourShadowIsNotHere` taught *where* the light is. This is the other
@@ -1338,6 +1449,7 @@ abstract final class Levels {
     twoNotOne,
     notEveryStep,
     stairOfYourself,
+    yourPastShutsIt,
     underTheLight,
     threeGatesOnePast,
   ];

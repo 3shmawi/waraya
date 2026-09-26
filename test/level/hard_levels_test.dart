@@ -121,6 +121,46 @@ void main() {
     );
   });
 
+  group('your past shuts it', () {
+    final level = Levels.yourPastShutsIt;
+
+    testWithGame<LevelGame>(
+      'the key and leave, the plate and wait, and over the other one',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(level.solution);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    // However long you stand on the balcony, the plate on the floor decides:
+    // jumped, you are through; walked, you are not. Standing longer cannot
+    // buy your way past it, because what shuts the gate is your past
+    // arriving on the plate, and that is always a delay after you did.
+    final stand = level.solution.indexOf(const Move(1.0));
+    final hop = level.solution.indexOf(const Move.right(0.55, jump: true));
+    for (final seconds in const [0.2, 0.6, 1.2, 2.0]) {
+      for (final jumped in const [true, false]) {
+        testWithGame<LevelGame>(
+          '${seconds}s on the balcony, ${jumped ? 'over' : 'across'} the '
+          'plate on the floor',
+          build(level),
+          (game) async {
+            await game.ready();
+            final moves = [...level.solution];
+            moves[stand] = Move(seconds);
+            if (!jumped) moves[hop] = const Move.right(0.55);
+            final run = start(game)..play(moves, stopWhenComplete: true);
+
+            expect(run.finishedAt != null, jumped, reason: run.where);
+          },
+        );
+      }
+    }
+  });
+
   group('under the light', () {
     final level = Levels.underTheLight;
     final lamp = level.lights.first, beam = level.lights.last;
