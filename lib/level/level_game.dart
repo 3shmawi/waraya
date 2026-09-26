@@ -208,6 +208,16 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// this one*, solid enough to be a body walking past.
   static const double _standingShadowOpacity = 0.5;
 
+  /// And while it is the ducked one, in the same level.
+  ///
+  /// Above one on purpose: this is the only body in such a level you can put
+  /// your feet on, so it is drawn **harder than an ordinary shadow**, not
+  /// merely left undimmed. The two states have to be one glance apart — the
+  /// whole level is the player deciding where to leave a step, and a step
+  /// they have to squint for is a step they will not trust. Clamped where it
+  /// lands past opaque.
+  static const double _duckedShadowOpacity = 1.7;
+
   /// Bumped on every reload, shown in the readout. The only "death" system
   /// this phase gets: no respawn animation, no lives, no checkpoints.
   int reloads = 0;
@@ -403,27 +413,33 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     // slider that closed it would be a slider that deletes the level.
     recorder.delaySeconds = settings.delaySeconds;
     for (final ghost in shadows) {
-      // Faint in the light, and a fraction rather than a value of its own:
-      // this and the fade ladder are the two things on screen saying which
-      // past is which and whether it is there at all, so both stay relative to
-      // whatever opacity the panel is set to.
-      // Faint when it is not a thing — in the light, or standing up in a
-      // level where only a ducked body is solid. One dimming for both,
-      // because to the player they mean the same sentence: *that one is not
-      // really here*. A rule you cannot see is a rule that reads as a bug the
-      // first time you fall through your own shoulders.
-      final upright =
-          level.solidWhen == ShadowSolidity.crouched &&
-          settings.shadowIsSolid &&
-          ghost.crouch < _duckedEnough;
+      // Every one of these is a fraction of whatever the panel is set to
+      // rather than a value of its own: this and the fade ladder are the two
+      // things on screen saying which past is which and whether it is there
+      // at all, and both have to survive the opacity slider being moved.
+      //
+      // What the player is being told, in one glance:
+      //   in the light        — not here at all
+      //   standing, in a      — here, but not something to stand on
+      //     crouched level
+      //   ducked, in one      — *this* is the step you left
+      //   anything else       — your past, as every other level means it
+      //
+      // A rule you cannot see is a rule that reads as a bug the first time
+      // you fall through your own shoulders.
+      final crouchedLevel =
+          level.solidWhen == ShadowSolidity.crouched && settings.shadowIsSolid;
+      final ducked = ghost.crouch >= _duckedEnough;
       ghost.opacity =
-          settings.shadowOpacity *
-          ghost.fade *
-          switch ((ghost.inLight, upright)) {
-            (true, _) => _litShadowOpacity,
-            (false, true) => _standingShadowOpacity,
-            _ => 1,
-          };
+          (settings.shadowOpacity *
+                  ghost.fade *
+                  switch ((ghost.inLight, crouchedLevel, ducked)) {
+                    (true, _, _) => _litShadowOpacity,
+                    (false, true, false) => _standingShadowOpacity,
+                    (false, true, true) => _duckedShadowOpacity,
+                    _ => 1,
+                  })
+              .clamp(0.0, 1.0);
     }
 
     // Record and replay before the world moves, so the shadow's rect is
