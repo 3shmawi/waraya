@@ -538,7 +538,12 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
           toggles.any(
             (toggle) => toggle.flips == door.id && toggle.flipped,
           );
-      if (door.hold(open, forcedShut: forcedShut)) {
+      // The grace is your past's, not yours: a door held open by nothing but
+      // the body you are standing in shuts the moment you step off it.
+      final lingers =
+          mine.any((plate) => !plate.inverts && plate.pressedByShadow) ||
+          toggles.any((toggle) => toggle.flips == door.id && toggle.flipped);
+      if (door.hold(open, forcedShut: forcedShut, lingers: lingers)) {
         audio.play(Sfx.door, volume: 0.4);
       }
     }

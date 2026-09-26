@@ -1286,6 +1286,71 @@ void main() {
     );
   });
 
+  group('a door your own weight opened', () {
+    /// A plate and a door far enough apart that a lingering door would let
+    /// the player walk through on their own press.
+    LevelGame Function() bench({double linger = 4}) => () => LevelGame(
+      levels: [
+        Level(
+          id: 'linger-bench',
+          name: 'linger-bench',
+          teaches: '',
+          delaySeconds: 2,
+          spawnX: 0,
+          floorTop: 620,
+          blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
+          plates: const [
+            PlateSpec(area: Rect.fromLTRB(-50, 608, 50, 620), opens: 'gate'),
+          ],
+          doors: [
+            DoorSpec(
+              id: 'gate',
+              closed: const Rect.fromLTRB(300, 360, 326, 620),
+              lingerSeconds: linger,
+            ),
+          ],
+          goal: const Rect.fromLTRB(500, 548, 580, 620),
+        ),
+      ],
+      inputs: [ScriptedInput()],
+    );
+
+    testWithGame<LevelGame>(
+      'shuts the moment you step off, however long its grace is',
+      bench(),
+      (game) async {
+        await game.ready();
+        // The miserly run: touch the plate and go. Reported from playing on
+        // two different levels, and it finished both of them before the
+        // shadow existed — a level about needing your past, won without ever
+        // having one.
+        final run = start(game)..play(const [Move(0.3), Move.right(0.8)]);
+
+        expect(game.shadow.isActive, isFalse, reason: 'too early to matter');
+        expect(game.doors.single.openFraction, 0, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'but keeps it for the body that is your past',
+      bench(),
+      (game) async {
+        await game.ready();
+        // The grace is for arriving a beat after your past steps off, which
+        // is the only thing it was ever for.
+        final run = start(game)
+          ..play(const [Move(0.6), Move.right(1.4), Move(1.4)]);
+
+        expect(game.plates.single.pressedByShadow, isFalse);
+        expect(
+          game.doors.single.openFraction,
+          1,
+          reason: 'your past let go moments ago: $run.where',
+        );
+      },
+    );
+  });
+
   group('the campaign holds together', () {
     test('teaches one thing at a time, in order', () {
       expect(Levels.campaign.first.id, 'press-it-early');
