@@ -812,10 +812,10 @@ abstract final class Levels {
       Move.left(0.95), // the wrong way first, as ever: out to the plate
       Move(1.2), // hold it, so your past holds the door
       Move.right(2.1), // back to the gate, arriving as it opens
-      Move.right(0.55), // through
+      Move.right(0.85), // through, and on to the foot of the shelf
       Move(0.1),
       Move(1.0, crouch: true), // and duck. this is the only step you get
-      Move.left(0.7), // back out of your own way
+      Move.left(0.6), // back out of your own way, still this side of the gate
       Move(0.8), // wait for the thing you left
       Move.right(0.55), // run at it
       Move.right(0.6, jump: true), // onto its head
@@ -831,10 +831,28 @@ abstract final class Levels {
         Move.left(0.95),
         Move(1.2),
         Move.right(2.1),
-        Move.right(0.55),
+        Move.right(0.85),
+        Move(0.1),
+        Move(1.0), // the one difference: upright
+        Move.left(0.6),
         Move(0.8),
+        Move.right(0.55),
+        Move.right(0.6, jump: true),
+        Move.right(0.7, jump: true),
+        Move.right(1.2),
+      ],
+      // Touch the plate and run for the gate on your own press. Reported
+      // from playing, and it used to work: the grace on the door outlasted
+      // the walk, so the gate was open when you arrived and your past was
+      // still three seconds from existing. The whole first half of the level
+      // was scenery.
+      [
+        Move.left(0.95),
+        Move(0.1),
+        Move.right(2.2),
+        Move(0.6, crouch: true),
         Move.left(0.7),
-        Move(1.6),
+        Move(0.8),
         Move.right(0.55),
         Move.right(0.6, jump: true),
         Move.right(0.7, jump: true),
@@ -861,16 +879,23 @@ abstract final class Levels {
     spawnX: 0,
     floorTop: _floor,
     blocks: [
-      _ground(-600, 900),
+      _ground(-600, 1000),
       // The shelf with the way out on it. A hundred and ninety above the
       // floor: past a jump (136), inside a duck's staircase (205) by fifteen.
       // See [crouchedLadderReach] — this number is the reason it exists.
-      const Rect.fromLTRB(420, 430, 820, 470),
+      //
+      // It starts at 480 rather than hard against the gate, and the gap is
+      // the level working. You duck just short of it, step off your own way,
+      // and come back at a run — and all of that has to happen on **this**
+      // side of the gate. Drawn any tighter, the only room to back up into is
+      // through the doorway, and a door that has done its job is shut by
+      // then: you end up on the wrong side of it watching the step you left.
+      const Rect.fromLTRB(480, 430, 880, 470),
       // The wall closing the shelf's far end, and the level does not exist
-      // without it. Open floor runs past 820, and open floor beside a surface
+      // without it. Open floor runs past 880, and open floor beside a surface
       // is a way onto that surface — duck out there and the shelf has a back
       // door. 260 above the shelf, which nothing can top.
-      const Rect.fromLTRB(820, 170, 860, 430),
+      const Rect.fromLTRB(880, 170, 920, 430),
     ],
     // The wrong way from everything, which is the first thing this game ever
     // taught and still the spine of the level: you cannot open the gate and
@@ -878,18 +903,30 @@ abstract final class Levels {
     plates: const [
       PlateSpec(area: Rect.fromLTRB(-260, 608, -160, 620), opens: 'gate'),
     ],
-    // Six seconds of grace for the same reason level three has them: the
-    // lesson here is where to duck, not how fast you can walk, and a door
-    // held open only for as long as you happened to stand on a plate turns
-    // the level into a stopwatch.
+    // A second and a bit of grace, and the number is load-bearing — this is
+    // the whole gate half of the level.
+    //
+    // Reported from playing: "the door opens the moment I stand on the plate
+    // and closes by itself." It did, and that was the level broken. The walk
+    // from the plate to the gate is 410 units, which is 1.86 seconds, so any
+    // grace longer than that means **your own press carries you through** and
+    // the shadow never has to arrive at all. It was six. You could touch the
+    // plate, run, and be through the gate a second before your past even
+    // existed.
+    //
+    // 1.2 is under the walk, so the door your own weight opened has shut
+    // again before you get there. And it is not a stopwatch on the other
+    // side: your past holds the plate for as long as you held it, plus this,
+    // which is a window of about two and a half seconds to walk through a
+    // gate you are already standing at.
     doors: const [
       DoorSpec(
         id: 'gate',
         closed: Rect.fromLTRB(250, 360, 276, 620),
-        lingerSeconds: 6,
+        lingerSeconds: 1.2,
       ),
     ],
-    goal: const Rect.fromLTRB(600, 358, 680, 430),
+    goal: const Rect.fromLTRB(660, 358, 740, 430),
   );
 
   /// In teaching order.

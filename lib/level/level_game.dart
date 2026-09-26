@@ -563,14 +563,28 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
   }
 
-  /// Whether a body is far enough into a lit rectangle to be in the light.
+  /// Whether a body is in a lit rectangle.
   ///
-  /// By its middle. Half a body in the light is a thing a player can see is
-  /// half in the light, and "the middle decides" is the version they can
-  /// predict from the floor — an overlap test would make the rule fire while
-  /// the shadow is visibly still mostly in the dark.
+  /// Any of it. This used to be the body's middle, on the argument that half
+  /// a body in the light is something the player can see is half in the
+  /// light, so "the middle decides" is the version they can predict from the
+  /// floor — and that an overlap test fires while the shadow is visibly still
+  /// mostly in the dark.
+  ///
+  /// Reported from playing, and it is the other half of that argument: "the
+  /// light shows the shadow if part of it is outside the light." A body
+  /// straddling the edge was drawn at full strength and was solid, sitting
+  /// visibly inside a beam that is supposed to erase it. The rule was right
+  /// and the picture said otherwise, and the picture is what the player has.
+  ///
+  /// So: if the beam touches your past, your past is not there — and it is
+  /// drawn faint the instant that becomes true, which is what makes the new
+  /// rule readable where the old one was not. The cost is real and worth
+  /// knowing when drawing a level: the reach is half a body (22) wider than
+  /// the lit rectangle on each side, because it is the body that has to be
+  /// clear of the beam, not the body's middle.
   bool _standsInLight(Rect body) =>
-      level.lights.any((light) => light.contains(body.center));
+      level.lights.any((light) => light.overlaps(body));
 
   /// Whether [body] is standing on [trigger] rather than touching its edge.
   ///
