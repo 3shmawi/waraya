@@ -770,7 +770,13 @@ abstract final class Levels {
         Move.right(1.6),
       ],
       // Or press the near plate alone, which opens half a gate.
-      [Move.left(0.8), Move(2.0), Move.right(1.4), Move(4.0), Move.right(1.6)],
+      [
+        Move.left(0.8),
+        Move(2.0),
+        Move.right(1.4),
+        Move(4.0),
+        Move.right(1.6),
+      ],
     ],
     name: 'اتنين مش واحد',
     teaches: 'البوابة عايزة الزرارين مع بعض، وانت واحد. بس ماضيك اتنين.',
@@ -1050,6 +1056,126 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(1000, 108, 1080, 180),
   );
 
+  /// **Phase 7.** Light has a bottom.
+  ///
+  /// `yourShadowIsNotHere` taught *where* the light is. This is the other
+  /// half of the same rule, which nothing in the campaign has asked yet: the
+  /// light is a rectangle, and a rectangle has a bottom edge. What decides
+  /// whether your past exists is whether the beam **touches** it — so how
+  /// tall your past was matters as much as where it stood.
+  ///
+  /// The first room's lamp hangs low over the plate and stops at head
+  /// height, forty units short of the floor. A body standing on the plate
+  /// has its head in the light and is not there; a ducked body is under the
+  /// beam, clear of it, and presses the plate like anything else. So the
+  /// habit of eleven levels — stand on the plate — opens nothing, and the
+  /// thing to work out is to duck on it. Nothing about the timing changes.
+  ///
+  /// The second room undoes the answer. Its beam goes all the way to the
+  /// floor at the foot of the shelf, which is where a step is shortest to
+  /// climb — and ducking there is exactly what the first room just taught to
+  /// do about light. It does nothing here: a ducked body is still touched.
+  /// The step has to go in the dark, a little further out. Two rooms, the
+  /// same move, opposite answers, and the only thing that tells them apart
+  /// is looking at where each beam stops. That is the second room being
+  /// harder *because* of the first, which is the question this phase asks
+  /// of every room.
+  static final Level underTheLight = Level(
+    id: 'under-the-light',
+    solution: const [
+      Move.left(1.68), // out to the plate, the wrong way from the gate
+      Move(1.5, crouch: true), // duck on it: under the lamp, not in it
+      Move.right(3.3), // to the gate, and wait at it
+      Move(0.6),
+      Move.right(1.1), // through, to the dark short of the second beam
+      Move(1.2, crouch: true), // duck there: this beam goes all the way down
+      Move.left(0.6), // out of your own way
+      Move(1.1),
+      Move.right(0.05),
+      Move.right(0.55, jump: true), // onto it
+      Move(0.1),
+      Move.right(0.6, jump: true), // and off it onto the shelf
+      Move.right(2.2), // to the way out
+    ],
+    wrongIdeas: const [
+      // Stand on the plate, the way every plate in the game has been stood
+      // on. Your past arrives standing, its head in the lamp, and is not
+      // there: the gate never moves.
+      [
+        Move.left(1.68),
+        Move(1.5),
+        Move.right(3.3),
+        Move(3.0),
+        Move.right(1.1),
+        Move(1.2, crouch: true),
+        Move.left(0.6),
+        Move(1.1),
+        Move.right(0.05),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.6, jump: true),
+        Move.right(2.2),
+      ],
+      // Carry the first room's answer into the second: duck, and the light
+      // will not see you. This beam goes to the floor. Duck hard against the
+      // shelf, where the climb is shortest, and you go straight through.
+      [
+        Move.left(1.68),
+        Move(1.5, crouch: true),
+        Move.right(3.3),
+        Move(0.6),
+        Move.right(1.5),
+        Move(1.2, crouch: true),
+        Move.left(0.6),
+        Move(1.1),
+        Move.right(0.05),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.6, jump: true),
+        Move.right(2.2),
+      ],
+    ],
+    name: 'النور ليه آخر',
+    teaches: 'النور بيمسح ماضيك — بس لحد فين؟',
+    delaySeconds: 3,
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [
+      _ground(-700, 1500),
+      // A hundred and ninety up: out of a jump's reach, inside a step's.
+      const Rect.fromLTRB(700, 430, 1400, 620),
+      // Closing the shelf's far end, so it has one way up. Open floor past it
+      // would be a dark place to duck and a back door.
+      const Rect.fromLTRB(1400, 170, 1440, 620),
+    ],
+    lights: const [
+      // The lamp over the plate. Its bottom edge is at 540: a standing body's
+      // head is at 524 and in it, a ducked body's is at 551 and eleven clear.
+      Rect.fromLTRB(-440, 200, -300, 540),
+      // The beam at the foot of the shelf, to the floor. Narrow, so the dark
+      // is close: a body ducked anywhere from about 570 to 628 is clear of
+      // it and near enough to jump onto the shelf from.
+      Rect.fromLTRB(650, 200, 700, 620),
+    ],
+    // The wrong way from the gate, as the first plate in the game was, and
+    // far enough from the spawn that ducking your way past it is too slow to
+    // be a plan.
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-420, 608, -320, 620), opens: 'gate'),
+    ],
+    // A second and a half of grace, your past's and not yours: the walk from
+    // the plate is three seconds and the delay is three, so you arrive as it
+    // opens and the grace is only there for arriving a beat late.
+    doors: const [
+      DoorSpec(
+        id: 'gate',
+        closed: Rect.fromLTRB(300, 360, 326, 620),
+        lingerSeconds: 1.5,
+      ),
+    ],
+    goal: const Rect.fromLTRB(1100, 358, 1180, 430),
+  );
+
   /// **Phase 7, two.** Three gates, one past — and the past is the whole
   /// plan, laid down before the first gate opens.
   ///
@@ -1212,6 +1338,7 @@ abstract final class Levels {
     twoNotOne,
     notEveryStep,
     stairOfYourself,
+    underTheLight,
     threeGatesOnePast,
   ];
 

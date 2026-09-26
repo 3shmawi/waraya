@@ -10,6 +10,7 @@ import 'dart:ui';
 
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waraya/game/config.dart';
 import 'package:waraya/input/input.dart';
 import 'package:waraya/level/level.dart';
 import 'package:waraya/level/level_game.dart';
@@ -118,6 +119,40 @@ void main() {
         );
       },
     );
+  });
+
+  group('under the light', () {
+    final level = Levels.underTheLight;
+    final lamp = level.lights.first, beam = level.lights.last;
+
+    testWithGame<LevelGame>(
+      'duck under the lamp, and out of the beam',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(level.solution);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    test('the lamp stops between a standing head and a ducked one', () {
+      // The whole first room is these two numbers. Measured off the body the
+      // game actually builds, not off the comment.
+      const standing = 96.0;
+      const ducked = standing * WarayaConfig.crouchHeightFactor;
+      expect(level.floorTop - standing, lessThan(lamp.bottom));
+      expect(level.floorTop - ducked, greaterThan(lamp.bottom));
+      // And the plate is under it, all of it.
+      final plate = level.plates.single.area;
+      expect(lamp.left, lessThanOrEqualTo(plate.left));
+      expect(lamp.right, greaterThanOrEqualTo(plate.right));
+    });
+
+    test('the second beam goes to the floor, against the shelf', () {
+      expect(beam.bottom, level.floorTop);
+      expect(beam.right, level.blocks[1].left);
+    });
   });
 
   group('three gates, one past', () {
