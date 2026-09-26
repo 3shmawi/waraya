@@ -74,7 +74,9 @@ void main() {
     testWidgets('names every level, so there is something to aim at', (
       tester,
     ) async {
-      await tester.binding.setSurfaceSize(const Size(500, 1400));
+      // Tall enough for the whole campaign: the list builds lazily, and a
+      // name scrolled out of view is not a name that is missing.
+      await tester.binding.setSurfaceSize(const Size(500, 2600));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(listWith(Levels.campaign.length));
       for (final level in Levels.campaign) {

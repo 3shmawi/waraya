@@ -954,6 +954,675 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(660, 358, 740, 430),
   );
 
+  /// **Phase 7, one.** Two pasts, one on top of the other.
+  ///
+  /// Two shadows are usually read as *two places at once* — that is what
+  /// `twoNotOne` teaches. This level is the other thing they are: **two
+  /// steps**. One ducked body is sixty-nine tall and a jump off it reaches
+  /// two hundred and five. Duck on top of a ducked body, and later your past
+  /// is floating sixty-nine up, sitting on a past that is no longer under it
+  /// — and if the other shadow is still ducked on the floor underneath it at
+  /// that moment, the two of them are a stair a hundred and thirty-eight tall,
+  /// and the top of the climb is two hundred and seventy-four.
+  ///
+  /// The first shelf is the one step every level since the second has
+  /// taught, as a reminder with both shadows present. The roof is fifty
+  /// beyond one step and twenty-four inside two.
+  ///
+  /// **Why one shadow cannot do it alone,** which is the whole reason the
+  /// level needs two, and which rests on two units. Your own past floating
+  /// sixty-nine up has its top a hundred and thirty-eight above the floor,
+  /// and a jump — measured, not the textbook number — lifts the feet a
+  /// hundred and thirty. Even with the six units of landing grace the body
+  /// is two short. So the bottom step has to be *the other* past, still
+  /// ducked where you ducked first, and the long first duck is what keeps it
+  /// there: the far shadow holds the floor for as long as you held it, and it
+  /// has to outlast the near one arriving on top. `hard_levels_test.dart`
+  /// pins the two units.
+  static final Level stairOfYourself = Level(
+    id: 'stair-of-yourself',
+    solution: const [
+      Move.right(1.05), // to the foot of the step
+      Move(1.2, crouch: true), // duck: the first step
+      Move(0.3),
+      Move(0.9), // wait for it
+      Move(0.5, jump: true), // straight up onto it
+      Move.right(0.9, jump: true), // and off it onto the shelf
+      Move.right(1.45), // along the shelf to the foot of the wall
+      Move(3.5, crouch: true), // duck, long: this is the bottom step
+      Move(1.6), // stand up and wait for the far one to arrive under you
+      Move(0.5, jump: true), // up onto it
+      Move(1.0, crouch: true), // and duck on top of it: the second step
+      Move(1.0), // stand, and wait for the near one to arrive on top
+      Move(0.7, jump: true), // up onto that
+      Move.right(0.9, jump: true), // and off the top onto the roof
+      Move.right(1.5), // to the way out
+    ],
+    wrongIdeas: const [
+      // One step, which is all the first shelf needed. Duck at the foot of
+      // the wall, climb the first body that arrives, and jump: seventy short.
+      [
+        Move.right(1.05),
+        Move(1.2, crouch: true),
+        Move(1.2),
+        Move(0.5, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.45),
+        Move(1.2, crouch: true),
+        Move(1.0),
+        Move(0.5, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+      // One past stacked on itself. Duck, climb it, duck on top — and by the
+      // time that comes back floating in the air, the body that was under it
+      // has walked off. The floating one is a hundred and thirty-eight up and
+      // a jump is a hundred and thirty: two short, with nothing to stand on.
+      [
+        Move.right(1.05),
+        Move(1.2, crouch: true),
+        Move(1.2),
+        Move(0.5, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.45),
+        Move(1.0, crouch: true),
+        Move(1.1),
+        Move(0.5, jump: true),
+        Move(0.4, crouch: true),
+        Move(1.6),
+        Move(0.7, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+    ],
+    name: 'سلّم من نفسك',
+    teaches: 'ماضيك اتنين. واحد فوق التاني سلّمة.',
+    // Three seconds apart. The gap is what the bottom step has to last
+    // through: the far one arrives under you three seconds after the near
+    // one, and has to still be there when the near one comes back on top.
+    delays: const [2, 5],
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [
+      _ground(-400, 1300),
+      // One step up: a hundred and ninety, inside a ducked body's two
+      // hundred and five.
+      const Rect.fromLTRB(300, 430, 1300, 620),
+      // Two steps up: two hundred and fifty above the shelf, past one body's
+      // reach by forty-five and inside two bodies' by twenty-four. Nothing
+      // anywhere in the level is higher than the shelf except this.
+      const Rect.fromLTRB(760, 180, 1300, 430),
+    ],
+    goal: const Rect.fromLTRB(1000, 108, 1080, 180),
+  );
+
+  /// **Phase 7.** What your past opens, your past shuts — the order in
+  /// `Door.hold`, played as a level.
+  ///
+  /// Three rules decide a door, in order: an inverted plate under a body
+  /// shuts it whatever else is true; otherwise a plate held or a key thrown
+  /// opens it; otherwise it drifts shut after its grace. Every level so far
+  /// has used one line of that at a time. This one walks you down all three.
+  ///
+  /// The first room is the key, as a reminder: touch it and leave, because
+  /// your past is coming to flip it back. The second room is the other two
+  /// lines at once. A plate on a balcony holds the far gate open, with three
+  /// seconds of grace — plenty for the long walk. But the corridor to that
+  /// gate has an inverted plate on its floor, and it beats the plate *and*
+  /// the grace. You can walk over it all you like; it is your past walking
+  /// over it two and a half seconds later that slams the gate, and by then
+  /// you are still a walk away. So the thing to do is not to have been
+  /// there: jump it.
+  ///
+  /// The corridor past it is longer than the delay on purpose. If the walk
+  /// from the inverted plate to the gate were shorter than two and a half
+  /// seconds, you would be through before your past stepped on it, and the
+  /// plate would be scenery.
+  ///
+  /// The balcony is for the reason `threeGatesOnePast` found: a plate on the
+  /// floor of the only corridor is a plate everybody crosses, and a crossing
+  /// with three seconds of grace behind it opens the gate for free.
+  static final Level yourPastShutsIt = Level(
+    id: 'your-past-shuts-it',
+    solution: const [
+      Move.left(0.7), // onto the key, against the wall
+      Move.right(1.82), // and straight out through the gate, before you return
+      Move.right(1.2), // on past the balcony
+      Move.left(0.55, jump: true), // up onto it
+      Move.left(0.25),
+      Move(1.0), // stand on the plate: this holds the far gate
+      Move.right(1.15), // off the balcony
+      Move.right(0.55, jump: true), // over the plate on the floor
+      Move.right(6), // and the long way to the far gate
+    ],
+    wrongIdeas: const [
+      // Everything right, and walk across the plate on the floor instead of
+      // over it. Two and a half seconds later your past walks across it too,
+      // and it holds the far gate shut — which beats the plate on the
+      // balcony and wipes the grace with it. You arrive at a shut gate.
+      [
+        Move.left(0.7),
+        Move.right(1.82),
+        Move.right(1.2),
+        Move.left(0.55, jump: true),
+        Move.left(0.25),
+        Move(1.0),
+        Move.right(1.15),
+        Move.right(0.55),
+        Move.right(6),
+      ],
+      // Step on the key and wait for your past to come and hold it, the way
+      // every plate is held. On a key its arrival is the second flip.
+      [
+        Move.left(0.7),
+        Move(3.0),
+        Move.right(1.82),
+        Move.right(1.2),
+        Move.left(0.55, jump: true),
+        Move.left(0.25),
+        Move(1.0),
+        Move.right(1.15),
+        Move.right(0.55, jump: true),
+        Move.right(6),
+      ],
+    ],
+    name: 'اللي ماضيك بيفتحه بيقفله',
+    teaches: 'المعكوس بيغلب كل حاجة. متكونش كنت واقف عليه.',
+    delaySeconds: 2.5,
+    spawnX: -200,
+    floorTop: _floor,
+    blocks: [
+      _ground(-500, 1500),
+      // The wall against the key, which turns you round while you are still
+      // on it: one trip to the key is exactly one flip.
+      const Rect.fromLTRB(-400, 200, -360, 620),
+      // The balcony, head height and a hop up. Walking under it presses
+      // nothing.
+      const Rect.fromLTRB(120, 506, 220, 522),
+    ],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-360, 608, -260, 620), flips: 'near'),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(130, 494, 210, 506), opens: 'far'),
+      // Sixty wide rather than a hundred, so a plain running jump clears it.
+      // A body counts as on a plate with sixteen units over it, and a jump is
+      // above the trigger for about a hundred units of travel — a full-width
+      // plate would be a jump that has to be timed, and this is a level about
+      // knowing to jump at all.
+      PlateSpec(
+        area: Rect.fromLTRB(470, 608, 530, 620),
+        opens: 'far',
+        inverts: true,
+      ),
+    ],
+    doors: const [
+      DoorSpec(id: 'near', closed: Rect.fromLTRB(0, 360, 26, 620)),
+      DoorSpec(
+        id: 'far',
+        closed: Rect.fromLTRB(1200, 360, 1226, 620),
+        lingerSeconds: 3,
+      ),
+    ],
+    goal: const Rect.fromLTRB(1300, 548, 1380, 620),
+  );
+
+  /// **Phase 7.** Light has a bottom.
+  ///
+  /// `yourShadowIsNotHere` taught *where* the light is. This is the other
+  /// half of the same rule, which nothing in the campaign has asked yet: the
+  /// light is a rectangle, and a rectangle has a bottom edge. What decides
+  /// whether your past exists is whether the beam **touches** it — so how
+  /// tall your past was matters as much as where it stood.
+  ///
+  /// The first room's lamp hangs low over the plate and stops at head
+  /// height, forty units short of the floor. A body standing on the plate
+  /// has its head in the light and is not there; a ducked body is under the
+  /// beam, clear of it, and presses the plate like anything else. So the
+  /// habit of eleven levels — stand on the plate — opens nothing, and the
+  /// thing to work out is to duck on it. Nothing about the timing changes.
+  ///
+  /// The second room undoes the answer. Its beam goes all the way to the
+  /// floor at the foot of the shelf, which is where a step is shortest to
+  /// climb — and ducking there is exactly what the first room just taught to
+  /// do about light. It does nothing here: a ducked body is still touched.
+  /// The step has to go in the dark, a little further out. Two rooms, the
+  /// same move, opposite answers, and the only thing that tells them apart
+  /// is looking at where each beam stops. That is the second room being
+  /// harder *because* of the first, which is the question this phase asks
+  /// of every room.
+  static final Level underTheLight = Level(
+    id: 'under-the-light',
+    solution: const [
+      Move.left(1.68), // out to the plate, the wrong way from the gate
+      Move(1.5, crouch: true), // duck on it: under the lamp, not in it
+      Move.right(3.3), // to the gate, and wait at it
+      Move(0.6),
+      Move.right(1.1), // through, to the dark short of the second beam
+      Move(1.2, crouch: true), // duck there: this beam goes all the way down
+      Move.left(0.6), // out of your own way
+      Move(1.1),
+      Move.right(0.05),
+      Move.right(0.55, jump: true), // onto it
+      Move(0.1),
+      Move.right(0.6, jump: true), // and off it onto the shelf
+      Move.right(2.2), // to the way out
+    ],
+    wrongIdeas: const [
+      // Stand on the plate, the way every plate in the game has been stood
+      // on. Your past arrives standing, its head in the lamp, and is not
+      // there: the gate never moves.
+      [
+        Move.left(1.68),
+        Move(1.5),
+        Move.right(3.3),
+        Move(3.0),
+        Move.right(1.1),
+        Move(1.2, crouch: true),
+        Move.left(0.6),
+        Move(1.1),
+        Move.right(0.05),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.6, jump: true),
+        Move.right(2.2),
+      ],
+      // Carry the first room's answer into the second: duck, and the light
+      // will not see you. This beam goes to the floor. Duck hard against the
+      // shelf, where the climb is shortest, and you go straight through.
+      [
+        Move.left(1.68),
+        Move(1.5, crouch: true),
+        Move.right(3.3),
+        Move(0.6),
+        Move.right(1.5),
+        Move(1.2, crouch: true),
+        Move.left(0.6),
+        Move(1.1),
+        Move.right(0.05),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.6, jump: true),
+        Move.right(2.2),
+      ],
+    ],
+    name: 'النور ليه آخر',
+    teaches: 'النور بيمسح ماضيك — بس لحد فين؟',
+    delaySeconds: 3,
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [
+      _ground(-700, 1500),
+      // A hundred and ninety up: out of a jump's reach, inside a step's.
+      const Rect.fromLTRB(700, 430, 1400, 620),
+      // Closing the shelf's far end, so it has one way up. Open floor past it
+      // would be a dark place to duck and a back door.
+      const Rect.fromLTRB(1400, 170, 1440, 620),
+    ],
+    lights: const [
+      // The lamp over the plate. Its bottom edge is at 540: a standing body's
+      // head is at 524 and in it, a ducked body's is at 551 and eleven clear.
+      Rect.fromLTRB(-440, 200, -300, 540),
+      // The beam at the foot of the shelf, to the floor. Narrow, so the dark
+      // is close: a body ducked anywhere from about 570 to 628 is clear of
+      // it and near enough to jump onto the shelf from.
+      Rect.fromLTRB(650, 200, 700, 620),
+    ],
+    // The wrong way from the gate, as the first plate in the game was, and
+    // far enough from the spawn that ducking your way past it is too slow to
+    // be a plan.
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-420, 608, -320, 620), opens: 'gate'),
+    ],
+    // A second and a half of grace, your past's and not yours: the walk from
+    // the plate is three seconds and the delay is three, so you arrive as it
+    // opens and the grace is only there for arriving a beat late.
+    doors: const [
+      DoorSpec(
+        id: 'gate',
+        closed: Rect.fromLTRB(300, 360, 326, 620),
+        lingerSeconds: 1.5,
+      ),
+    ],
+    goal: const Rect.fromLTRB(1100, 358, 1180, 430),
+  );
+
+  /// **Phase 7, two.** Three gates, one past — and the past is the whole
+  /// plan, laid down before the first gate opens.
+  ///
+  /// Every plate is behind the first gate. There is nothing to press on the
+  /// far side of it, so by the time you walk through, the three presses the
+  /// three gates need are already in your past and on their way: the second
+  /// and third gates are opened by things you did **before you could see
+  /// them working**. That is the hypothesis this phase is built on — a long
+  /// level is not a short one with more floor, it is one where the buffer is
+  /// something you spend from — and this is the level that tests it.
+  ///
+  /// The plates are on balconies rather than on the floor, and the level does
+  /// not exist without that. A floor plate is a plate you cross, and a shadow
+  /// crossing a plate opens its gate for as long as the grace lasts: the first
+  /// draft had all three on the floor in a row, and walking to the wall and
+  /// back — pressing nothing on purpose — opened the gates in a usable order
+  /// from the crossings alone. A balcony is something you have to decide to
+  /// climb onto. Walking underneath it presses nothing.
+  ///
+  /// And the balconies are **not** in the gates' order. The middle one opens
+  /// the first gate, the far one the second, the near one the third. So the
+  /// two orders a hand falls into — nearest first, and furthest first (which
+  /// is what the very first level taught) — both open the gates in an order
+  /// nobody can walk through. The only order that works is the gates' own,
+  /// which means the route through the balconies is worked out from the gates
+  /// backwards: that is the thing to understand, and nothing here is timed
+  /// tightly enough to be the thing instead. The grace on each gate is
+  /// generous, and a sweep of every order at every pause
+  /// (`levels_test.dart`) finds only that one order finishing — with anything
+  /// from a touch to over a second on each balcony.
+  ///
+  /// Getting it wrong costs a restart rather than a walk back, and that is
+  /// the answer this level gives to the question `docs/phase-7-hard-levels.md`
+  /// left open. The whole plan lives on this side of the first gate, so "go
+  /// back and redo the part that went wrong" and "start again" are the same
+  /// walk; a way back would be a slower R. Nothing kills.
+  static final Level threeGatesOnePast = Level(
+    id: 'three-gates-one-past',
+    solution: const [
+      Move.left(1.3), // under the near balcony, to the foot of the middle one
+      Move.left(0.5, jump: true), // up onto it
+      Move.left(0.15),
+      Move(0.6), // the first gate
+      Move.left(0.2),
+      Move.left(0.55, jump: true), // across onto the far balcony
+      Move.left(0.25),
+      Move(0.6), // the second gate
+      Move.right(1.45), // off it, and back under the middle one
+      Move.right(0.55, jump: true), // up onto the near balcony
+      Move.right(0.1),
+      Move(0.6), // the third gate
+      Move.right(12), // and through all three, in the order they were pressed
+    ],
+    wrongIdeas: const [
+      // Nearest first, the way the balconies come to hand.
+      [
+        Move.left(0.15),
+        Move.left(0.55, jump: true),
+        Move.left(0.1),
+        Move(0.6),
+        Move.left(0.2),
+        Move.left(0.55, jump: true),
+        Move.left(0.25),
+        Move(0.6),
+        Move.left(0.38),
+        Move.left(0.55, jump: true),
+        Move.left(0.25),
+        Move(0.6),
+        Move.right(14),
+      ],
+      // Furthest first, the habit the first level taught.
+      [
+        Move.left(2.4),
+        Move.left(0.55, jump: true),
+        Move.left(0.1),
+        Move(0.6),
+        Move.right(0.2),
+        Move.right(0.55, jump: true),
+        Move.right(0.25),
+        Move(0.6),
+        Move.right(0.3),
+        Move.right(0.55, jump: true),
+        Move.right(0.25),
+        Move(0.6),
+        Move.right(14),
+      ],
+      // One gate at a time: the first one's balcony, through it, and then
+      // look for the second.
+      [
+        Move.left(1.3),
+        Move.left(0.5, jump: true),
+        Move.left(0.15),
+        Move(1.2),
+        Move.right(14),
+      ],
+    ],
+    name: 'تلات أبواب بماضي واحد',
+    teaches: 'ماضيك راجع بنفس الترتيب اللي دست بيه.',
+    // Longer than anything else in the campaign, because it has to hold three
+    // presses and the walk back from them. The waiting it costs is at the
+    // first gate, with the plan already made, and it is short.
+    delaySeconds: 5.5,
+    spawnX: -20,
+    floorTop: _floor,
+    blocks: [
+      _ground(-800, 1100),
+      // The back wall. Tall enough that a body on a ducked shadow on the far
+      // balcony still cannot top it (the top of that climb is 301).
+      const Rect.fromLTRB(-840, 200, -800, 620),
+      // Three balconies, a hundred and fourteen above the floor: out of reach
+      // of nothing, a jump puts you on any of them, but high enough that a
+      // standing body walks underneath with room to spare. Walking past is
+      // not pressing. The gaps between them are a hundred and fifty, which is
+      // room to take off from the floor in and a hop from one to the next.
+      const Rect.fromLTRB(-750, 506, -650, 522),
+      const Rect.fromLTRB(-500, 506, -400, 522),
+      const Rect.fromLTRB(-250, 506, -150, 522),
+    ],
+    // Out of order on purpose. See above.
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-740, 494, -660, 506), opens: 'second'),
+      PlateSpec(area: Rect.fromLTRB(-490, 494, -410, 506), opens: 'first'),
+      PlateSpec(area: Rect.fromLTRB(-240, 494, -160, 506), opens: 'third'),
+    ],
+    // Four hundred apart, a little under two seconds of walking, and the
+    // grace is most of that again: the gates forgive arriving late, never the
+    // wrong order. The first one has longest, because it is the one you wait
+    // at while your whole plan walks back to you.
+    doors: const [
+      DoorSpec(
+        id: 'first',
+        closed: Rect.fromLTRB(60, 360, 86, 620),
+        lingerSeconds: 2,
+      ),
+      DoorSpec(
+        id: 'second',
+        closed: Rect.fromLTRB(460, 360, 486, 620),
+        lingerSeconds: 1.5,
+      ),
+      DoorSpec(
+        id: 'third',
+        closed: Rect.fromLTRB(860, 360, 886, 620),
+        lingerSeconds: 1.5,
+      ),
+    ],
+    goal: const Rect.fromLTRB(960, 548, 1040, 620),
+  );
+
+  /// **Phase 7, last.** All of it — nothing new, everything somewhere else.
+  ///
+  /// Four rooms, one delay, and every room is a lesson from earlier in the
+  /// campaign put somewhere it was not learned:
+  ///
+  /// 1. **The key, on a balcony.** Touch it and leave before you come back
+  ///    to flip it (`closeWhatYouOpened`). Up on a balcony a trip to it is
+  ///    exactly one arrival, with no wall needed to turn you round, and
+  ///    nobody flips it by walking past.
+  /// 2. **The lamp that stops short of the floor, over a plate.** Duck on it
+  ///    (`underTheLight`). New here: the plate is right behind the gate you
+  ///    just came through and you walk over it on the way — and walking
+  ///    over it does nothing, because a walking past is standing and its
+  ///    head is in the lamp. The lamp is what makes a plate on the path
+  ///    safe to have on the path.
+  /// 3. **The inverted plate on the corridor floor.** Jump it
+  ///    (`yourPastShutsIt`). The balcony that holds the gate is *before* it,
+  ///    which is the only order where it matters: crossing an inverted plate
+  ///    before your past has held anything shuts nothing that was open.
+  /// 4. **The beam that goes to the floor, at the foot of the shelf.** Duck
+  ///    in the dark further out (`yourShadowIsNotHere`) — and after the
+  ///    second room, ducking was the answer to light. Here it is not.
+  ///
+  /// So three recorded wrong ideas, one for each room after the first, and
+  /// each is the previous room's habit carried one room too far or the
+  /// campaign's oldest habit — stand on the plate — met in the one place it
+  /// fails.
+  ///
+  /// Nothing kills. Every mistake is a shut gate you can see from where you
+  /// are standing, and costs a restart of a level that takes about twenty
+  /// seconds when you know it.
+  static final Level allOfIt = Level(
+    id: 'all-of-it',
+    solution: const [
+      Move.left(0.27), // to the foot of the balcony
+      Move.left(0.55, jump: true), // up onto the key
+      Move.left(0.15),
+      Move(0.2),
+      Move.right(2.3), // off it, and through the first gate before you return
+      Move(1.2, crouch: true), // duck on the plate under the lamp
+      Move.right(3.0), // to the second gate
+      Move(0.5),
+      Move.right(0.4), // through it, to the foot of the next balcony
+      Move.right(0.55, jump: true), // up onto the plate
+      Move.right(0.1),
+      Move(1.0), // stand: this holds the third gate
+      Move.right(0.9), // off it
+      Move.right(0.55, jump: true), // over the plate on the floor
+      Move.right(3.9), // the long way to the third gate, and through
+      Move(1.2, crouch: true), // duck in the dark short of the beam
+      Move.left(0.6),
+      Move(1.1),
+      Move.right(0.05),
+      Move.right(0.55, jump: true), // onto it
+      Move(0.1),
+      Move.right(0.6, jump: true), // and onto the shelf
+      Move.right(2.0), // to the way out
+    ],
+    wrongIdeas: const [
+      // The second room: stand on the plate, as every plate is stood on. Your
+      // past arrives with its head in the lamp and is not there.
+      [
+        Move.left(0.27),
+        Move.left(0.55, jump: true),
+        Move.left(0.15),
+        Move(0.2),
+        Move.right(2.3),
+        Move(1.2),
+        Move.right(3.0),
+        Move(0.5),
+        Move.right(0.4),
+        Move.right(0.55, jump: true),
+        Move.right(0.1),
+        Move(1.0),
+        Move.right(0.9),
+        Move.right(0.55, jump: true),
+        Move.right(3.9),
+        Move(1.2, crouch: true),
+        Move.left(0.6),
+        Move(1.1),
+        Move.right(0.05),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.6, jump: true),
+        Move.right(2.0),
+      ],
+      // The third: walk across the plate on the floor. Your past walks
+      // across it three seconds later, and it beats the plate on the balcony
+      // and its grace.
+      [
+        Move.left(0.27),
+        Move.left(0.55, jump: true),
+        Move.left(0.15),
+        Move(0.2),
+        Move.right(2.3),
+        Move(1.2, crouch: true),
+        Move.right(3.0),
+        Move(0.5),
+        Move.right(0.4),
+        Move.right(0.55, jump: true),
+        Move.right(0.1),
+        Move(1.0),
+        Move.right(0.9),
+        Move.right(0.55),
+        Move.right(3.9),
+        Move(1.2, crouch: true),
+        Move.left(0.6),
+        Move(1.1),
+        Move.right(0.05),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.6, jump: true),
+        Move.right(2.0),
+      ],
+      // The fourth: duck hard against the shelf, where the climb is
+      // shortest — the second room's answer to a lamp. This beam reaches the
+      // floor.
+      [
+        Move.left(0.27),
+        Move.left(0.55, jump: true),
+        Move.left(0.15),
+        Move(0.2),
+        Move.right(2.3),
+        Move(1.2, crouch: true),
+        Move.right(3.0),
+        Move(0.5),
+        Move.right(0.4),
+        Move.right(0.55, jump: true),
+        Move.right(0.1),
+        Move(1.0),
+        Move.right(0.9),
+        Move.right(0.55, jump: true),
+        Move.right(4.35),
+        Move(1.2, crouch: true),
+        Move.left(0.6),
+        Move(1.1),
+        Move.right(0.05),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.6, jump: true),
+        Move.right(2.0),
+      ],
+    ],
+    name: 'كله مع بعض',
+    teaches: 'مفيش حاجة جديدة هنا. كل حاجة اتعلمتها، في مكان تاني.',
+    delaySeconds: 3,
+    spawnX: -100,
+    floorTop: _floor,
+    blocks: [
+      _ground(-440, 2840),
+      const Rect.fromLTRB(-440, 200, -400, 620),
+      const Rect.fromLTRB(-360, 506, -260, 522),
+      const Rect.fromLTRB(1060, 506, 1160, 522),
+      const Rect.fromLTRB(2400, 430, 2800, 620),
+      const Rect.fromLTRB(2800, 170, 2840, 620),
+    ],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-350, 494, -270, 506), flips: 'first'),
+    ],
+    lights: const [
+      Rect.fromLTRB(160, 200, 300, 540),
+      Rect.fromLTRB(2350, 200, 2400, 620),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(180, 608, 280, 620), opens: 'second'),
+      PlateSpec(area: Rect.fromLTRB(1070, 494, 1150, 506), opens: 'third'),
+      PlateSpec(
+        area: Rect.fromLTRB(1300, 608, 1360, 620),
+        opens: 'third',
+        inverts: true,
+      ),
+    ],
+    doors: const [
+      DoorSpec(id: 'first', closed: Rect.fromLTRB(120, 360, 146, 620)),
+      DoorSpec(
+        id: 'second',
+        closed: Rect.fromLTRB(900, 360, 926, 620),
+        lingerSeconds: 1.5,
+      ),
+      DoorSpec(
+        id: 'third',
+        closed: Rect.fromLTRB(2100, 360, 2126, 620),
+        lingerSeconds: 3,
+      ),
+    ],
+    goal: const Rect.fromLTRB(2600, 358, 2680, 430),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -967,6 +1636,11 @@ abstract final class Levels {
     yourShadowIsNotHere,
     twoNotOne,
     notEveryStep,
+    stairOfYourself,
+    underTheLight,
+    yourPastShutsIt,
+    threeGatesOnePast,
+    allOfIt,
   ];
 
   /// The Phase 2 tuning bench, as a level so it runs on the same code as the

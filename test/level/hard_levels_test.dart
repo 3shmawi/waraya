@@ -1,0 +1,401 @@
+// The Phase 7 levels, one group each.
+//
+// Kept out of `levels_test.dart` because these ask a different kind of
+// question. A short level has one idea and one wrong idea; a long one has a
+// route, and a route has many more ways of being walked than anybody would
+// think to write down. So as well as the recorded runs, the groups here sweep:
+// every order, every pause, driven by a small controller rather than by hand-
+// written timings, and they say out loud which of those finish.
+import 'dart:ui';
+
+import 'package:flame_test/flame_test.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:waraya/game/config.dart';
+import 'package:waraya/input/input.dart';
+import 'package:waraya/level/level.dart';
+import 'package:waraya/level/level_game.dart';
+import 'package:waraya/level/levels.dart';
+import 'package:waraya/level/playthrough.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  Playthrough start(LevelGame game) =>
+      Playthrough(game, game.input.sources.first as ScriptedInput);
+
+  LevelGame Function() build(Level level) =>
+      () => LevelGame(levels: [level], inputs: [ScriptedInput()]);
+
+  group('stair of yourself', () {
+    final level = Levels.stairOfYourself;
+
+    testWithGame<LevelGame>(
+      'the near past on top of the far one reaches the roof',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(level.solution);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    // The level needs two shadows because one cannot stack on itself, and
+    // that is two units of margin: your past floating a ducked body up has
+    // its top 138 above the floor, and a jump — with the landing grace —
+    // gets the feet to 136. If a number in the jump ever moves, this is
+    // what says the level has become a one-shadow level.
+    testWithGame<LevelGame>(
+      'one past cannot be a stair on its own',
+      () => LevelGame(
+        levels: [
+          Level(
+            id: 'one-stack',
+            name: 'x',
+            teaches: 'x',
+            delaySeconds: 3,
+            spawnX: 0,
+            blocks: const [Rect.fromLTRB(-1500, 620, 1500, 2200)],
+            goal: const Rect.fromLTRB(1400, 548, 1480, 620),
+          ),
+        ],
+        inputs: [ScriptedInput()],
+      ),
+      (game) async {
+        await game.ready();
+        final source = game.input.sources.first as ScriptedInput;
+        void frame({
+          double axis = 0,
+          bool jump = false,
+          bool held = false,
+          bool crouch = false,
+        }) {
+          source.next = InputIntent(
+            moveAxis: axis,
+            jump: jump,
+            jumpHeld: held,
+            crouch: crouch,
+          );
+          game.update(Playthrough.dt);
+        }
+
+        void hold(double seconds, {bool jump = false, bool crouch = false}) {
+          for (var i = 0; i < (seconds / Playthrough.dt).round(); i++) {
+            frame(jump: jump && i == 0, held: jump, crouch: crouch);
+          }
+        }
+
+        // Duck for long enough to climb, and climb it in place.
+        hold(2.5, crouch: true);
+        hold(0.6);
+        hold(0.75, jump: true);
+        expect(game.player.isOnShadow, isTrue, reason: 'the first step');
+        // Duck on top of it, which is recorded sixty-nine up.
+        hold(1.2, crouch: true);
+        expect(game.player.isOnShadow, isTrue);
+        // Wait for it to stand and walk you back down to the floor.
+        hold(1.0);
+        expect(game.player.y, 620);
+
+        // It comes back floating a body up. Jump at it, over and over, from
+        // right underneath, for as long as it is there.
+        var highest = 620.0;
+        var floated = false;
+        for (var tries = 0; tries < 8; tries++) {
+          for (var i = 0; i < 40; i++) {
+            frame(jump: i == 0, held: true);
+            final shadow = game.shadow;
+            if (shadow.crouch >= 0.75 && shadow.y < 600) floated = true;
+            if (game.player.isGrounded) {
+              highest = game.player.y < highest ? game.player.y : highest;
+            }
+          }
+        }
+        expect(floated, isTrue, reason: 'it never came back floating');
+        expect(
+          highest,
+          620,
+          reason: 'stood on a past that was standing on nothing',
+        );
+      },
+    );
+  });
+
+  group('your past shuts it', () {
+    final level = Levels.yourPastShutsIt;
+
+    testWithGame<LevelGame>(
+      'the key and leave, the plate and wait, and over the other one',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(level.solution);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    // However long you stand on the balcony, the plate on the floor decides:
+    // jumped, you are through; walked, you are not. Standing longer cannot
+    // buy your way past it, because what shuts the gate is your past
+    // arriving on the plate, and that is always a delay after you did.
+    final stand = level.solution.indexOf(const Move(1.0));
+    final hop = level.solution.indexOf(const Move.right(0.55, jump: true));
+    for (final seconds in const [0.2, 0.6, 1.2, 2.0]) {
+      for (final jumped in const [true, false]) {
+        testWithGame<LevelGame>(
+          '${seconds}s on the balcony, ${jumped ? 'over' : 'across'} the '
+          'plate on the floor',
+          build(level),
+          (game) async {
+            await game.ready();
+            final moves = [...level.solution];
+            moves[stand] = Move(seconds);
+            if (!jumped) moves[hop] = const Move.right(0.55);
+            final run = start(game)..play(moves, stopWhenComplete: true);
+
+            expect(run.finishedAt != null, jumped, reason: run.where);
+          },
+        );
+      }
+    }
+  });
+
+  group('under the light', () {
+    final level = Levels.underTheLight;
+    final lamp = level.lights.first, beam = level.lights.last;
+
+    testWithGame<LevelGame>(
+      'duck under the lamp, and out of the beam',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(level.solution);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    test('the lamp stops between a standing head and a ducked one', () {
+      // The whole first room is these two numbers. Measured off the body the
+      // game actually builds, not off the comment.
+      const standing = 96.0;
+      const ducked = standing * WarayaConfig.crouchHeightFactor;
+      expect(level.floorTop - standing, lessThan(lamp.bottom));
+      expect(level.floorTop - ducked, greaterThan(lamp.bottom));
+      // And the plate is under it, all of it.
+      final plate = level.plates.single.area;
+      expect(lamp.left, lessThanOrEqualTo(plate.left));
+      expect(lamp.right, greaterThanOrEqualTo(plate.right));
+    });
+
+    test('the second beam goes to the floor, against the shelf', () {
+      expect(beam.bottom, level.floorTop);
+      expect(beam.right, level.blocks[1].left);
+    });
+  });
+
+  group('all of it', () {
+    final level = Levels.allOfIt;
+
+    testWithGame<LevelGame>(
+      'four rooms, four old lessons, one run',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(level.solution);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    test('uses at least four of the words Phase 6 added', () {
+      final used = {
+        if (level.toggles.isNotEmpty) 'toggles',
+        if (level.plates.any((p) => p.inverts)) 'inverts',
+        if (level.lights.isNotEmpty) 'lights',
+        if (level.delays.length > 1) 'delays',
+        if (level.doors.any((d) => d.lingerSeconds > 0)) 'lingerSeconds',
+      };
+      expect(used.length, greaterThanOrEqualTo(4), reason: '$used');
+    });
+
+    // Each wrong idea is one room's mistake with everything else right, so
+    // each should stop in front of its own room's gate — not somewhere
+    // earlier, which would mean the recording is broken rather than wrong.
+    final stops = [
+      level.doors[1].closed.left,
+      level.doors[2].closed.left,
+      level.blocks[4].left,
+    ];
+    for (final (i, idea) in level.wrongIdeas.indexed) {
+      testWithGame<LevelGame>(
+        'wrong idea ${i + 1} gets as far as its own room',
+        build(level),
+        (game) async {
+          await game.ready();
+          final run = start(game)..play(idea, stopWhenComplete: true);
+
+          expect(run.finishedAt, isNull, reason: run.where);
+          expect(game.player.x, closeTo(stops[i], 80), reason: run.where);
+        },
+      );
+    }
+  });
+
+  group('three gates, one past', () {
+    final level = Levels.threeGatesOnePast;
+    // The balconies, left to right, and which gate each one holds.
+    final far = level.blocks[2],
+        middle = level.blocks[3],
+        near = level.blocks[4];
+
+    testWithGame<LevelGame>(
+      'the gates, in their own order, from a plan made before the first',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(level.solution);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    test('every plate is on a balcony, and every balcony on this side', () {
+      // The level is only about planning if nothing can be pressed once the
+      // plan is running. A plate past the first gate would be a short level
+      // stood on the end of this one.
+      final first = level.doors.firstWhere((d) => d.id == 'first').closed;
+      for (final plate in level.plates) {
+        expect(plate.area.right, lessThan(first.left), reason: plate.opens);
+        expect(
+          plate.area.bottom,
+          lessThan(level.floorTop - 96),
+          reason: '${plate.opens} can be pressed by walking past it',
+        );
+      }
+    });
+
+    testWithGame<LevelGame>(
+      'only one order of the three opens all three',
+      build(level),
+      (game) async {
+        await game.ready();
+        final source = game.input.sources.first as ScriptedInput;
+        final names = {far: 'far', middle: 'middle', near: 'near'};
+        final finished = <String>[];
+        var played = 0;
+        for (final route in _routes([far, middle, near])) {
+          for (final pause in const [0.0, 0.6, 1.2]) {
+            game.reload();
+            played++;
+            final seconds = _climb(game, source, route, pause);
+            if (seconds != null) {
+              finished.add(
+                '${route.map((b) => names[b]).join(' > ')} @ $pause',
+              );
+            }
+          }
+        }
+
+        // Every visit to all three in the gates' order finishes, at every
+        // pause tried — the timing is there to be generous. Nothing else
+        // does: no other order, and no route that skips a balcony.
+        expect(played, 45);
+        expect(finished, [
+          'middle > far > near @ 0.0',
+          'middle > far > near @ 0.6',
+          'middle > far > near @ 1.2',
+        ]);
+      },
+    );
+  });
+}
+
+/// Every route through [stops] that visits at least one, in every order.
+Iterable<List<Rect>> _routes(List<Rect> stops) sync* {
+  for (final a in stops) {
+    yield [a];
+    for (final b in stops) {
+      if (b == a) continue;
+      yield [a, b];
+      for (final c in stops) {
+        if (c == a || c == b) continue;
+        yield [a, b, c];
+      }
+    }
+  }
+}
+
+/// Climbs onto each of [route] in turn, stands in its middle for [pause],
+/// then runs right for the way out. Returns when the level was finished, or
+/// null.
+///
+/// A controller rather than a recording because a sweep has to reach every
+/// balcony from every other, and timings written by hand for forty-five
+/// routes would be forty-five things to get wrong. It jumps from the floor a
+/// hundred units short of the edge it is aiming at, which is inside the
+/// window where a rising body clears the underside and lands on top.
+double? _climb(
+  LevelGame game,
+  ScriptedInput source,
+  List<Rect> route,
+  double pause,
+) {
+  const dt = Playthrough.dt;
+  var elapsed = 0.0;
+  var stop = 0;
+  var stood = 0.0;
+  var rising = 0;
+  var axis = 0.0;
+  while (elapsed < 40) {
+    final player = game.player;
+    var press = false;
+    if (stop >= route.length) {
+      axis = 1;
+    } else if (rising > 0) {
+      rising--;
+    } else {
+      final balcony = route[stop];
+      final onIt =
+          player.isGrounded &&
+          (player.y - balcony.top).abs() < 2 &&
+          player.x > balcony.left - 20 &&
+          player.x < balcony.right + 20;
+      if (onIt) {
+        final middle = balcony.center.dx;
+        axis = (player.x - middle).abs() > 12 ? (middle - player.x).sign : 0;
+        if (axis == 0) {
+          stood += dt;
+          if (stood >= pause) {
+            stop++;
+            stood = 0;
+          }
+        }
+      } else if (player.isGrounded && player.y > balcony.bottom) {
+        final takeOff = player.x > balcony.right
+            ? balcony.right + 100
+            : balcony.left - 100;
+        if ((player.x - takeOff).abs() > 5) {
+          axis = (takeOff - player.x).sign;
+        } else {
+          axis = (balcony.center.dx - player.x).sign;
+          press = true;
+          rising = 30;
+        }
+      } else if (player.isGrounded) {
+        // On another balcony: walk off it towards this one.
+        axis = (balcony.center.dx - player.x).sign;
+      }
+    }
+    source.next = InputIntent(
+      moveAxis: axis,
+      jump: press,
+      jumpHeld: press || rising > 0,
+    );
+    game.update(dt);
+    elapsed += dt;
+    if (game.completed) return elapsed;
+  }
+  return null;
+}
