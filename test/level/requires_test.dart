@@ -34,6 +34,7 @@ void main() {
         if (level.plates.any((plate) => plate.inverts)) 'inverted-plates',
         if (level.lights.isNotEmpty) 'lights',
         if (level.delays.length > 1) 'delays',
+        if (level.solidWhen != ShadowSolidity.always) 'crouched-solid',
       };
       expect(level.requires, expected, reason: level.id);
       expect(level.toJson()['requires'], expected.toList()..sort());
@@ -47,6 +48,7 @@ void main() {
       'toggles': 'close-what-you-opened',
       'lights': 'your-shadow-is-not-here',
       'delays': 'two-not-one',
+      'crouched-solid': 'not-every-step',
     }.entries) {
       expect(
         Levels.campaign.where((l) => l.requires.contains(mechanic)).map(
@@ -84,6 +86,7 @@ void main() {
       'inverted-plates',
       'lights',
       'delays',
+      'crouched-solid',
     });
     expect(levelFromJson(jsonOf(sample, requires: const [])).id, sample.id);
     expect(
