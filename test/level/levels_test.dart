@@ -1132,9 +1132,16 @@ void main() {
 
         expect(run.finishedAt, isNull, reason: run.where);
         // On the floor, not the shelf: the climb is what failed, not the
-        // door. The door is the thing that worked.
+        // door. And past the gate rather than at it, which is how we know —
+        // not by the door's state at the last frame. It opened for them when
+        // their past reached the plate, they walked through, and it shut
+        // behind them on its own. The half of the level that works, worked.
         expect(game.player.y, Levels.notEveryStep.floorTop);
-        expect(game.doors.single.openFraction, 1);
+        expect(
+          game.player.x,
+          greaterThan(Levels.notEveryStep.doors.single.closed.right),
+          reason: 'the gate is not what stopped them',
+        );
       },
     );
 
@@ -1166,10 +1173,11 @@ void main() {
             Move.left(0.95),
             Move(1.2),
             Move.right(2.1),
-            Move.right(0.55),
-            Move(0.8),
-            Move.left(0.7),
-            Move(1.2),
+            Move.right(0.85),
+            Move(0.1),
+            Move(1.0),
+            Move.left(0.6),
+            Move(0.4),
             Move.right(0.55),
             Move.right(0.6, jump: true),
             Move.right(0.7, jump: true),
