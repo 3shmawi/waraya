@@ -814,6 +814,45 @@ void main() {
     void standThenLeave(Playthrough run) =>
         run.play(const [Move(1.0), Move.right(1.0), Move(1.0)]);
 
+    /// A beam with its right edge at zero, so a body standing at the spawn
+    /// straddles it: half in, half out.
+    LevelGame edgeBench() => LevelGame(
+      levels: [
+        Level(
+          id: 'lit-edge',
+          name: 'lit-edge',
+          teaches: '',
+          delaySeconds: 1,
+          spawnX: 0,
+          floorTop: 620,
+          blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
+          lights: const [Rect.fromLTRB(-200, 200, 0, 620)],
+          goal: const Rect.fromLTRB(600, 548, 680, 620),
+        ),
+      ],
+      inputs: [ScriptedInput()],
+    );
+
+    testWithGame<LevelGame>(
+      'a body with one shoulder in the beam is in the beam',
+      edgeBench,
+      (game) async {
+        await game.ready();
+        // Reported from playing: "the light shows the shadow if part of it is
+        // outside the light." It did — the rule read the body's middle, so a
+        // shadow sitting visibly inside the beam was solid and drawn at full
+        // strength. The beam is what the player can see; it has to be what
+        // decides.
+        final run = start(game)..play(const [Move(2.0)]);
+
+        expect(game.shadow.isActive, isTrue, reason: run.where);
+        // Straddling: the middle is out, the body is not.
+        expect(game.shadow.bounds.center.dx, greaterThanOrEqualTo(0));
+        expect(game.shadow.bounds.left, lessThan(0));
+        expect(game.shadowInLight, isTrue, reason: run.where);
+      },
+    );
+
     testWithGame<LevelGame>(
       'presses no plate, so the door it would have opened stays shut',
       plateBench(lit: true),
