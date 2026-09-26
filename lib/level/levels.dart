@@ -143,7 +143,7 @@ abstract final class Levels {
     id: 'stand-on-yourself',
     solution: const [
       Move.left(3.3), // out to the mark, under the ledge
-      Move(2.5), // stand there long enough to leave a solid shadow
+      Move(2.5, crouch: true), // duck there: this is the step you are leaving
       Move.right(0.9), // get out of your own way
       Move(0.15), // it is already standing there
       Move.left(0.4), // run at it
@@ -304,9 +304,9 @@ abstract final class Levels {
       Move.right(2.0), // to the door, and wait at it
       Move.right(1.2), // through, once the shadow takes over the plate
       Move.right(0.6), // out to the mark, short of the ledge
-      Move(2.0), // stand there: this is the second job
+      Move(2.0, crouch: true), // duck there: this is the second job
       Move.left(0.9), // out of your own way
-      Move(0.6),
+      Move(0.1),
       Move.right(0.45), // run at what you left behind
       Move.right(0.55, jump: true), // onto its head
       Move.right(0.6, jump: true), // and off the head onto the ledge
@@ -349,16 +349,35 @@ abstract final class Levels {
   /// gap. So the gap is where the ladder has to be built, and it has to be
   /// built before you need it, from the one spot you can build it in.
   ///
-  /// Nothing here is a stopwatch. The shadow stands in the gap for exactly as
-  /// long as you stood there, so a player who wants more room simply waits
+  /// Nothing here is a stopwatch. The shadow waits in the gap for exactly as
+  /// long as you waited there, so a player who wants more room simply waits
   /// longer — the level is made harder by having more to work out, not by
   /// giving less time to do it in.
+  ///
+  /// **What this level is about, now that a ducked body is the only solid
+  /// one.** Under the roof you have no choice: it is eighty above the floor,
+  /// so you crouch the whole way, and crouching leaves a step behind you
+  /// every inch of it. Which sounds like it should hand you the level — and
+  /// does not, because of the other number. A body standing on a step in this
+  /// corridor has its head at 455 and the roof's underside is at 540: it does
+  /// not fit. The whole trail under the roof is a staircase you cannot use.
+  ///
+  /// The gap between the two roof pieces is the only place with headroom
+  /// over it, so it is the only place a step is worth anything — which is
+  /// the same sentence the level always said, arrived at from the other side.
+  /// It used to be *the one place you may stand up*; it is now *the one place
+  /// standing on something fits*.
+  ///
+  /// It is also the level that shows where the rule stops helping. "A walk
+  /// leaves no ladder" is only true where ducking is a choice. Under a roof
+  /// that forces it, the ladder is back — and what has to stop it is
+  /// geometry, as it is here.
   static final Level goInLow = Level(
     id: 'go-in-low',
     solution: const [
       Move.left(0.5), // out to the mouth of the roof
       Move.left(2.9, crouch: true), // under it, bent over, to the gap
-      Move(2.0), // stand up: the only place in the level you are allowed to
+      Move(2.0, crouch: true), // duck here: the one place a step is any use
       Move.left(1.2, crouch: true), // back under the roof, out of your own way
       Move.right(1.2, crouch: true), // and straight back: it is standing there
       Move(0.1),
@@ -386,6 +405,22 @@ abstract final class Levels {
         Move(0.6, jump: true),
         Move(2.0),
       ],
+      // Use the staircase the corridor hands you. Crouching under the roof
+      // is not optional, so the trail down there is solid the whole way —
+      // and useless, because a body standing on it has its head in the roof.
+      // Come back to the middle of the corridor, climb, and there is nowhere
+      // to be. This is the one the geometry has to stop, not the rule.
+      [
+        Move.left(0.5),
+        Move.left(2.0, crouch: true),
+        Move(1.2, crouch: true),
+        Move.left(0.9, crouch: true),
+        Move(1.4, crouch: true),
+        Move.right(0.5, crouch: true),
+        Move.right(0.6, jump: true),
+        Move.right(0.6, jump: true),
+        Move(1.5),
+      ],
       // Or — reported from playing, and it used to work — never crouch at
       // all: leave a body standing out in the open at the spawn and climb
       // onto the roof from the wrong end. The lip is what stops it.
@@ -401,7 +436,7 @@ abstract final class Levels {
       ],
     ],
     name: 'خُش واطي',
-    teaches: 'تحت السقف مفيش وقوف. المكان الوحيد اللي تقف فيه هو مكان السلّمة.',
+    teaches: 'تحت السقف مفيش وقوف على حاجة. المكان الوحيد هو الفتحة.',
     delaySeconds: 3,
     spawnX: 330,
     floorTop: _floor,
@@ -462,7 +497,9 @@ abstract final class Levels {
     id: 'hold-your-own-door',
     solution: const [
       Move.left(2.1), // out to the plate, the wrong way from everything
-      Move(3.0), // hold it. this is how long the door will be open for
+      // Ducked, and the plate does not care: a body on it holds the door
+      // whatever shape it is in. Ducked is only about what you can climb.
+      Move(3.0, crouch: true), // hold it. this is how long the door is open
       Move.left(0.6), // on past it, into the open, out of your own way
       Move(0.6), // and wait there for yourself to arrive
       Move.right(0.75, jump: true), // a running jump onto your own head
@@ -476,7 +513,7 @@ abstract final class Levels {
       // door at the end of it. The press is the timer.
       [
         Move.left(2.1),
-        Move(1.0),
+        Move(1.0, crouch: true),
         Move.left(0.6),
         Move(2.6),
         Move.right(0.75, jump: true),
@@ -628,7 +665,7 @@ abstract final class Levels {
     id: 'your-shadow-is-not-here',
     solution: const [
       Move.left(1.58), // out to the mark, past the lit ground
-      Move(2.2), // stand there, leaving something to climb
+      Move(2.2, crouch: true), // duck there, leaving something to climb
       Move.left(0.6), // out of your own way
       Move(1.3), // and wait for yourself to arrive
       Move.right(0.12), // a short run — any longer and you sail over it
@@ -642,7 +679,7 @@ abstract final class Levels {
       // the lit place. You come back and go straight through it.
       [
         Move.left(1.3),
-        Move(2.2),
+        Move(2.2, crouch: true),
         Move.left(0.6),
         Move(1.3),
         Move.right(0.12),
@@ -752,26 +789,23 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(400, 548, 480, 620),
   );
 
-  /// **Phase 7, one.** Your past is a route, not a shelf.
+  /// **Phase 7, one.** Both halves of your past, in one pass.
   ///
-  /// Ten levels have taught one thing without ever saying it: everywhere you
-  /// have been is somewhere you can stand. That is the mechanic and it is
-  /// also the game's biggest liability — every patch of open floor beside a
-  /// surface is a way onto that surface whether anybody drew it or not, which
-  /// is what quietly unsolved two finished levels months after they closed.
+  /// This level is where `ShadowSolidity.crouched` was worked out, back when
+  /// it was one level's opt-in rather than the game's rule. What it proved is
+  /// still the thing it teaches: your past is two different things depending
+  /// on what it was doing, and you need both of them here.
   ///
-  /// Here a walk leaves nothing. The shadow still presses the plate standing
-  /// up — it is as real as it ever was — but you can only put your feet on it
-  /// where you **ducked**, and ducking is a thing you do on purpose and pay
-  /// for: it costs you more than half your speed while the delay keeps
-  /// running.
+  /// The **standing** body is as real as it ever was — it puts its weight on
+  /// the plate and holds the gate open for you. It is just not a floor. The
+  /// **ducked** body is the floor, and it is the only one, which makes the
+  /// shelf a place you can only reach by having decided to duck.
   ///
-  /// So the level is the old habit taken away. The shelf is 190 above the
-  /// floor, a jump is 136, and the only way up is a step you decided to
-  /// leave. Walk the whole thing perfectly without ducking once and you end
-  /// up under the shelf with nothing to climb — which is exactly the run that
-  /// would have finished every other level in the campaign, and it is the
-  /// first recorded wrong idea.
+  /// So: go the wrong way, stand on the plate, come back through the gate
+  /// your own weight is holding, and duck once in the right place. Walk the
+  /// whole thing perfectly and never duck and you end up under the shelf with
+  /// nothing to climb — the first recorded wrong idea, and the run that would
+  /// have won this game before the rule changed.
   static final Level notEveryStep = Level(
     id: 'not-every-step',
     solution: const [
@@ -822,12 +856,7 @@ abstract final class Levels {
       ],
     ],
     name: 'مش كل خطوة سلّمة',
-    teaches: 'ظلك سكة مش رفّ — إلا في المكان اللي وطيت فيه.',
-    // Only where it ducked. The one field in the schema that takes something
-    // away, and `requires` names it: a build that has never heard of it plays
-    // this level with a ladder under every step and finishes it without the
-    // player ever crouching, which does not look broken — it looks easy.
-    solidWhen: ShadowSolidity.crouched,
+    teaches: 'الواقف بيمسك الباب، والواطي بس هو اللي بتقف عليه.',
     delaySeconds: 3,
     spawnX: 0,
     floorTop: _floor,

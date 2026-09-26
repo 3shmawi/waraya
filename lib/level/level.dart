@@ -28,7 +28,7 @@ class Level {
     this.lights = const [],
     this.markers = const [],
     this.shadowIsSolid = true,
-    this.solidWhen = ShadowSolidity.always,
+    this.solidWhen = ShadowSolidity.crouched,
     this.shadowKills = false,
     this.floorTop = 620,
     this.solution = const [],
@@ -196,22 +196,28 @@ class Level {
     // alone puts up a level with one shadow, which is a level that looks
     // right, plays, and cannot be finished.
     if (delays.length > 1) 'delays',
-    // The most dangerous of the lot to drop. A build that has never heard of
-    // it reads a level drawn around "a walk leaves no ladder" and plays it
-    // with a ladder along every step the player takes — which does not look
-    // broken, it looks easy, and it finishes without the player ever ducking.
+    // The most dangerous of the lot to drop, and now on nearly every level.
+    // A build that has never heard of it reads a level drawn around "a walk
+    // leaves no ladder" and plays it with a ladder along every step the
+    // player takes — which does not look broken, it looks easy, and it
+    // finishes without the player ever ducking.
     if (solidWhen != ShadowSolidity.always) 'crouched-solid',
   };
 }
 
 /// When the shadow is a thing you can stand on.
 ///
-/// [always] is the game as every level before this one plays it: your past is
-/// furniture wherever it happens to be, and that is the mechanic.
+/// [crouched] is the game's rule: your past is furniture **only where you
+/// chose to duck**. It started as one level's opt-in and became the whole
+/// game after that level was played, because it fixes the thing the original
+/// rule got wrong.
 ///
-/// [crouched] makes it furniture **only where you chose to duck**, and it
-/// exists because "furniture wherever it happens to be" is this project's
-/// single largest source of broken levels. Every patch of open floor within
+/// [always] is what the game used to be — furniture wherever your past
+/// happens to be — and it is kept because a level is data that outlives the
+/// build that wrote it. Nothing in the campaign uses it.
+///
+/// The reason the rule changed: "furniture wherever it happens to be" is
+/// this project's single largest source of broken levels. Every patch of open floor within
 /// reach of a surface is a second way onto that surface, whether the designer
 /// drew it or not — it is why `Levels.ladderCarry` exists, and it quietly
 /// unsolved two finished levels months after they were closed. Under
@@ -644,15 +650,19 @@ bool _asBool(Object? value, String field) => value is bool
     ? value
     : throw LevelFormatException('$field is not true or false');
 
-/// Absent means [ShadowSolidity.always] — the behaviour of every level
-/// written before the field existed, which is the rule every new field here
-/// follows.
+/// Absent means [ShadowSolidity.crouched], which is the game's rule and the
+/// constructor's default.
+///
+/// Every level this build writes names the mode outright, so an absent field
+/// only ever comes from something hand-written — and a hand-written level
+/// means the rule the game has now, not the one it used to have. A level
+/// that wants the old behaviour says so.
 ///
 /// An unknown name is refused rather than defaulted. Defaulting would put up
 /// a level whose ladders work in places its author drew as walkable, and
 /// `requires` exists precisely so that never happens quietly.
 ShadowSolidity _solidity(Object? value) {
-  if (value == null) return ShadowSolidity.always;
+  if (value == null) return ShadowSolidity.crouched;
   final name = _asString(value, 'shadowSolidWhen');
   for (final mode in ShadowSolidity.values) {
     if (mode.name == name) return mode;
