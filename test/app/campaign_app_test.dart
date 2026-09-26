@@ -155,6 +155,48 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    /// How faded in the word is, wherever the ending has got to.
+    double wordAt(WidgetTester tester) => tester
+        .widget<Opacity>(
+          find
+              .ancestor(
+                of: find.text('خلصت'),
+                matching: find.byType(Opacity),
+              )
+              .first,
+        )
+        .opacity;
+
+    testWidgets('walks itself in, rather than appearing', (tester) async {
+      await tester.pumpWidget(endWith());
+      // The first frame is the three of them off the edge of the panel and
+      // nothing said yet.
+      await tester.pump();
+      expect(wordAt(tester), 0);
+
+      await tester.pump(const Duration(milliseconds: 1500));
+      expect(wordAt(tester), greaterThan(0));
+
+      await tester.pump(const Duration(seconds: 2));
+      expect(wordAt(tester), 1);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('and a tap skips to the end of it', (tester) async {
+      await tester.pumpWidget(endWith());
+      await tester.pump();
+      expect(wordAt(tester), 0);
+
+      // Somebody replaying the campaign has seen this once already.
+      await tester.tapAt(const Offset(200, 60));
+      await tester.pump();
+      expect(wordAt(tester), 1);
+
+      // And it has stopped: settling means the ticker is done, not that it is
+      // still running with nothing left to change.
+      await tester.pumpAndSettle();
+    });
+
     testWidgets('both ways onward are wired', (tester) async {
       var levels = 0;
       var restart = 0;
