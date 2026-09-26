@@ -25,6 +25,101 @@ void main() {
   LevelGame Function() build(Level level) =>
       () => LevelGame(levels: [level], inputs: [ScriptedInput()]);
 
+  group('stair of yourself', () {
+    final level = Levels.stairOfYourself;
+
+    testWithGame<LevelGame>(
+      'the near past on top of the far one reaches the roof',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(level.solution);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    // The level needs two shadows because one cannot stack on itself, and
+    // that is two units of margin: your past floating a ducked body up has
+    // its top 138 above the floor, and a jump — with the landing grace —
+    // gets the feet to 136. If a number in the jump ever moves, this is
+    // what says the level has become a one-shadow level.
+    testWithGame<LevelGame>(
+      'one past cannot be a stair on its own',
+      () => LevelGame(
+        levels: [
+          Level(
+            id: 'one-stack',
+            name: 'x',
+            teaches: 'x',
+            delaySeconds: 3,
+            spawnX: 0,
+            blocks: const [Rect.fromLTRB(-1500, 620, 1500, 2200)],
+            goal: const Rect.fromLTRB(1400, 548, 1480, 620),
+          ),
+        ],
+        inputs: [ScriptedInput()],
+      ),
+      (game) async {
+        await game.ready();
+        final source = game.input.sources.first as ScriptedInput;
+        void frame({
+          double axis = 0,
+          bool jump = false,
+          bool held = false,
+          bool crouch = false,
+        }) {
+          source.next = InputIntent(
+            moveAxis: axis,
+            jump: jump,
+            jumpHeld: held,
+            crouch: crouch,
+          );
+          game.update(Playthrough.dt);
+        }
+
+        void hold(double seconds, {bool jump = false, bool crouch = false}) {
+          for (var i = 0; i < (seconds / Playthrough.dt).round(); i++) {
+            frame(jump: jump && i == 0, held: jump, crouch: crouch);
+          }
+        }
+
+        // Duck for long enough to climb, and climb it in place.
+        hold(2.5, crouch: true);
+        hold(0.6);
+        hold(0.75, jump: true);
+        expect(game.player.isOnShadow, isTrue, reason: 'the first step');
+        // Duck on top of it, which is recorded sixty-nine up.
+        hold(1.2, crouch: true);
+        expect(game.player.isOnShadow, isTrue);
+        // Wait for it to stand and walk you back down to the floor.
+        hold(1.0);
+        expect(game.player.y, 620);
+
+        // It comes back floating a body up. Jump at it, over and over, from
+        // right underneath, for as long as it is there.
+        var highest = 620.0;
+        var floated = false;
+        for (var tries = 0; tries < 8; tries++) {
+          for (var i = 0; i < 40; i++) {
+            frame(jump: i == 0, held: true);
+            final shadow = game.shadow;
+            if (shadow.crouch >= 0.75 && shadow.y < 600) floated = true;
+            if (game.player.isGrounded) {
+              highest = game.player.y < highest ? game.player.y : highest;
+            }
+          }
+        }
+        expect(floated, isTrue, reason: 'it never came back floating');
+        expect(
+          highest,
+          620,
+          reason: 'stood on a past that was standing on nothing',
+        );
+      },
+    );
+  });
+
   group('three gates, one past', () {
     final level = Levels.threeGatesOnePast;
     // The balconies, left to right, and which gate each one holds.

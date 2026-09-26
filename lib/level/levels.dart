@@ -948,6 +948,108 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(660, 358, 740, 430),
   );
 
+  /// **Phase 7, one.** Two pasts, one on top of the other.
+  ///
+  /// Two shadows are usually read as *two places at once* — that is what
+  /// `twoNotOne` teaches. This level is the other thing they are: **two
+  /// steps**. One ducked body is sixty-nine tall and a jump off it reaches
+  /// two hundred and five. Duck on top of a ducked body, and later your past
+  /// is floating sixty-nine up, sitting on a past that is no longer under it
+  /// — and if the other shadow is still ducked on the floor underneath it at
+  /// that moment, the two of them are a stair a hundred and thirty-eight tall,
+  /// and the top of the climb is two hundred and seventy-four.
+  ///
+  /// The first shelf is the one step every level since the second has
+  /// taught, as a reminder with both shadows present. The roof is fifty
+  /// beyond one step and twenty-four inside two.
+  ///
+  /// **Why one shadow cannot do it alone,** which is the whole reason the
+  /// level needs two, and which rests on two units. Your own past floating
+  /// sixty-nine up has its top a hundred and thirty-eight above the floor,
+  /// and a jump — measured, not the textbook number — lifts the feet a
+  /// hundred and thirty. Even with the six units of landing grace the body
+  /// is two short. So the bottom step has to be *the other* past, still
+  /// ducked where you ducked first, and the long first duck is what keeps it
+  /// there: the far shadow holds the floor for as long as you held it, and it
+  /// has to outlast the near one arriving on top. `hard_levels_test.dart`
+  /// pins the two units.
+  static final Level stairOfYourself = Level(
+    id: 'stair-of-yourself',
+    solution: const [
+      Move.right(1.05), // to the foot of the step
+      Move(1.2, crouch: true), // duck: the first step
+      Move(0.3),
+      Move(0.9), // wait for it
+      Move(0.5, jump: true), // straight up onto it
+      Move.right(0.9, jump: true), // and off it onto the shelf
+      Move.right(1.45), // along the shelf to the foot of the wall
+      Move(3.5, crouch: true), // duck, long: this is the bottom step
+      Move(1.6), // stand up and wait for the far one to arrive under you
+      Move(0.5, jump: true), // up onto it
+      Move(1.0, crouch: true), // and duck on top of it: the second step
+      Move(1.0), // stand, and wait for the near one to arrive on top
+      Move(0.7, jump: true), // up onto that
+      Move.right(0.9, jump: true), // and off the top onto the roof
+      Move.right(1.5), // to the way out
+    ],
+    wrongIdeas: const [
+      // One step, which is all the first shelf needed. Duck at the foot of
+      // the wall, climb the first body that arrives, and jump: seventy short.
+      [
+        Move.right(1.05),
+        Move(1.2, crouch: true),
+        Move(1.2),
+        Move(0.5, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.45),
+        Move(1.2, crouch: true),
+        Move(1.0),
+        Move(0.5, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+      // One past stacked on itself. Duck, climb it, duck on top — and by the
+      // time that comes back floating in the air, the body that was under it
+      // has walked off. The floating one is a hundred and thirty-eight up and
+      // a jump is a hundred and thirty: two short, with nothing to stand on.
+      [
+        Move.right(1.05),
+        Move(1.2, crouch: true),
+        Move(1.2),
+        Move(0.5, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.45),
+        Move(1.0, crouch: true),
+        Move(1.1),
+        Move(0.5, jump: true),
+        Move(0.4, crouch: true),
+        Move(1.6),
+        Move(0.7, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+    ],
+    name: 'سلّم من نفسك',
+    teaches: 'ماضيك اتنين. واحد فوق التاني سلّمة.',
+    // Three seconds apart. The gap is what the bottom step has to last
+    // through: the far one arrives under you three seconds after the near
+    // one, and has to still be there when the near one comes back on top.
+    delays: const [2, 5],
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [
+      _ground(-400, 1300),
+      // One step up: a hundred and ninety, inside a ducked body's two
+      // hundred and five.
+      const Rect.fromLTRB(300, 430, 1300, 620),
+      // Two steps up: two hundred and fifty above the shelf, past one body's
+      // reach by forty-five and inside two bodies' by twenty-four. Nothing
+      // anywhere in the level is higher than the shelf except this.
+      const Rect.fromLTRB(760, 180, 1300, 430),
+    ],
+    goal: const Rect.fromLTRB(1000, 108, 1080, 180),
+  );
+
   /// **Phase 7, two.** Three gates, one past — and the past is the whole
   /// plan, laid down before the first gate opens.
   ///
@@ -1109,6 +1211,7 @@ abstract final class Levels {
     yourShadowIsNotHere,
     twoNotOne,
     notEveryStep,
+    stairOfYourself,
     threeGatesOnePast,
   ];
 
