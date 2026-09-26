@@ -203,8 +203,51 @@ class LightZone extends PositionComponent {
           : const [Color(0x00FFFFFF), Color(0x33FFFFFF)],
     );
 
+  /// The lamp the beam comes out of.
+  ///
+  /// Reported from looking at it: the column stopped dead in the middle of
+  /// the sky, lit from nowhere. Light with no source reads as a tinted
+  /// rectangle somebody drew on the scene, which is exactly what the player
+  /// must not think it is — the rectangle *is* the rule here.
+  ///
+  /// Horizontal and well above the play plane on purpose. A dark vertical in
+  /// reach is something the player tries to stand on, which is why there are
+  /// no lamp posts anywhere in this game.
+  static const double _lampDepth = 13;
+  static const double _lampInset = 0.16;
+
   @override
   void render(Canvas canvas) {
+    final lamp = Rect.fromLTRB(
+      area.left + area.width * _lampInset,
+      area.top - _lampDepth,
+      area.right - area.width * _lampInset,
+      area.top,
+    );
+    // What it hangs from, running off the top of the view. Two units wide and
+    // lit, for the same reason the door frames are: a dark upright is a thing
+    // the player tries to stand on.
+    canvas.drawRect(
+      Rect.fromLTRB(
+        lamp.center.dx - 1,
+        lamp.top - 900,
+        lamp.center.dx + 1,
+        lamp.top,
+      ),
+      Paint()..color = const Color(0x66FFE7B0),
+    );
+    canvas.drawRect(
+      lamp,
+      Paint()
+        ..color = _lit ? SilhouettePalette.blockFill : Palette.blockFill,
+    );
+    // The bulb: the underside of the housing, which is the brightest thing in
+    // the level and the place the eye follows down into the beam.
+    canvas.drawRect(
+      Rect.fromLTWH(lamp.left, lamp.bottom - 3, lamp.width, 3),
+      Paint()..color = const Color(0xFFFFE7B0),
+    );
+
     canvas.drawRect(area, _beam);
     canvas.drawRect(area.deflate(area.width * 0.28), _core);
     canvas.drawRect(
@@ -409,20 +452,79 @@ class Door extends PositionComponent {
     _open = (_open + (wantsOpen ? _speed : -_speed) * dt).clamp(0.0, 1.0);
   }
 
+  /// How far the head sticks out past the opening on each side, and how deep
+  /// it is.
+  static const double _headOverhang = 9;
+  static const double _headDepth = 20;
+
   @override
   void render(Canvas canvas) {
     final lit = look == LevelLook.silhouette;
-    canvas.drawRect(
-      bounds,
-      Paint()
-        ..color = lit ? SilhouettePalette.doorColor : Palette.doorColor,
+    final opening = spec.closed;
+    final fill = Paint()
+      ..color = lit ? SilhouettePalette.doorColor : Palette.doorColor;
+    final edge = Paint()
+      ..color = lit ? SilhouettePalette.blockTop : Palette.blockEdge;
+
+    // The head of the frame, and the reason it is here: the slab travels up
+    // by its own height, so an open door used to be a black bar hanging in
+    // the sky above an empty gap, attached to nothing. Now it goes somewhere.
+    // Out of reach by construction — `Levels.minDoorHeight` is 250 and a body
+    // on a shadow gets to 232, so the top of any door is already above
+    // anywhere the player can stand, and the head is above that.
+    final head = Rect.fromLTRB(
+      opening.left - _headOverhang,
+      opening.top - _headDepth,
+      opening.right + _headOverhang,
+      opening.top,
     );
+    canvas.drawRect(head, fill);
+    canvas.drawRect(
+      Rect.fromLTWH(head.left, head.top, head.width, lit ? 3 : 2),
+      edge,
+    );
+
+    // The slab, clipped to the opening, so it slides up into the head rather
+    // than past it. The collision box is [bounds] and is unchanged: what is
+    // hidden is the part that has left the doorway, and the doorway is the
+    // only part of it anybody can reach.
+    canvas.save();
+    canvas.clipRect(opening);
+    canvas.drawRect(bounds, fill);
     canvas.drawRect(
       bounds,
       Paint()
         ..color = lit ? SilhouettePalette.blockTop : Palette.blockEdge
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
+    );
+    canvas.restore();
+
+    // The jambs and the sill, which turn the head from a bar hanging in the
+    // sky into a doorway. There is no wall either side of these — they are
+    // free-standing gates on flat ground — so without the uprights the frame
+    // has nothing holding it up.
+    //
+    // Lit lines rather than dark posts, and that is not decoration. A dark
+    // vertical in this game is a thing the player tries to stand on, and a
+    // drawn solid that the body walks straight through is a lie. A hairline
+    // is the backlight catching an edge, which is the whole grammar of the
+    // scene and cannot be mistaken for somewhere to put your feet.
+    final jamb = lit ? 3.0 : 2.0;
+    for (final x in [opening.left - jamb, opening.right]) {
+      canvas.drawRect(
+        Rect.fromLTRB(x, opening.top, x + jamb, opening.bottom),
+        edge,
+      );
+    }
+    canvas.drawRect(
+      Rect.fromLTRB(
+        head.left,
+        opening.bottom - jamb,
+        head.right,
+        opening.bottom,
+      ),
+      edge,
     );
   }
 }
@@ -461,12 +563,37 @@ class Goal extends PositionComponent {
               ? SilhouettePalette.goalReached
               : SilhouettePalette.goalIdle,
       );
-      canvas.drawRect(
-        area.deflate(2),
+
+      // Light coming out of it, pooling at the bottom. A rectangle with a
+      // stroke all the way round it reads as a picture frame hung on the sky;
+      // something spilling light reads as somewhere to walk into, which is
+      // what it is.
+      if (!reached) {
+        canvas.drawRect(
+          area,
+          Paint()
+            ..blendMode = BlendMode.plus
+            ..shader = ui.Gradient.linear(
+              Offset(0, area.top),
+              Offset(0, area.bottom),
+              const [Color(0x00E8B55E), Color(0x66FFC46A)],
+            ),
+        );
+      }
+
+      // Framed on three sides. Not the fourth: the bottom of this is the
+      // floor you walk in over, and a line across it turns the doorway back
+      // into a box.
+      canvas.drawPath(
+        Path()
+          ..moveTo(area.left, area.bottom)
+          ..lineTo(area.left, area.top)
+          ..lineTo(area.right, area.top)
+          ..lineTo(area.right, area.bottom),
         Paint()
           ..color = SilhouettePalette.goalReached
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 4,
+          ..strokeWidth = 3,
       );
       return;
     }

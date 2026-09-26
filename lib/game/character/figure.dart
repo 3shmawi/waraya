@@ -43,6 +43,11 @@ class Figure {
   /// slide.
   static const double _stride = 0.20;
 
+  /// [_stride], for anything outside that has to turn distance into phase —
+  /// the mark on the ending screen walks its bodies in and needs the same
+  /// relation between travel and gait, or their feet slide.
+  static double get stride => _stride;
+
   /// How high the swing foot lifts. A walk skims the ground; a run picks the
   /// knee up.
   static const double _lift = 0.15;

@@ -9,6 +9,18 @@
 # bench: a link handed to someone is a link to the game. The bench carries debug
 # sliders that would only invite fiddling with numbers the levels are measured
 # against.
+#
+# THIS WORKFLOW ONLY PUBLISHES IF PAGES IS SET TO DEPLOY FROM ACTIONS.
+# Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+#
+# It is a repository setting and nothing in this file can change it. With the
+# other setting — "Deploy from a branch" — GitHub runs its own Jekyll build on
+# every push as well, and that build renders README.md at the root, knows
+# nothing about site/, and has no game to put under play/. Both deployments
+# then race: this one finished at 22:32:12 and Jekyll's at 22:32:17, so the
+# README won and the site looked like a repository page for twelve pushes,
+# with every run of this workflow green. `configure-pages` with `enablement`
+# turns Pages *on*; it does not move an already-configured source.
 name: pages
 
 on:
