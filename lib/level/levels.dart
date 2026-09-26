@@ -783,7 +783,24 @@ abstract final class Levels {
     delays: const [2, 6],
     spawnX: 120,
     floorTop: _floor,
-    blocks: [_ground(-900, 700)],
+    blocks: [
+      _ground(-900, 700),
+      // The wall that makes the far plate a place rather than a thing on the
+      // way, and the level does not hold without it.
+      //
+      // Found by sweeping the campaign for the cheapest run that finishes:
+      // walk left past both plates, turn round, walk right. Out and back
+      // crosses each plate **twice**, which is four presses from one walk,
+      // and with the turn as a free dial two of them can always be slid four
+      // seconds apart — the exact gap between the two shadows. It finished in
+      // 9.4 seconds, faster than the intended solution, without the player
+      // ever working out what the gap was for.
+      //
+      // A dead end collapses the two crossings into one press whose *length*
+      // you choose, which is the thing the level is actually about. Its face
+      // is at -560 so a body pushed up against it is standing on the plate.
+      const Rect.fromLTRB(-600, 260, -560, 620),
+    ],
     plates: const [
       // The far one, which the six-second shadow comes back for.
       PlateSpec(area: Rect.fromLTRB(-560, 608, -460, 620), opens: 'far'),
