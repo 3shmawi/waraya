@@ -109,6 +109,10 @@ const clips = <Clip>[
   Clip(number: 7, slug: 'the-key', levelId: 'close-what-you-opened'),
   Clip(number: 8, slug: 'in-the-light', levelId: 'your-shadow-is-not-here'),
   Clip(number: 9, slug: 'two-of-you', levelId: 'two-not-one'),
+  // The one the rule change earned. Every clip before it now shows ducking
+  // somewhere, because a body that walked past standing up is not a floor
+  // any more — this is the level where that is the whole question.
+  Clip(number: 10, slug: 'duck-to-build', levelId: 'not-every-step'),
 ];
 
 void main() {
