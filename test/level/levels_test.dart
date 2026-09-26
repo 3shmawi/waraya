@@ -1,5 +1,6 @@
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:waraya/game/config.dart';
@@ -505,10 +506,7 @@ void main() {
       (game) async {
         await game.ready();
         final run = start(game)
-          ..play(
-            Levels.closeWhatYouOpened.solution,
-            stopWhenComplete: true,
-          );
+          ..play(Levels.closeWhatYouOpened.solution, stopWhenComplete: true);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -709,10 +707,7 @@ void main() {
       (game) async {
         await game.ready();
         final run = start(game)
-          ..play(
-            Levels.yourShadowIsNotHere.solution,
-            stopWhenComplete: true,
-          );
+          ..play(Levels.yourShadowIsNotHere.solution, stopWhenComplete: true);
 
         expect(run.finishedAt, isNotNull, reason: run.where);
       },
@@ -796,14 +791,15 @@ void main() {
               floorTop: 620,
               blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
               plates: const [
-                PlateSpec(area: Rect.fromLTRB(-50, 608, 50, 620), opens: 'gate'),
+                PlateSpec(
+                  area: Rect.fromLTRB(-50, 608, 50, 620),
+                  opens: 'gate',
+                ),
               ],
               doors: const [
                 DoorSpec(id: 'gate', closed: Rect.fromLTRB(400, 360, 426, 620)),
               ],
-              lights: lit
-                  ? const [Rect.fromLTRB(-70, 200, 70, 620)]
-                  : const [],
+              lights: lit ? const [Rect.fromLTRB(-70, 200, 70, 620)] : const [],
               goal: const Rect.fromLTRB(600, 548, 680, 620),
             ),
           ],
@@ -863,9 +859,7 @@ void main() {
               doors: const [
                 DoorSpec(id: 'gate', closed: Rect.fromLTRB(400, 360, 426, 620)),
               ],
-              lights: lit
-                  ? const [Rect.fromLTRB(-70, 200, 70, 620)]
-                  : const [],
+              lights: lit ? const [Rect.fromLTRB(-70, 200, 70, 620)] : const [],
               goal: const Rect.fromLTRB(600, 548, 680, 620),
             ),
           ],
@@ -911,9 +905,7 @@ void main() {
               floorTop: 620,
               shadowKills: true,
               blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
-              lights: lit
-                  ? const [Rect.fromLTRB(-70, 200, 70, 620)]
-                  : const [],
+              lights: lit ? const [Rect.fromLTRB(-70, 200, 70, 620)] : const [],
               goal: const Rect.fromLTRB(600, 548, 680, 620),
             ),
           ],
@@ -967,9 +959,7 @@ void main() {
       'and with one shadow the same run never opens the gate at all',
       () => LevelGame(
         levels: [
-          levelFromJson(
-            Levels.twoNotOne.toJson()..['delays'] = <double>[3],
-          ),
+          levelFromJson(Levels.twoNotOne.toJson()..['delays'] = <double>[3]),
         ],
         inputs: [ScriptedInput()],
       ),
@@ -1091,7 +1081,8 @@ void main() {
         expect(
           level.wrongIdeas,
           isNotEmpty,
-          reason: '${level.id} has no recorded wrong idea, which is the half '
+          reason:
+              '${level.id} has no recorded wrong idea, which is the half '
               'that keeps it a puzzle',
         );
       }
@@ -1195,6 +1186,36 @@ void main() {
           ..play(Levels.notEveryStep.wrongIdeas[1], stopWhenComplete: true);
 
         expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'the step you can use is a glance brighter than the one you cannot',
+      build(Levels.notEveryStep),
+      (game) async {
+        await game.ready();
+        // Readability, pinned. The whole level is the player deciding where
+        // to leave a step, and the only thing on screen telling them which
+        // body is a step is how hard it is drawn. A change to those numbers
+        // that closes the gap does not break a puzzle, it breaks the level's
+        // one instruction — and nothing else would fail.
+        final run = start(game);
+        final upright = <double>[];
+        final ducked = <double>[];
+        for (final move in Levels.notEveryStep.solution) {
+          run.play([move]);
+          final ghost = game.shadow;
+          if (!ghost.isActive) continue;
+          (ghost.crouch >= 0.75 ? ducked : upright).add(ghost.opacity);
+        }
+
+        expect(ducked, isNotEmpty, reason: 'nothing was ever ducked');
+        expect(upright, isNotEmpty, reason: 'nothing was ever upright');
+        expect(
+          ducked.reduce(min),
+          greaterThan(upright.reduce(max) * 2),
+          reason: 'the two states have to read apart at a glance',
+        );
       },
     );
 
