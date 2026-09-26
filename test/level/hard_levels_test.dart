@@ -195,6 +195,54 @@ void main() {
     });
   });
 
+  group('all of it', () {
+    final level = Levels.allOfIt;
+
+    testWithGame<LevelGame>(
+      'four rooms, four old lessons, one run',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(level.solution);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    test('uses at least four of the words Phase 6 added', () {
+      final used = {
+        if (level.toggles.isNotEmpty) 'toggles',
+        if (level.plates.any((p) => p.inverts)) 'inverts',
+        if (level.lights.isNotEmpty) 'lights',
+        if (level.delays.length > 1) 'delays',
+        if (level.doors.any((d) => d.lingerSeconds > 0)) 'lingerSeconds',
+      };
+      expect(used.length, greaterThanOrEqualTo(4), reason: '$used');
+    });
+
+    // Each wrong idea is one room's mistake with everything else right, so
+    // each should stop in front of its own room's gate — not somewhere
+    // earlier, which would mean the recording is broken rather than wrong.
+    final stops = [
+      level.doors[1].closed.left,
+      level.doors[2].closed.left,
+      level.blocks[4].left,
+    ];
+    for (final (i, idea) in level.wrongIdeas.indexed) {
+      testWithGame<LevelGame>(
+        'wrong idea ${i + 1} gets as far as its own room',
+        build(level),
+        (game) async {
+          await game.ready();
+          final run = start(game)..play(idea, stopWhenComplete: true);
+
+          expect(run.finishedAt, isNull, reason: run.where);
+          expect(game.player.x, closeTo(stops[i], 80), reason: run.where);
+        },
+      );
+    }
+  });
+
   group('three gates, one past', () {
     final level = Levels.threeGatesOnePast;
     // The balconies, left to right, and which gate each one holds.
