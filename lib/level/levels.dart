@@ -770,13 +770,7 @@ abstract final class Levels {
         Move.right(1.6),
       ],
       // Or press the near plate alone, which opens half a gate.
-      [
-        Move.left(0.8),
-        Move(2.0),
-        Move.right(1.4),
-        Move(4.0),
-        Move.right(1.6),
-      ],
+      [Move.left(0.8), Move(2.0), Move.right(1.4), Move(4.0), Move.right(1.6)],
     ],
     name: 'اتنين مش واحد',
     teaches: 'البوابة عايزة الزرارين مع بعض، وانت واحد. بس ماضيك اتنين.',
@@ -954,6 +948,154 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(660, 358, 740, 430),
   );
 
+  /// **Phase 7, two.** Three gates, one past — and the past is the whole
+  /// plan, laid down before the first gate opens.
+  ///
+  /// Every plate is behind the first gate. There is nothing to press on the
+  /// far side of it, so by the time you walk through, the three presses the
+  /// three gates need are already in your past and on their way: the second
+  /// and third gates are opened by things you did **before you could see
+  /// them working**. That is the hypothesis this phase is built on — a long
+  /// level is not a short one with more floor, it is one where the buffer is
+  /// something you spend from — and this is the level that tests it.
+  ///
+  /// The plates are on balconies rather than on the floor, and the level does
+  /// not exist without that. A floor plate is a plate you cross, and a shadow
+  /// crossing a plate opens its gate for as long as the grace lasts: the first
+  /// draft had all three on the floor in a row, and walking to the wall and
+  /// back — pressing nothing on purpose — opened the gates in a usable order
+  /// from the crossings alone. A balcony is something you have to decide to
+  /// climb onto. Walking underneath it presses nothing.
+  ///
+  /// And the balconies are **not** in the gates' order. The middle one opens
+  /// the first gate, the far one the second, the near one the third. So the
+  /// two orders a hand falls into — nearest first, and furthest first (which
+  /// is what the very first level taught) — both open the gates in an order
+  /// nobody can walk through. The only order that works is the gates' own,
+  /// which means the route through the balconies is worked out from the gates
+  /// backwards: that is the thing to understand, and nothing here is timed
+  /// tightly enough to be the thing instead. The grace on each gate is
+  /// generous, and a sweep of every order at every pause
+  /// (`levels_test.dart`) finds only that one order finishing — with anything
+  /// from a touch to over a second on each balcony.
+  ///
+  /// Getting it wrong costs a restart rather than a walk back, and that is
+  /// the answer this level gives to the question `docs/phase-7-hard-levels.md`
+  /// left open. The whole plan lives on this side of the first gate, so "go
+  /// back and redo the part that went wrong" and "start again" are the same
+  /// walk; a way back would be a slower R. Nothing kills.
+  static final Level threeGatesOnePast = Level(
+    id: 'three-gates-one-past',
+    solution: const [
+      Move.left(1.3), // under the near balcony, to the foot of the middle one
+      Move.left(0.5, jump: true), // up onto it
+      Move.left(0.15),
+      Move(0.6), // the first gate
+      Move.left(0.2),
+      Move.left(0.55, jump: true), // across onto the far balcony
+      Move.left(0.25),
+      Move(0.6), // the second gate
+      Move.right(1.45), // off it, and back under the middle one
+      Move.right(0.55, jump: true), // up onto the near balcony
+      Move.right(0.1),
+      Move(0.6), // the third gate
+      Move.right(12), // and through all three, in the order they were pressed
+    ],
+    wrongIdeas: const [
+      // Nearest first, the way the balconies come to hand.
+      [
+        Move.left(0.15),
+        Move.left(0.55, jump: true),
+        Move.left(0.1),
+        Move(0.6),
+        Move.left(0.2),
+        Move.left(0.55, jump: true),
+        Move.left(0.25),
+        Move(0.6),
+        Move.left(0.38),
+        Move.left(0.55, jump: true),
+        Move.left(0.25),
+        Move(0.6),
+        Move.right(14),
+      ],
+      // Furthest first, the habit the first level taught.
+      [
+        Move.left(2.4),
+        Move.left(0.55, jump: true),
+        Move.left(0.1),
+        Move(0.6),
+        Move.right(0.2),
+        Move.right(0.55, jump: true),
+        Move.right(0.25),
+        Move(0.6),
+        Move.right(0.3),
+        Move.right(0.55, jump: true),
+        Move.right(0.25),
+        Move(0.6),
+        Move.right(14),
+      ],
+      // One gate at a time: the first one's balcony, through it, and then
+      // look for the second.
+      [
+        Move.left(1.3),
+        Move.left(0.5, jump: true),
+        Move.left(0.15),
+        Move(1.2),
+        Move.right(14),
+      ],
+    ],
+    name: 'تلات أبواب بماضي واحد',
+    teaches: 'ماضيك راجع بنفس الترتيب اللي دست بيه.',
+    // Longer than anything else in the campaign, because it has to hold three
+    // presses and the walk back from them. The waiting it costs is at the
+    // first gate, with the plan already made, and it is short.
+    delaySeconds: 5.5,
+    spawnX: -20,
+    floorTop: _floor,
+    blocks: [
+      _ground(-800, 1100),
+      // The back wall. Tall enough that a body on a ducked shadow on the far
+      // balcony still cannot top it (the top of that climb is 301).
+      const Rect.fromLTRB(-840, 200, -800, 620),
+      // Three balconies, a hundred and fourteen above the floor: out of reach
+      // of nothing, a jump puts you on any of them, but high enough that a
+      // standing body walks underneath with room to spare. Walking past is
+      // not pressing. The gaps between them are a hundred and fifty, which is
+      // room to take off from the floor in and a hop from one to the next.
+      const Rect.fromLTRB(-750, 506, -650, 522),
+      const Rect.fromLTRB(-500, 506, -400, 522),
+      const Rect.fromLTRB(-250, 506, -150, 522),
+    ],
+    // Out of order on purpose. See above.
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-740, 494, -660, 506), opens: 'second'),
+      PlateSpec(area: Rect.fromLTRB(-490, 494, -410, 506), opens: 'first'),
+      PlateSpec(area: Rect.fromLTRB(-240, 494, -160, 506), opens: 'third'),
+    ],
+    // Four hundred apart, a little under two seconds of walking, and the
+    // grace is most of that again: the gates forgive arriving late, never the
+    // wrong order. The first one has longest, because it is the one you wait
+    // at while your whole plan walks back to you.
+    doors: const [
+      DoorSpec(
+        id: 'first',
+        closed: Rect.fromLTRB(60, 360, 86, 620),
+        lingerSeconds: 2,
+      ),
+      DoorSpec(
+        id: 'second',
+        closed: Rect.fromLTRB(460, 360, 486, 620),
+        lingerSeconds: 1.5,
+      ),
+      DoorSpec(
+        id: 'third',
+        closed: Rect.fromLTRB(860, 360, 886, 620),
+        lingerSeconds: 1.5,
+      ),
+    ],
+    goal: const Rect.fromLTRB(960, 548, 1040, 620),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -967,6 +1109,7 @@ abstract final class Levels {
     yourShadowIsNotHere,
     twoNotOne,
     notEveryStep,
+    threeGatesOnePast,
   ];
 
   /// The Phase 2 tuning bench, as a level so it runs on the same code as the
