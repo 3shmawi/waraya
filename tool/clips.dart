@@ -103,6 +103,12 @@ const clips = <Clip>[
   Clip(number: 4, slug: 'not-this-way', levelId: 'not-the-same-way-back'),
   Clip(number: 5, slug: 'go-in-low', levelId: 'go-in-low'),
   Clip(number: 6, slug: 'hold-the-door', levelId: 'hold-your-own-door'),
+  // The three that came after the first six were cut. Each one is a rule the
+  // earlier clips could not show, which is why they are worth their own post
+  // rather than a longer version of clip one.
+  Clip(number: 7, slug: 'the-key', levelId: 'close-what-you-opened'),
+  Clip(number: 8, slug: 'in-the-light', levelId: 'your-shadow-is-not-here'),
+  Clip(number: 9, slug: 'two-of-you', levelId: 'two-not-one'),
 ];
 
 void main() {
