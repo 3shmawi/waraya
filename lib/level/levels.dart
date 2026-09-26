@@ -50,6 +50,16 @@ abstract final class Levels {
   /// surface 64 below the head. The reach of that second way up.
   static const double ladderCarry = 145;
 
+  /// [ladderReach] in a level where only a ducked body is solid: a crouched
+  /// figure is `crouchHeightFactor` of a standing one, so the step is 69 and
+  /// the reach is 69 + 136.
+  ///
+  /// Twenty-seven short of the standing number, which sounds like nothing and
+  /// is the whole margin: a shelf drawn at 190 is still climbable and one
+  /// drawn at 210 is not. Any level using [ShadowSolidity.crouched] is
+  /// measured against this and not against [ladderReach].
+  static const double crouchedLadderReach = 205;
+
   /// The same rule for a level with two shadows, where the staircase has one
   /// more step in it.
   ///
@@ -742,6 +752,117 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(400, 548, 480, 620),
   );
 
+  /// **Phase 7, one.** Your past is a route, not a shelf.
+  ///
+  /// Ten levels have taught one thing without ever saying it: everywhere you
+  /// have been is somewhere you can stand. That is the mechanic and it is
+  /// also the game's biggest liability — every patch of open floor beside a
+  /// surface is a way onto that surface whether anybody drew it or not, which
+  /// is what quietly unsolved two finished levels months after they closed.
+  ///
+  /// Here a walk leaves nothing. The shadow still presses the plate standing
+  /// up — it is as real as it ever was — but you can only put your feet on it
+  /// where you **ducked**, and ducking is a thing you do on purpose and pay
+  /// for: it costs you more than half your speed while the delay keeps
+  /// running.
+  ///
+  /// So the level is the old habit taken away. The shelf is 190 above the
+  /// floor, a jump is 136, and the only way up is a step you decided to
+  /// leave. Walk the whole thing perfectly without ducking once and you end
+  /// up under the shelf with nothing to climb — which is exactly the run that
+  /// would have finished every other level in the campaign, and it is the
+  /// first recorded wrong idea.
+  static final Level notEveryStep = Level(
+    id: 'not-every-step',
+    solution: const [
+      Move.left(0.95), // the wrong way first, as ever: out to the plate
+      Move(1.2), // hold it, so your past holds the door
+      Move.right(2.1), // back to the gate, arriving as it opens
+      Move.right(0.55), // through
+      Move(0.1),
+      Move(1.0, crouch: true), // and duck. this is the only step you get
+      Move.left(0.7), // back out of your own way
+      Move(0.8), // wait for the thing you left
+      Move.right(0.55), // run at it
+      Move.right(0.6, jump: true), // onto its head
+      Move.right(0.7, jump: true), // and off the head onto the shelf
+      Move.right(1.2), // along to the way out
+    ],
+    wrongIdeas: const [
+      // The run that would have won any other level in the game: do
+      // everything right and never duck. The plate is pressed, the door
+      // opens, you walk through and stand under the shelf on a trail that is
+      // not there.
+      [
+        Move.left(0.95),
+        Move(1.2),
+        Move.right(2.1),
+        Move.right(0.55),
+        Move(0.8),
+        Move.left(0.7),
+        Move(1.6),
+        Move.right(0.55),
+        Move.right(0.6, jump: true),
+        Move.right(0.7, jump: true),
+        Move.right(1.2),
+      ],
+      // Or duck in the obvious place — on the plate, where you are standing
+      // still anyway — and get a perfectly good step on the wrong side of a
+      // door you then have to walk through.
+      [
+        Move.left(0.95),
+        Move(0.2),
+        Move(1.0, crouch: true),
+        Move.right(2.1),
+        Move.right(0.55),
+        Move(2.0),
+        Move.right(0.6, jump: true),
+        Move.right(0.7, jump: true),
+        Move.right(2.0),
+      ],
+    ],
+    name: 'مش كل خطوة سلّمة',
+    teaches: 'ظلك سكة مش رفّ — إلا في المكان اللي وطيت فيه.',
+    // Only where it ducked. The one field in the schema that takes something
+    // away, and `requires` names it: a build that has never heard of it plays
+    // this level with a ladder under every step and finishes it without the
+    // player ever crouching, which does not look broken — it looks easy.
+    solidWhen: ShadowSolidity.crouched,
+    delaySeconds: 3,
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [
+      _ground(-600, 900),
+      // The shelf with the way out on it. A hundred and ninety above the
+      // floor: past a jump (136), inside a duck's staircase (205) by fifteen.
+      // See [crouchedLadderReach] — this number is the reason it exists.
+      const Rect.fromLTRB(420, 430, 820, 470),
+      // The wall closing the shelf's far end, and the level does not exist
+      // without it. Open floor runs past 820, and open floor beside a surface
+      // is a way onto that surface — duck out there and the shelf has a back
+      // door. 260 above the shelf, which nothing can top.
+      const Rect.fromLTRB(820, 170, 860, 430),
+    ],
+    // The wrong way from everything, which is the first thing this game ever
+    // taught and still the spine of the level: you cannot open the gate and
+    // be at the gate.
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-260, 608, -160, 620), opens: 'gate'),
+    ],
+    // Six seconds of grace for the same reason level three has them: the
+    // lesson here is where to duck, not how fast you can walk, and a door
+    // held open only for as long as you happened to stand on a plate turns
+    // the level into a stopwatch.
+    doors: const [
+      DoorSpec(
+        id: 'gate',
+        closed: Rect.fromLTRB(250, 360, 276, 620),
+        lingerSeconds: 6,
+      ),
+    ],
+    goal: const Rect.fromLTRB(600, 358, 680, 430),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -754,6 +875,7 @@ abstract final class Levels {
     closeWhatYouOpened,
     yourShadowIsNotHere,
     twoNotOne,
+    notEveryStep,
   ];
 
   /// The Phase 2 tuning bench, as a level so it runs on the same code as the

@@ -65,6 +65,14 @@ class ShadowFigure extends PositionComponent {
   /// it is not solid, and it cannot kill.
   bool get isActive => _snapshot != null;
 
+  /// How folded the recorded pose was, nought standing to one fully ducked.
+  ///
+  /// Off the snapshot rather than off the drawing, for the same reason
+  /// [bounds] is: what the shadow is has to be exactly what was recorded, and
+  /// a value read from the render frame answers differently on a 120Hz
+  /// screen.
+  double get crouch => _snapshot?.crouch ?? 0;
+
   late final Figure _figure = Figure(height: size.y, color: color);
 
   /// Sized from the recorded pose: a shadow that was crouching is a shorter

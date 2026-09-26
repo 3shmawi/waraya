@@ -28,6 +28,7 @@ class Level {
     this.lights = const [],
     this.markers = const [],
     this.shadowIsSolid = true,
+    this.solidWhen = ShadowSolidity.always,
     this.shadowKills = false,
     this.floorTop = 620,
     this.solution = const [],
@@ -109,6 +110,9 @@ class Level {
   /// Can the player stand on the shadow in this level?
   final bool shadowIsSolid;
 
+  /// And *when* — always, or only where it is crouched. See [ShadowSolidity].
+  final ShadowSolidity solidWhen;
+
   /// Does touching the shadow restart the level?
   final bool shadowKills;
 
@@ -168,6 +172,7 @@ class Level {
     'inverted-plates',
     'lights',
     'delays',
+    'crouched-solid',
   };
 
   /// What this level needs beyond the baseline, worked out from its contents.
@@ -191,8 +196,38 @@ class Level {
     // alone puts up a level with one shadow, which is a level that looks
     // right, plays, and cannot be finished.
     if (delays.length > 1) 'delays',
+    // The most dangerous of the lot to drop. A build that has never heard of
+    // it reads a level drawn around "a walk leaves no ladder" and plays it
+    // with a ladder along every step the player takes — which does not look
+    // broken, it looks easy, and it finishes without the player ever ducking.
+    if (solidWhen != ShadowSolidity.always) 'crouched-solid',
   };
 }
+
+/// When the shadow is a thing you can stand on.
+///
+/// [always] is the game as every level before this one plays it: your past is
+/// furniture wherever it happens to be, and that is the mechanic.
+///
+/// [crouched] makes it furniture **only where you chose to duck**, and it
+/// exists because "furniture wherever it happens to be" is this project's
+/// single largest source of broken levels. Every patch of open floor within
+/// reach of a surface is a second way onto that surface, whether the designer
+/// drew it or not — it is why `Levels.ladderCarry` exists, and it quietly
+/// unsolved two finished levels months after they were closed. Under
+/// [crouched] a walk leaves nothing behind, so the ladder is a decision
+/// rather than a side effect, and the level has the one route it was drawn
+/// with.
+///
+/// What it does **not** change: the shadow still presses plates, throws keys
+/// and kills, standing or not. Only whether you can put your feet on it. A
+/// past that stopped pressing buttons when it stood up would not be a
+/// variation on this game, it would be a different one.
+///
+/// The price is height. A crouched body is [WarayaConfig.crouchHeightFactor]
+/// of a standing one, so the staircase is shorter — see
+/// [Levels.crouchedLadderReach].
+enum ShadowSolidity { always, crouched }
 
 /// A pressure plate, and the door it holds open while something stands on it.
 class PlateSpec {
@@ -388,6 +423,7 @@ extension LevelJson on Level {
     'spawnX': spawnX,
     'floorTop': floorTop,
     'shadowIsSolid': shadowIsSolid,
+    'shadowSolidWhen': solidWhen.name,
     'shadowKills': shadowKills,
     'solution': [for (final move in solution) _moveToJson(move)],
     'wrongIdeas': [
@@ -495,6 +531,7 @@ Level levelFromJson(Object? source) {
       spawnX: _asDouble(json['spawnX'], 'spawnX'),
       floorTop: _asDouble(json['floorTop'] ?? 620, 'floorTop'),
       shadowIsSolid: _asBool(json['shadowIsSolid'] ?? true, 'shadowIsSolid'),
+      solidWhen: _solidity(json['shadowSolidWhen']),
       shadowKills: _asBool(json['shadowKills'] ?? false, 'shadowKills'),
       goal: _rectFromJson(json['goal'], 'goal'),
       solution: _moveList(json['solution'], 'solution'),
@@ -606,6 +643,22 @@ double _asDouble(Object? value, String field) => value is num
 bool _asBool(Object? value, String field) => value is bool
     ? value
     : throw LevelFormatException('$field is not true or false');
+
+/// Absent means [ShadowSolidity.always] — the behaviour of every level
+/// written before the field existed, which is the rule every new field here
+/// follows.
+///
+/// An unknown name is refused rather than defaulted. Defaulting would put up
+/// a level whose ladders work in places its author drew as walkable, and
+/// `requires` exists precisely so that never happens quietly.
+ShadowSolidity _solidity(Object? value) {
+  if (value == null) return ShadowSolidity.always;
+  final name = _asString(value, 'shadowSolidWhen');
+  for (final mode in ShadowSolidity.values) {
+    if (mode.name == name) return mode;
+  }
+  throw LevelFormatException('shadowSolidWhen is not a mode: $name');
+}
 
 Rect _rectFromJson(Object? value, String field) {
   final list = _asList(value, field);

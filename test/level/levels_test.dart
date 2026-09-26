@@ -1113,6 +1113,108 @@ void main() {
     }
   });
 
+  group('not every step', () {
+    testWithGame<LevelGame>(
+      'duck once, and the step you left is the way up',
+      build(Levels.notEveryStep),
+      (game) async {
+        await game.ready();
+        final run = start(game)..play(Levels.notEveryStep.solution);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'the run that wins every other level in the game loses this one',
+      build(Levels.notEveryStep),
+      (game) async {
+        await game.ready();
+        // Plate pressed, door opened, walked through, waited, ran at the
+        // spot, jumped — everything right except the duck. In any other
+        // level the trail underfoot would have carried them up.
+        final run = start(game)
+          ..play(Levels.notEveryStep.wrongIdeas.first, stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+        // On the floor, not the shelf: the climb is what failed, not the
+        // door. The door is the thing that worked.
+        expect(game.player.y, Levels.notEveryStep.floorTop);
+        expect(game.doors.single.openFraction, 1);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'and the same level with the flag off finishes without ducking at all',
+      () => LevelGame(
+        levels: [
+          levelFromJson(
+            Levels.notEveryStep.toJson()..['shadowSolidWhen'] = 'always',
+          ),
+        ],
+        inputs: [ScriptedInput()],
+      ),
+      (game) async {
+        await game.ready();
+        // The whole argument for the field, run as an experiment: with the
+        // shadow solid everywhere, the never-duck run walks up its own
+        // footprints and finishes. That is not a level, it is a corridor —
+        // and it is exactly what an older build would quietly serve, which is
+        // why `requires` names the mechanic and refuses rather than guessing.
+        //
+        // The same run as the recorded wrong idea, with one number moved: a
+        // standing body is 96 and a ducked one 69, so the head arrives 27
+        // higher and the jump at it comes four tenths of a second sooner.
+        // The point is that *nothing else* has to change — no ducking, no
+        // different route, no thinking.
+        final run = start(game)
+          ..play(const [
+            Move.left(0.95),
+            Move(1.2),
+            Move.right(2.1),
+            Move.right(0.55),
+            Move(0.8),
+            Move.left(0.7),
+            Move(1.2),
+            Move.right(0.55),
+            Move.right(0.6, jump: true),
+            Move.right(0.7, jump: true),
+            Move.right(1.2),
+          ], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'ducking on the plate leaves a step on the wrong side of the door',
+      build(Levels.notEveryStep),
+      (game) async {
+        await game.ready();
+        final run = start(game)
+          ..play(Levels.notEveryStep.wrongIdeas[1], stopWhenComplete: true);
+
+        expect(run.finishedAt, isNull, reason: run.where);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'a standing past still presses the plate it is standing on',
+      build(Levels.notEveryStep),
+      (game) async {
+        await game.ready();
+        // The half of the rule that does not change, and the level does not
+        // work without it: the shadow is only *furniture* where it ducked.
+        // Everywhere else it is still a body, and a body on a plate holds a
+        // door open.
+        final run = start(game)
+          ..play(const [Move.left(0.95), Move(1.2), Move(3.0)]);
+
+        expect(game.doors.single.openFraction, 1, reason: run.where);
+      },
+    );
+  });
+
   group('the campaign holds together', () {
     test('teaches one thing at a time, in order', () {
       expect(Levels.campaign.first.id, 'press-it-early');

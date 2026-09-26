@@ -148,6 +148,29 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   Iterable<ShadowFigure> get liveShadows =>
       shadows.where((s) => s.isActive && !s.inLight);
 
+  /// How far down a recorded pose has to be folded before it counts as ducked.
+  ///
+  /// Not zero. The crouch eases in and out over a few frames, so a body that
+  /// merely brushed the key on its way past records a sliver of one — and a
+  /// sliver of a crouch that makes a step is a step the player did not mean
+  /// to leave, which is the entire thing [ShadowSolidity.crouched] exists to
+  /// stop. Three quarters is comfortably past anything accidental and
+  /// comfortably short of the pose you hold on purpose.
+  static const double _duckedEnough = 0.75;
+
+  /// The shadows you can put your feet on this frame.
+  ///
+  /// In an ordinary level that is all of them. In a [ShadowSolidity.crouched]
+  /// level it is only the ones that were ducked, which is what turns the
+  /// staircase from a side effect of walking into something the player chose
+  /// to leave.
+  Iterable<ShadowFigure> get standableShadows => switch (level.solidWhen) {
+    ShadowSolidity.always => liveShadows,
+    ShadowSolidity.crouched => liveShadows.where(
+      (s) => s.crouch >= _duckedEnough,
+    ),
+  };
+
   /// True once the player has touched the level's way out.
   bool get completed => _completed;
   bool _completed = false;
@@ -174,6 +197,16 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
   /// How much of its usual opacity a shadow keeps while it is in the light.
   static const double _litShadowOpacity = 0.28;
+
+  /// And while it is standing up in a level where only a ducked body is solid.
+  ///
+  /// Nearly twice the light's number, for a plain reason: in the light there
+  /// is a beam behind the shadow holding it up against the sky, and here
+  /// there is nothing. At 0.28 on open ground the body simply is not there —
+  /// rendered and checked — and a past you cannot see is not a past that is
+  /// ghostly, it is a past that looks like a bug. Faint enough to say *not
+  /// this one*, solid enough to be a body walking past.
+  static const double _standingShadowOpacity = 0.5;
 
   /// Bumped on every reload, shown in the readout. The only "death" system
   /// this phase gets: no respawn animation, no lives, no checkpoints.
@@ -374,10 +407,23 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       // this and the fade ladder are the two things on screen saying which
       // past is which and whether it is there at all, so both stay relative to
       // whatever opacity the panel is set to.
+      // Faint when it is not a thing — in the light, or standing up in a
+      // level where only a ducked body is solid. One dimming for both,
+      // because to the player they mean the same sentence: *that one is not
+      // really here*. A rule you cannot see is a rule that reads as a bug the
+      // first time you fall through your own shoulders.
+      final upright =
+          level.solidWhen == ShadowSolidity.crouched &&
+          settings.shadowIsSolid &&
+          ghost.crouch < _duckedEnough;
       ghost.opacity =
           settings.shadowOpacity *
           ghost.fade *
-          (ghost.inLight ? _litShadowOpacity : 1);
+          switch ((ghost.inLight, upright)) {
+            (true, _) => _litShadowOpacity,
+            (false, true) => _standingShadowOpacity,
+            _ => 1,
+          };
     }
 
     // Record and replay before the world moves, so the shadow's rect is
@@ -629,7 +675,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     ],
     oneWay: [
       if (settings.shadowIsSolid)
-        for (final ghost in liveShadows) ghost.bounds,
+        for (final ghost in standableShadows) ghost.bounds,
     ],
   );
 
