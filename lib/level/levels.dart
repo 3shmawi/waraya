@@ -193,6 +193,14 @@ abstract final class Levels {
       // Straight back out the way you came in, and wait by the door — which
       // is standing in the corridor your own past is walking up.
       [Move.left(1.9), Move(1.0), Move.right(2.5), Move(4)],
+      // The miserly run, and it used to finish this level in four seconds.
+      // Touch the plate on the way past, turn round, and walk out through a
+      // door your own weight opened — the grace on it outlasted the walk by
+      // four and a half seconds, so you were through before the shadow this
+      // level is entirely about had come into existence. Now the door shuts
+      // as you step off the plate, and the corridor kills you on the way
+      // back, which is the lesson arriving on time.
+      [Move.left(1.7), Move.right(3.0)],
     ],
     name: 'مش نفس السكة',
     teaches: 'ظلك جاي في نفس السكة. دوّر على سكة تانية.',
@@ -903,22 +911,22 @@ abstract final class Levels {
     plates: const [
       PlateSpec(area: Rect.fromLTRB(-260, 608, -160, 620), opens: 'gate'),
     ],
-    // A second and a bit of grace, and the number is load-bearing — this is
-    // the whole gate half of the level.
+    // A second and a bit of grace, which is your past's and not yours.
     //
     // Reported from playing: "the door opens the moment I stand on the plate
-    // and closes by itself." It did, and that was the level broken. The walk
-    // from the plate to the gate is 410 units, which is 1.86 seconds, so any
-    // grace longer than that means **your own press carries you through** and
-    // the shadow never has to arrive at all. It was six. You could touch the
-    // plate, run, and be through the gate a second before your past even
-    // existed.
+    // and closes by itself." It did, and that was the level broken — the
+    // grace was six seconds and the walk from the plate to the gate is 1.86,
+    // so your own weight carried you through and the shadow never had to
+    // arrive. That is fixed in `Door.hold` now rather than here: a door held
+    // open by nothing but the body you are standing in shuts the instant you
+    // step off it, in every level.
     //
-    // 1.2 is under the walk, so the door your own weight opened has shut
-    // again before you get there. And it is not a stopwatch on the other
-    // side: your past holds the plate for as long as you held it, plus this,
-    // which is a window of about two and a half seconds to walk through a
-    // gate you are already standing at.
+    // This number is what is left of the question, and it is the forgiving
+    // half: your past holds the plate for as long as you held it, plus this
+    // — about two and a half seconds to walk through a gate you are already
+    // standing at. It stays under the walk as well, which costs nothing and
+    // means the level would still be a level if the rule above were ever
+    // argued with.
     doors: const [
       DoorSpec(
         id: 'gate',

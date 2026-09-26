@@ -407,11 +407,25 @@ class Door extends PositionComponent {
   ///
   /// 1. an inverted plate pressed → shut, whatever else is true;
   /// 2. otherwise a plate held or a key thrown → open;
-  /// 3. otherwise shut, after [DoorSpec.lingerSeconds].
+  /// 3. otherwise shut, after [DoorSpec.lingerSeconds] — but only if [lingers].
+  ///
+  /// [lingers] is false when the only thing holding this door open is the
+  /// **player's own body**, and it is the difference between a puzzle and a
+  /// corridor. The grace exists for one reason: so that arriving a beat after
+  /// your past steps off the plate is not a lost run. Your own weight needs
+  /// no such forgiveness — you can simply keep standing there — and giving it
+  /// any means a door you opened yourself is still open when you get to it.
+  ///
+  /// Reported from playing, twice, before this was the rule. A six-second
+  /// grace on a door 340 units from its plate meant you could touch the
+  /// plate, run, and be through before your shadow existed at all: two
+  /// levels, both of them about needing your past, both finishable without
+  /// ever having one. A number in the data can only paper over that one
+  /// level at a time; this is the shape of the thing.
   ///
   /// Returns true if the answer changed, which is what the scene listens to so
   /// a door makes its noise once rather than every frame.
-  bool hold(bool open, {bool forcedShut = false}) {
+  bool hold(bool open, {bool forcedShut = false, bool lingers = true}) {
     if (forcedShut) {
       // The grace goes with it. A door being held shut that drifts open again
       // a moment later because something was standing on a plate six seconds
@@ -420,7 +434,8 @@ class Door extends PositionComponent {
       _linger = 0;
     } else {
       _pressed = open;
-      if (open) _linger = spec.lingerSeconds;
+      // Grace only for a door your **past** was holding. See [lingers].
+      if (open) _linger = lingers ? spec.lingerSeconds : 0;
     }
     final wanted = !forcedShut && (_pressed || _linger > 0);
     if (wanted == wantsOpen) return false;
