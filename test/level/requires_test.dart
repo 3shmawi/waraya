@@ -48,7 +48,6 @@ void main() {
       'toggles': 'close-what-you-opened',
       'lights': 'your-shadow-is-not-here',
       'delays': 'two-not-one',
-      'crouched-solid': 'not-every-step',
     }.entries) {
       expect(
         Levels.campaign.where((l) => l.requires.contains(mechanic)).map(
@@ -58,6 +57,17 @@ void main() {
         reason: 'the level $mechanic was added for is the one declaring it',
       );
     }
+
+    // `crouched-solid` is the exception, and the reason it is one is the
+    // point. The others are mechanics one level uses; this one stopped being
+    // a mechanic and became the rule — your past is a floor only where you
+    // ducked, everywhere — so every level in the campaign declares it and an
+    // older build refuses all of them rather than serving eleven levels that
+    // look easy.
+    expect(
+      Levels.campaign.where((l) => l.requires.contains('crouched-solid')),
+      hasLength(Levels.campaign.length),
+    );
   });
 
   test('a level is refused by name when it asks for what is not here', () {

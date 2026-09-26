@@ -330,7 +330,7 @@ void main() {
         final run = start(game)
           ..play(const [
             Move.left(2.1),
-            Move(1.0), // barely stood on it at all
+            Move(1.0, crouch: true), // barely stood on it at all
             Move.left(0.6),
             Move(2.6), // wait the same amount, so only the press differs
             Move.right(0.75, jump: true),
@@ -341,10 +341,13 @@ void main() {
           ], stopWhenComplete: true);
 
         expect(run.finishedAt, isNull, reason: run.where);
-        // On the shelf, which is the point: the climb worked and the door is
-        // what stopped you. The shelf by name, not `blocks.last` — the last
-        // block is the wall that closes the shelf's far end now.
-        expect(game.player.y, Levels.holdYourOwnDoor.blocks[1].top);
+        // Back on the floor, and that is the lesson sharpening rather than
+        // changing. The press used to buy only the door; now the body you
+        // ducked on the plate is *also* the step you climb, so one second of
+        // it holds the door for one second **and** is a step for one second.
+        // The climb takes longer than that: you get up, it stands, you come
+        // down. One number, two things you needed, and both of them short.
+        expect(game.player.y, Levels.holdYourOwnDoor.floorTop);
       },
     );
 

@@ -115,23 +115,26 @@ void main() {
     );
 
     testWithGame<LevelGame>(
-      'a solid shadow is something to stand on, and only from above',
+      'a ducked shadow is something to stand on, and only from above',
       gameWith,
       (game) async {
         await game.ready();
-        run(game, 90, x: 150);
+        // Ducked, because that is the game's rule: a body that walked past
+        // standing up is not a floor. The bench plays the same `LevelGame`
+        // the campaign does and is not allowed a private version of it.
+        run(game, 90, x: 150, crouch: 1);
 
         expect(game.shadow.isActive, isTrue);
-        // Drop the player onto the shadow's head.
-        game.player.position.setValues(
-          150,
-          game.shadow.y - game.shadow.size.y - 40,
-        );
+        // Drop the player onto the shadow's head. `bounds` rather than
+        // `size.y`: a ducked body is shorter, and the head is wherever the
+        // recorded pose put it.
+        final head = game.shadow.bounds.top;
+        game.player.position.setValues(150, head - 40);
         game.player.locomotion.reset();
-        run(game, 30, x: 150);
+        run(game, 30, x: 150, crouch: 1);
 
         expect(game.player.isOnShadow, isTrue);
-        expect(game.player.y, closeTo(game.shadow.y - game.shadow.size.y, 1));
+        expect(game.player.y, closeTo(head, 1));
       },
     );
 
@@ -140,13 +143,12 @@ void main() {
       () => gameWith(solid: false),
       (game) async {
         await game.ready();
-        run(game, 90, x: 150);
-        game.player.position.setValues(
-          150,
-          game.shadow.y - game.shadow.size.y - 40,
-        );
+        // Ducked, so the only thing keeping the player off it is the flag.
+        // Walking past standing up would pass this test with the flag on.
+        run(game, 90, x: 150, crouch: 1);
+        game.player.position.setValues(150, game.shadow.bounds.top - 40);
         game.player.locomotion.reset();
-        run(game, 30, x: 150);
+        run(game, 30, x: 150, crouch: 1);
 
         expect(game.player.isOnShadow, isFalse);
         expect(game.player.y, closeTo(LabScene.floorTop, 0.001));
