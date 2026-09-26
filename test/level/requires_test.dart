@@ -44,17 +44,18 @@ void main() {
         reason: '${level.id} asks this build for something it has not got',
       );
     }
+    // The first level to declare each one is the level it was added for.
+    // Only the first: Phase 7 builds its levels out of exactly these words,
+    // and a mechanic used again later is the vocabulary doing its job.
     for (final MapEntry(key: mechanic, value: id) in const {
       'toggles': 'close-what-you-opened',
       'lights': 'your-shadow-is-not-here',
       'delays': 'two-not-one',
     }.entries) {
       expect(
-        Levels.campaign.where((l) => l.requires.contains(mechanic)).map(
-          (l) => l.id,
-        ),
-        [id],
-        reason: 'the level $mechanic was added for is the one declaring it',
+        Levels.campaign.firstWhere((l) => l.requires.contains(mechanic)).id,
+        id,
+        reason: 'the level $mechanic was added for is the first declaring it',
       );
     }
 
