@@ -4,6 +4,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import 'audio/flame_audio_out.dart';
+import 'level/bundled_levels.dart';
 import 'level/file_levels.dart';
 import 'level/level.dart';
 import 'level/level_game.dart';
@@ -22,6 +23,9 @@ import 'ui/upload_dialog.dart';
 ///
 /// # or, to work on levels that are not in the code:
 /// flutter run -t lib/main_lab.dart --dart-define=WARAYA_LEVELS=levels/
+///
+/// # or the same folder as it was at build time — the web, which has no disk:
+/// flutter run -t lib/main_lab.dart --dart-define=WARAYA_LEVELS=bundled
 /// ```
 ///
 /// A second entry point rather than a mode inside `main.dart`, so the shipping
@@ -65,7 +69,8 @@ void main() async {
 /// Where the bench reads levels from, or null for the one written in Dart.
 LevelSource? get _authoring {
   const path = String.fromEnvironment('WARAYA_LEVELS');
-  return path.isEmpty ? null : FileLevels(path);
+  if (path.isEmpty) return null;
+  return path == 'bundled' ? const BundledLevels() : FileLevels(path);
 }
 
 class ShadowLabApp extends StatefulWidget {
@@ -137,7 +142,14 @@ class _ShadowLabAppState extends State<ShadowLabApp> {
     return MaterialApp(
       title: 'waraya · shadow lab',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(useMaterial3: true),
+      // The bundled monospace, not Material's Roboto: Roboto is fetched from
+      // Google's CDN on the web, and on a connection that cannot reach it the
+      // upload dialog came up with every word of it missing.
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        useMaterial3: true,
+        fontFamily: 'LiberationMono',
+      ),
       home: GameWidget<LevelGame>(
         game: _game,
         overlayBuilderMap: {
