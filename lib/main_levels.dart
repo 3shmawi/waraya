@@ -5,6 +5,7 @@ import 'audio/flame_audio_out.dart';
 import 'level/level.dart';
 import 'level/level_game.dart';
 import 'level/level_source.dart';
+import 'level/supabase_levels.dart';
 import 'licenses.dart';
 import 'progress/progress.dart';
 import 'progress/stored_progress.dart';
@@ -26,14 +27,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerFontLicenses();
 
-  // Where the levels come from is one line, and today it is the ones that
-  // ship in the app. When there is a server, it becomes:
-  //
-  //   LevelsThenExtras(const BuiltInLevels(), SupabaseLevels(...))
-  //
-  // and nothing below this line changes. See docs/backend-plan.md.
-  const source = BuiltInLevels();
-  final levels = await source.load();
+  // The campaign that ships is what the first frame is built from, and the
+  // server is never waited for: its levels are added to the end whenever it
+  // answers, or never. See docs/phase-8-server.md.
+  final levels = await const BuiltInLevels().load();
   final progress = await StoredProgress.open();
 
   runApp(
@@ -41,6 +38,10 @@ Future<void> main() async {
       levels: levels,
       progress: progress,
       beaten: await progress.beaten(),
+      extras: SupabaseLevels(
+        cache: const StoredLevelCache(),
+        onRefused: (verdict) => debugPrint('refused from server: $verdict'),
+      ),
     ),
   );
 }
@@ -51,9 +52,14 @@ class WarayaLevels extends StatefulWidget {
     required this.levels,
     required this.progress,
     required this.beaten,
+    this.extras,
   });
 
   final List<Level> levels;
+
+  /// Levels from somewhere else, added after [levels] once they arrive. A
+  /// failure is silent: the player has the campaign either way.
+  final LevelSource? extras;
   final Progress progress;
 
   /// What was already finished when the app started. Read once here rather
@@ -71,12 +77,13 @@ class _WarayaLevelsState extends State<WarayaLevels> {
 
   late final Set<String> _beaten = {...widget.beaten};
   late final LevelGame _game;
+  late List<Level> _levels = widget.levels;
 
   @override
   void initState() {
     super.initState();
     _game = LevelGame(
-      levels: widget.levels,
+      levels: _levels,
       audio: FlameAudioOut(),
       // The puzzles are played in the scene from Phase 1, not on the bench's
       // grey boxes. Same class, same geometry, same numbers — only the paint
@@ -87,11 +94,27 @@ class _WarayaLevelsState extends State<WarayaLevels> {
       // Straight back to where they stopped. No title screen in the way: a
       // first-time visitor starts in level one because nothing is beaten yet,
       // and everyone else carries on.
-      startAt: resumeIndex(widget.levels, _beaten),
+      startAt: resumeIndex(_levels, _beaten),
       onBeaten: _remember,
       onCampaignFinished: _showEnd,
       onMenuRequested: _openMenu,
     );
+    _addExtras();
+  }
+
+  Future<void> _addExtras() async {
+    final extras = widget.extras;
+    if (extras == null) return;
+    final List<Level> more;
+    try {
+      more = await extras.load();
+    } catch (error) {
+      debugPrint('no levels from ${extras.label}: $error');
+      return;
+    }
+    if (!mounted || more.isEmpty) return;
+    _game.addLevels(more);
+    setState(() => _levels = _game.levels);
   }
 
   void _remember(Level level) {
@@ -152,14 +175,14 @@ class _WarayaLevelsState extends State<WarayaLevels> {
             game: _game,
             overlayBuilderMap: {
               _menu: (context, game) => LevelSelect(
-                levels: widget.levels,
-                unlocked: unlockedCount(widget.levels, _beaten),
+                levels: _levels,
+                unlocked: unlockedCount(_levels, _beaten),
                 current: game.levelIndex,
                 onPick: _pick,
                 onClose: _closeMenu,
               ),
               _end: (context, game) => CampaignEnd(
-                levels: widget.levels,
+                levels: _levels,
                 onLevels: () => _leaveEnd(goTo: null),
                 onRestart: () => _leaveEnd(goTo: 0),
               ),

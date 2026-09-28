@@ -58,7 +58,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
   /// Played in order. One entry is a bench; several is a campaign.
   ///
-  /// Not final only so [replaceLevels] can swap it. Nothing else writes it.
+  /// Not final only so [replaceLevels] and [addLevels] can change it. Nothing
+  /// else writes it.
   List<Level> levels;
 
   final LabSettings settings;
@@ -638,6 +639,23 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
     _index++;
     _build();
+  }
+
+  /// Puts [more] after the last level, without touching the one being played.
+  ///
+  /// For levels that arrive after the game has started — from a server that
+  /// answered while the player was already mid-stride. Nothing is rebuilt and
+  /// nothing fades: the only thing that changes is that finishing the last
+  /// built-in level now leads somewhere. A level whose id is already in the
+  /// list is left out, so nothing from outside can stand in for one that is
+  /// known to be solvable.
+  void addLevels(Iterable<Level> more) {
+    final known = {for (final level in levels) level.id};
+    levels = [
+      ...levels,
+      for (final level in more)
+        if (known.add(level.id)) level,
+    ];
   }
 
   /// Swaps the whole list under a running game, for the authoring loop.
