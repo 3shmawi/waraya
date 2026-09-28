@@ -8,13 +8,14 @@ import 'level.dart';
 import 'level_check.dart';
 import 'level_source.dart';
 
-/// The project's Supabase. Both values are public by design — the anon key is
-/// what every copy of the app ships with, and what protects the table is its
+/// The project's Supabase. Both values are public by design — the publishable
+/// key (what used to be called the anon key) is what every copy of the app
+/// ships with, and what protects the table is its
 /// row-level security (`supabase/migrations/`), not the key. The service key
 /// is the one that is not, and it lives in GitHub secrets and nowhere else.
 abstract final class SupabaseProject {
   static const String url = 'https://anuohrvxlmthfvbnukrb.supabase.co';
-  static const String anonKey =
+  static const String publishableKey =
       'sb_publishable_cp6qBlCGVyr2M1EO8wGlsw_MiXufFGT';
 }
 
@@ -131,7 +132,7 @@ class SupabaseLevels implements LevelSource {
     );
     final response = await http.get(
       uri,
-      headers: {'apikey': SupabaseProject.anonKey},
+      headers: {'apikey': SupabaseProject.publishableKey},
     );
     if (response.statusCode != 200) {
       throw http.ClientException('levels: HTTP ${response.statusCode}', uri);
