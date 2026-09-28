@@ -14,6 +14,15 @@ class InputController extends Component {
 
   InputIntent _intent = InputIntent.none;
 
+  /// Rewrites the merged intent before anything sees it, when set.
+  ///
+  /// For the editor and nothing else: while it records a run it keeps every
+  /// step to one a recorded move can say (and writes it down), and while it
+  /// replays one it puts the recording in place of the keyboard. Either way
+  /// the game is driven by exactly the intent that is kept, which is what
+  /// makes a recording replay the same.
+  InputIntent Function(InputIntent intent)? shape;
+
   /// The merged intent for the current frame.
   InputIntent get intent => _intent;
 
@@ -31,6 +40,6 @@ class InputController extends Component {
     for (final source in sources) {
       merged = merged.merge(source.poll());
     }
-    _intent = merged;
+    _intent = shape?.call(merged) ?? merged;
   }
 }

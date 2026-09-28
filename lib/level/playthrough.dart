@@ -85,22 +85,80 @@ class Playthrough {
   /// own ending from walking the *next* level's player away from their spawn
   /// before that level has started.
   void play(List<Move> moves, {bool stopWhenComplete = false}) {
+    for (final intent in intentsOf(moves)) {
+      source.next = intent;
+      game.update(dt);
+      elapsed += dt;
+      if (game.completed && !_wasComplete) finishes.add(elapsed);
+      _wasComplete = game.completed;
+      if (stopWhenComplete && game.completed) return;
+    }
+  }
+
+  /// What a recorded run asks of the game, one fixed step at a time.
+  ///
+  /// The one definition of what a [Move] means. [play] feeds these to the
+  /// game, and the editor's replay button feeds the very same ones — so a run
+  /// shown in the editor is the run the gate replays, not a lookalike.
+  static Iterable<InputIntent> intentsOf(List<Move> moves) sync* {
     for (final move in moves) {
       final frames = (move.seconds / dt).round();
       for (var frame = 0; frame < frames; frame++) {
-        source.next = InputIntent(
+        yield InputIntent(
           moveAxis: move.axis,
           jump: move.jump && frame == 0,
           jumpHeld: move.jump,
           crouch: move.crouch,
         );
-        game.update(dt);
-        elapsed += dt;
-        if (game.completed && !_wasComplete) finishes.add(elapsed);
-        _wasComplete = game.completed;
-        if (stopWhenComplete && game.completed) return;
       }
     }
+  }
+
+  /// The inverse of [intentsOf]: one intent per fixed step, folded back into
+  /// moves.
+  ///
+  /// A step starts a new move when anything held changes, or when the jump is
+  /// pressed again — a press is the first frame of a jumping move and nowhere
+  /// else. The steps have to be ones [intentsOf] could have produced (a press
+  /// is always held, a hold always starts with a press); the editor's recorder
+  /// shapes them that way before the game ever sees them.
+  ///
+  /// Seconds are rounded to the millisecond so the JSON reads as numbers a
+  /// person wrote. That is a thirtieth of a step at most, and [intentsOf]
+  /// rounds to whole steps, so it gives back exactly the same steps.
+  static List<Move> movesOf(List<InputIntent> steps) {
+    final moves = <Move>[];
+    InputIntent? head;
+    var frames = 0;
+    void close() {
+      if (head == null || frames == 0) return;
+      moves.add(
+        Move(
+          (frames * dt * 1000).round() / 1000,
+          axis: head.moveAxis,
+          jump: head.jumpHeld,
+          crouch: head.crouch,
+        ),
+      );
+    }
+
+    for (final step in steps) {
+      final continues =
+          head != null &&
+          !step.jump &&
+          step.moveAxis == head.moveAxis &&
+          step.jumpHeld == head.jumpHeld &&
+          step.crouch == head.crouch;
+      if (continues) {
+        frames++;
+      } else {
+        close();
+        head = step;
+        frames = 1;
+      }
+    }
+    close();
+    return moves;
   }
 
   /// Where the body is, for tuning a run that does not work yet.

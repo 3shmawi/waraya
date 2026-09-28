@@ -1,22 +1,17 @@
-import 'dart:convert';
-
-import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import 'audio/flame_audio_out.dart';
+import 'editor/editor_screen.dart';
 import 'level/bundled_levels.dart';
 import 'level/file_levels.dart';
 import 'level/level.dart';
-import 'level/level_game.dart';
 import 'level/level_source.dart';
 import 'level/level_upload.dart';
 import 'level/levels.dart';
 import 'level/supabase_backend.dart';
 import 'licenses.dart';
-import 'ui/lab_controls.dart';
-import 'ui/upload_dialog.dart';
 
-/// The tuning bench — the shadow, on grey boxes, with every number exposed.
+/// The tuning bench — the shadow, on grey boxes — and the level editor.
 ///
 /// ```sh
 /// flutter run -t lib/main_lab.dart
@@ -29,18 +24,13 @@ import 'ui/upload_dialog.dart';
 /// ```
 ///
 /// A second entry point rather than a mode inside `main.dart`, so the shipping
-/// app never carries the debug sliders and the finished Phase 1 scene is not
-/// touched at all by this phase.
+/// app never carries the editor or the debug sliders.
 ///
-/// Pointed at a file or a folder it becomes the level editor's other half:
-/// the folder button re-reads the JSON without restarting, and the code button
-/// prints the level on screen as JSON to start a new one from. That loop —
-/// edit the file, alt-tab, look — is what makes "a level is data" true in
-/// practice; a level being JSON is worth nothing on its own if seeing your
-/// edit means a rebuild.
-///
-/// And it is where a level leaves: the cloud button checks the level on screen
-/// with the gate's own rules and, if it passes, sends it to be published.
+/// It opens editing (`docs/phase-9-editor.md`): the level stands still with
+/// its pieces outlined, you drag them about, and Tab puts you in it — the same
+/// `LevelGame`, not a preview of one. From here a level is recorded (its
+/// solution and its wrong ideas, in the gate's own fixed steps), checked by
+/// the gate's own rules as you work, saved as JSON, and sent to be published.
 /// Signing in is here and nowhere else — an account is for sending a level,
 /// never for playing one.
 void main() async {
@@ -73,16 +63,11 @@ LevelSource? get _authoring {
   return path == 'bundled' ? const BundledLevels() : FileLevels(path);
 }
 
-class ShadowLabApp extends StatefulWidget {
-  const ShadowLabApp({
-    super.key,
-    this.authoring,
-    this.levels,
-    this.upload,
-  });
+class ShadowLabApp extends StatelessWidget {
+  const ShadowLabApp({super.key, this.authoring, this.levels, this.upload});
 
-  /// Set when the bench was pointed at a file or folder, so the panel can
-  /// offer to read it again.
+  /// Set when the bench was pointed at a file or folder, so the editor can
+  /// offer to read it again — and save next to it.
   final LevelSource? authoring;
 
   /// What was on the disk at startup. Null means the bench level in the code.
@@ -91,54 +76,13 @@ class ShadowLabApp extends StatefulWidget {
   /// Where the cloud button sends a level. Null hides the button.
   final LevelUpload? upload;
 
-  @override
-  State<ShadowLabApp> createState() => _ShadowLabAppState();
-}
-
-class _ShadowLabAppState extends State<ShadowLabApp> {
-  late final LevelGame _game = LevelGame(
-    levels: widget.levels ?? [Levels.lab],
-    audio: FlameAudioOut(),
-  );
-
-  String? _status;
-
-  /// Reads the levels again and swaps them under the running game.
-  ///
-  /// A failure is reported and nothing else happens: while a level is being
-  /// written, a broken file is the normal state of it for a few seconds, and
-  /// throwing the level you are looking at away every time you save mid-edit
-  /// would make the loop unusable.
-  Future<void> _reread() async {
-    try {
-      final levels = await widget.authoring!.load();
-      await _game.replaceLevels(levels);
-      setState(() {
-        _status = levels.isEmpty
-            ? 'nothing to read — keeping ${_game.level.id}'
-            : '${levels.length} level(s) · on ${_game.level.id}';
-      });
-    } catch (error) {
-      setState(() => _status = '$error');
-    }
-  }
-
-  /// Prints the level on screen as JSON.
-  ///
-  /// The starting point for a new one: nobody types thirty rectangles from
-  /// nothing, they take a level that already stands up and move it.
-  void _dump() {
-    debugPrint(
-      const JsonEncoder.withIndent('  ').convert(_game.level.toJson()),
-    );
-    setState(() => _status = '${_game.level.id} printed to the console');
-  }
-
-  /// Unlike `main.dart`, this one needs Material: `Slider` and `Switch` want a
-  /// Material ancestor, and the extra bundle weight does not matter in a build
-  /// that is never shipped.
+  /// Unlike `main.dart`, this one needs Material: the editor's panels are
+  /// text boxes, switches and menus, and the extra bundle weight does not
+  /// matter in a build that is never shipped.
   @override
   Widget build(BuildContext context) {
+    final authoring = this.authoring;
+    final disk = levels ?? const <Level>[];
     return MaterialApp(
       title: 'waraya · shadow lab',
       debugShowCheckedModeBanner: false,
@@ -149,26 +93,20 @@ class _ShadowLabAppState extends State<ShadowLabApp> {
         brightness: Brightness.dark,
         useMaterial3: true,
         fontFamily: 'LiberationMono',
+        // The monospace has no Arabic, and a level's name and lesson are
+        // Arabic. Without the bundled face behind it the editor's boxes and
+        // menus drew them as rows of empty squares.
+        fontFamilyFallback: const [arabicFontFamily],
       ),
-      home: GameWidget<LevelGame>(
-        game: _game,
-        overlayBuilderMap: {
-          'controls': (context, game) => LabControls(
-            settings: game.settings,
-            onReload: game.reload,
-            onReread: widget.authoring == null ? null : _reread,
-            onDump: _dump,
-            onUpload: widget.upload == null
-                ? null
-                : () => UploadDialog.show(
-                    context,
-                    level: game.level,
-                    upload: widget.upload!,
-                  ),
-            status: _status,
-          ),
-        },
-        initialActiveOverlays: const ['controls'],
+      home: Scaffold(
+        body: EditorScreen(
+          startFrom: disk.isEmpty ? Levels.lab : disk.first,
+          extraLevels: disk,
+          upload: upload,
+          audio: FlameAudioOut(),
+          onReread: authoring?.load,
+          saveFolder: authoring is FileLevels ? authoring.path : null,
+        ),
       ),
     );
   }

@@ -133,13 +133,16 @@ fvm install                                  # fetches the pinned SDK
 fvm flutter pub get
 
 fvm flutter run -t lib/main_levels.dart      # the puzzles
-fvm flutter run -t lib/main_lab.dart         # the tuning bench
+fvm flutter run -t lib/main_lab.dart         # the bench, and the level editor
 fvm flutter run                              # the finished environment
 ```
 
 **Three entry points.** `main_levels.dart` is the campaign — the puzzles, in
-teaching order. `main_lab.dart` is the same game on a bench scene with a live
-panel for the delay, the shadow's opacity, and whether the shadow is solid,
+teaching order. `main_lab.dart` is the same game on a bench scene, and the
+level editor: drag the rectangles about, press Tab to be inside the level you
+are drawing, record its solution and its wrong ideas, and watch the gate's own
+rules judge it as you go (`docs/phase-9-editor.md`). While playing, a live
+panel sets the delay, the shadow's opacity, and whether the shadow is solid,
 kills you, or shows the path it is about to walk. `main.dart` is the Phase 1
 scene with nothing to solve in it — one walker, one horizon.
 
@@ -323,7 +326,14 @@ carries weight, which is the flight phase that separates the two.
 ```
 lib/
   main.dart                      the game
-  main_lab.dart                  the shadow lab
+  main_lab.dart                  the shadow lab, and the level editor
+  editor/
+    editor_doc.dart              a level being edited, as a plain value
+    editor.dart                  select, drag, snap, undo — no screen needed
+    run_recorder.dart            recording a run in the gate's fixed steps
+    editor_game.dart             LevelGame, stepped by the editor
+    editor_rules.dart            the gate's rules, as things to draw
+    editor_screen.dart           the editor on screen
   shadow/
     snapshot.dart                one tick of the body: where, facing, pose
     fixed_ticker.dart            60Hz out of a variable frame rate

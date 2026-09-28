@@ -198,11 +198,7 @@ Future<Verdict> checkLevelJson(Object? json) async {
 /// and holds them to it). Nothing from outside sets it — a cheap run that
 /// finishes a submitted level is a refusal.
 Future<Verdict> checkLevel(Level level, {bool cheapIsTheLesson = false}) async {
-  final findings = <Finding>[
-    ..._requires(level),
-    ..._recordings(level),
-    ..._bounds(level),
-  ];
+  final findings = checkNumbers(level);
   // Nothing to replay, or numbers nobody should replay.
   if (findings.isNotEmpty) return Verdict(level.id, findings);
 
@@ -214,6 +210,56 @@ Future<Verdict> checkLevel(Level level, {bool cheapIsTheLesson = false}) async {
     game.onRemove();
   }
   return Verdict(level.id, findings);
+}
+
+/// Every rule that needs no replay: the shape of the data and the numbers.
+///
+/// The first half of [checkLevel], on its own so the editor can put it on
+/// screen as you drag — it takes no time — and leave the replays for when you
+/// stop. The same list, not a quicker copy of it: an editor with its own idea
+/// of what the numbers allow would draw a level the gate then refuses.
+List<Finding> checkNumbers(Level level) => [
+  ..._requires(level),
+  ..._recordings(level),
+  ..._bounds(level),
+];
+
+/// The shortest door [level] may have: one more step under it for every
+/// shadow that can be stacked.
+double minDoorHeightFor(Level level) => level.delays.length > 1
+    ? Levels.minDoorHeightTwoShadows
+    : Levels.minDoorHeight;
+
+/// How far above the floor it stands on a body can get its feet in [level],
+/// by standing on its own past and jumping.
+///
+/// Derived from the campaign's measured numbers rather than from new ones: a
+/// jump is what [Levels.ladderReach] has left over once a standing body is
+/// taken out, and a step is a body — a ducked one where only a ducked body is
+/// solid. One shadow, crouched, gives back exactly
+/// [Levels.crouchedLadderReach]; two stack into the 274 `CLAUDE.md` quotes.
+double ladderReachFor(Level level) {
+  const lift = Levels.ladderReach - bodyHeight;
+  if (!level.shadowIsSolid) return lift;
+  final step = level.solidWhen == ShadowSolidity.crouched
+      ? Levels.crouchedLadderReach - lift
+      : bodyHeight;
+  return lift + step * level.delays.length.clamp(1, CheckLimits.mostShadows);
+}
+
+/// Where the player's body is on the first frame.
+Rect spawnBoxOf(Level level) => Rect.fromLTWH(
+  level.spawnX - 22,
+  level.floorTop - bodyHeight,
+  44,
+  bodyHeight,
+);
+
+/// Whether the player starts inside a wall or a shut door.
+bool spawnsInside(Level level) {
+  final spawn = spawnBoxOf(level);
+  return level.blocks.any(spawn.overlaps) ||
+      level.doors.any((door) => spawn.overlaps(door.closed));
 }
 
 Iterable<Finding> _requires(Level level) sync* {
@@ -336,9 +382,7 @@ Iterable<Finding> _bounds(Level level) sync* {
     }
     // Two shadows stack, so a level with two has one more step under every
     // door. Same floor `levels_test.dart` holds the campaign to.
-    final floor = delays.length > 1
-        ? Levels.minDoorHeightTwoShadows
-        : Levels.minDoorHeight;
+    final floor = minDoorHeightFor(level);
     if (door.closed.height < floor) {
       yield out(
         'door "${door.id}" is ${door.closed.height.round()} tall; a body on '
@@ -358,16 +402,7 @@ Iterable<Finding> _bounds(Level level) sync* {
   }
 
   // Where you start, and where you are going.
-  final spawn = Rect.fromLTWH(
-    level.spawnX - 22,
-    level.floorTop - _bodyHeight,
-    44,
-    _bodyHeight,
-  );
-  if (level.blocks.any(spawn.overlaps) ||
-      level.doors.any((door) => spawn.overlaps(door.closed))) {
-    yield out('the player spawns inside the scenery');
-  }
+  if (spawnsInside(level)) yield out('the player spawns inside the scenery');
   // Not a proof it can be reached — the solution is that. This catches a goal
   // left floating where no surface is within a jump of it.
   const jump =
@@ -375,7 +410,7 @@ Iterable<Finding> _bounds(Level level) sync* {
       WarayaConfig.jumpSpeed /
       (2 * WarayaConfig.gravity);
   if (!level.blocks.any(
-    (block) => (block.top - level.goal.bottom).abs() < jump + _bodyHeight,
+    (block) => (block.top - level.goal.bottom).abs() < jump + bodyHeight,
   )) {
     yield out('the goal is nowhere a jump could land');
   }
@@ -439,7 +474,8 @@ Future<void> _boot(LevelGame game) async {
   await game.ready();
 }
 
-const double _bodyHeight = 96;
+/// A standing body, in world units — the player's collision box.
+const double bodyHeight = 96;
 
 bool _finite(Rect r) =>
     r.left.isFinite && r.top.isFinite && r.right.isFinite && r.bottom.isFinite;
