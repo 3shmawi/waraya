@@ -2,9 +2,11 @@ import 'package:flame/game.dart';
 import 'package:flutter/widgets.dart';
 
 import 'audio/flame_audio_out.dart';
+import 'level/attempts.dart';
 import 'level/level.dart';
 import 'level/level_game.dart';
 import 'level/level_source.dart';
+import 'level/supabase_attempts.dart';
 import 'level/supabase_levels.dart';
 import 'licenses.dart';
 import 'progress/progress.dart';
@@ -38,6 +40,7 @@ Future<void> main() async {
       levels: levels,
       progress: progress,
       beaten: await progress.beaten(),
+      attempts: AttemptLog(await SupabaseAttempts.open()),
       extras: SupabaseLevels(
         cache: const StoredLevelCache(),
         onRefused: (verdict) => debugPrint('refused from server: $verdict'),
@@ -53,6 +56,7 @@ class WarayaLevels extends StatefulWidget {
     required this.progress,
     required this.beaten,
     this.extras,
+    this.attempts,
   });
 
   final List<Level> levels;
@@ -60,6 +64,9 @@ class WarayaLevels extends StatefulWidget {
   /// Levels from somewhere else, added after [levels] once they arrive. A
   /// failure is silent: the player has the campaign either way.
   final LevelSource? extras;
+
+  /// Where each go at each level is reported, or null for none.
+  final AttemptLog? attempts;
   final Progress progress;
 
   /// What was already finished when the app started. Read once here rather
@@ -71,7 +78,8 @@ class WarayaLevels extends StatefulWidget {
   State<WarayaLevels> createState() => _WarayaLevelsState();
 }
 
-class _WarayaLevelsState extends State<WarayaLevels> {
+class _WarayaLevelsState extends State<WarayaLevels>
+    with WidgetsBindingObserver {
   static const String _menu = 'levels';
   static const String _end = 'campaign-end';
 
@@ -98,8 +106,24 @@ class _WarayaLevelsState extends State<WarayaLevels> {
       onBeaten: _remember,
       onCampaignFinished: _showEnd,
       onMenuRequested: _openMenu,
+      attempts: widget.attempts,
     );
+    WidgetsBinding.instance.addObserver(this);
     _addExtras();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// A game put away mid-level may never be opened again, so the go so far is
+  /// sent now. `hidden` is the one state every platform passes through on the
+  /// way out — a tab switched away from, a phone locked, a window minimised.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.hidden) widget.attempts?.hidden();
   }
 
   Future<void> _addExtras() async {
