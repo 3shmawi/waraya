@@ -142,6 +142,8 @@ void main() {
   final only = Platform.environment['WARAYA_CLIP'];
   for (final clip in clips) {
     if (only != null && only != clip.slug && only != '${clip.number}') continue;
+    // Twenty-five minutes a clip: the last level's is twenty seconds long and
+    // renders at about two frames a second, which ran out of ten.
     test('clip ${clip.name}', () async {
       final shot = await render(clip);
       // A clip that runs the whole script and never reaches the goal is a
@@ -156,7 +158,7 @@ void main() {
         '${clip.name}: ${shot.frames} frames '
         '(${(shot.frames / fps).toStringAsFixed(1)}s) -> $outRoot/${clip.name}',
       );
-    }, timeout: const Timeout(Duration(minutes: 10)));
+    }, timeout: const Timeout(Duration(minutes: 25)));
   }
 }
 
