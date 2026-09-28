@@ -22,6 +22,7 @@ import '../ui/level_fade.dart';
 import '../ui/level_hud.dart';
 import '../ui/level_title.dart';
 import '../ui/reset_flash.dart';
+import 'attempts.dart';
 import 'level.dart';
 import 'player.dart';
 import 'props.dart';
@@ -52,6 +53,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     this.onCampaignFinished,
     this.onMenuRequested,
     this.readoutDetail = true,
+    this.attempts,
   }) : settings = settings ?? LabSettings(),
        _index = startAt.clamp(0, levels.length - 1),
        assert(levels.isNotEmpty, 'a game needs at least one level');
@@ -87,6 +89,11 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// The game does not know what saving is and should not: it reports, and
   /// whatever built it decides whether that is worth writing down.
   final void Function(Level level)? onBeaten;
+
+  /// Told about each go at each level, for telling which ones are unfair
+  /// (`attempts.dart`). Null plays exactly the same and reports nothing — the
+  /// bench, the tests and the gate all run without one.
+  final AttemptLog? attempts;
 
   /// Called once the last level in the list has been finished and there is
   /// nowhere left to advance to.
@@ -276,6 +283,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     _completed = false;
     _advanceIn = 0;
     resetFlash.clear();
+    attempts?.started(level);
 
     // One delay line and one figure per delay, nearest first. Rebuilt rather
     // than reused: a level can have a different number of shadows from the one
@@ -419,6 +427,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   @override
   void update(double dt) {
     final step = dt > maxFrameSeconds ? maxFrameSeconds : dt;
+    attempts?.tick(step);
     input.refresh();
     // The panel drives the nearest one; the rest keep the delays their level
     // gave them, because the gap between two shadows is the puzzle and a
@@ -566,6 +575,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       if (goal.endsLevel) {
         _completed = true;
         _advanceIn = advanceDelay;
+        attempts?.finished();
         onBeaten?.call(level);
       }
     }
@@ -749,6 +759,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// past the player no longer has, and would be standing on a plate for
   /// reasons nobody could see.
   void reload() {
+    // Where the body was, before it is put back.
+    attempts?.reloaded(player.x, player.y);
     for (final line in recorders) {
       line.clear();
     }
