@@ -76,7 +76,7 @@ class ShadowLabApp extends StatelessWidget {
   /// Where the cloud button sends a level. Null hides the button.
   final LevelUpload? upload;
 
-  /// Unlike `main.dart`, this one needs Material: the editor's panels are
+  /// Unlike the campaign, this one needs Material: the editor's panels are
   /// text boxes, switches and menus, and the extra bundle weight does not
   /// matter in a build that is never shipped.
   @override

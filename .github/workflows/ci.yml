@@ -45,6 +45,6 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build web --no-web-resources-cdn
+      - run: flutter build web -t lib/main_scene.dart --no-web-resources-cdn
       - run: flutter build web -t lib/main_lab.dart --no-web-resources-cdn
       - run: flutter build web -t lib/main_levels.dart --no-web-resources-cdn
