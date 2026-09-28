@@ -1643,6 +1643,28 @@ abstract final class Levels {
     allOfIt,
   ];
 
+  /// The levels whose intended solution **is** one of the cheap runs
+  /// (`cheapRuns` in `level_check.dart`), and which are therefore expected to
+  /// fall to it.
+  ///
+  /// Not a list of things to fix. Each of these is a level whose lesson is
+  /// that a small deliberate act, done early, is enough — pressing a plate on
+  /// your way past and walking on (`press-it-early`), stepping onto one and
+  /// throwing yourself off a ledge (`take-it-with-you`), brushing a key and
+  /// leaving before your past shuts it (`close-what-you-opened`). A sweep
+  /// that finishes them is the sweep agreeing with the design.
+  ///
+  /// It is a list that should only ever get shorter, and it is the campaign's
+  /// alone: a level from outside cannot be on it, so the gate refuses any
+  /// level a cheap run finishes. Adding to it means deciding a level is meant
+  /// to be finishable without thought, which is a thing to argue about rather
+  /// than to do while fixing something else.
+  static const Set<String> cheapByDesign = {
+    'press-it-early',
+    'take-it-with-you',
+    'close-what-you-opened',
+  };
+
   /// The Phase 2 tuning bench, as a level so it runs on the same code as the
   /// puzzles. Not part of the campaign: it is where the numbers get argued
   /// with, not somewhere to be finished.
