@@ -5,10 +5,15 @@
 # what the game is and which keys move them, because the game itself has no
 # menu and says nothing.
 #
-# The campaign is what gets built, not the Phase 1 walker and not the tuning
-# bench: a link handed to someone is a link to the game. The bench carries debug
-# sliders that would only invite fiddling with numbers the levels are measured
-# against.
+# The campaign is what gets built, not the Phase 1 walker: a link handed to
+# someone is a link to the game.
+#
+# The bench goes up too, under lab/, and nothing links to it. It is there so a
+# level can be sent to the gate from a browser (Phase 8.3) — the owner's tool,
+# not something for players: its sliders only invite fiddling with numbers the
+# levels are measured against, which is why the landing page never mentions it
+# and the page asks search engines to leave it out. It reads levels/ as it was
+# at build time (WARAYA_LEVELS=bundled), since a browser has no folder to read.
 #
 # THIS WORKFLOW ONLY PUBLISHES IF PAGES IS SET TO DEPLOY FROM ACTIONS.
 # Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
@@ -76,12 +81,25 @@ jobs:
           --no-web-resources-cdn
           --base-href /${{ github.event.repository.name }}/play/
 
+      - run: >
+          flutter build web
+          -t lib/main_lab.dart
+          --release
+          --no-web-resources-cdn
+          --dart-define=WARAYA_LEVELS=bundled
+          --base-href /${{ github.event.repository.name }}/lab/
+          --output build/web-lab
+
       - name: Assemble the site
         run: |
-          mkdir -p _site/play
+          mkdir -p _site/play _site/lab
           cp -r site/. _site/
           rm -f _site/README.md
           cp -r build/web/. _site/play/
+          cp -r build/web-lab/. _site/lab/
+          # Unlinked is not hidden; this at least keeps it out of search.
+          sed -i 's|<head>|<head>\n  <meta name="robots" content="noindex">|' _site/lab/index.html
+          grep -q 'name="robots"' _site/lab/index.html
 
       - uses: actions/upload-pages-artifact@v3
         with:

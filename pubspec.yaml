@@ -74,6 +74,9 @@ flutter:
     # the bundle and are registered at startup by lib/licenses.dart.
     - assets/fonts/LiberationMono-LICENSE.txt
     - assets/fonts/Cairo-LICENSE.txt
+    # Levels being written. Read by the bench on the web, which has no disk
+    # (lib/level/bundled_levels.dart); a few kilobytes of JSON.
+    - levels/
 
   fonts:
     - family: LiberationMono
