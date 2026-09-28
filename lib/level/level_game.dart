@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../audio/sfx.dart';
@@ -248,7 +249,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       await addAll([input, keyboard]);
       await camera.viewport.add(touch);
     }
-    await add(_Hotkeys(onReload: reload, onMenu: onMenuRequested));
+    await add(_Hotkeys(onReload: retry, onMenu: onMenuRequested));
 
     // The scene the levels stand in, added once. The world half is rebuilt per
     // level — `_build` empties the world — but the sky and the air do not
@@ -364,11 +365,21 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       player,
     ]);
 
-    _frameVertically();
-    camera.follow(player, horizontalOnly: true);
+    aimCamera();
     // Whatever put this level up — the level before it finishing, or the menu
     // — the new one arrives out of the dark rather than appearing in it.
     fade.reveal();
+  }
+
+  /// Points the camera at a freshly built level: the ground at its height on
+  /// screen, and the player followed.
+  ///
+  /// Overridable for the editor, whose camera is wherever the author left it
+  /// and is not to be yanked back to the spawn every time a block is moved.
+  @protected
+  void aimCamera() {
+    _frameVertically();
+    camera.follow(player, horizontalOnly: true);
   }
 
   /// The environment, standing on this level's floor.
@@ -680,7 +691,11 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// emptied or every level in it was refused, and a game with no level is a
   /// crash; keeping the last good one on screen is the answer that lets you
   /// fix the file and press the button again.
-  Future<void> replaceLevels(List<Level> next) async {
+  ///
+  /// With [quietly] the new level simply appears, with no fade: the editor
+  /// rebuilds on every drag, and a level that flashed black each time would be
+  /// a level nobody could draw.
+  Future<void> replaceLevels(List<Level> next, {bool quietly = false}) async {
     if (next.isEmpty) return;
     final wasOn = level.id;
     levels = next;
@@ -688,7 +703,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     _index = found < 0 ? 0 : found;
     reloads = 0;
     _advanceIn = 0;
-    fade.blackout();
+    if (!quietly) fade.blackout();
     await _build();
   }
 
@@ -752,6 +767,14 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
         for (final ghost in standableShadows) ghost.bounds,
     ],
   );
+
+  /// The player asked to start again — R, not a fall or a shadow.
+  ///
+  /// Separate from [reload] only so the editor can tell the two apart: a
+  /// fall is part of a recorded run and replays with it, and a key pressed
+  /// halfway through a recording is not something a recording can hold.
+  @protected
+  void retry() => reload();
 
   /// The whole death-and-retry system for this phase: put everything back.
   ///

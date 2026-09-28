@@ -39,6 +39,8 @@ dependencies:
   flame_audio: ^2.12.2
   shared_preferences: ^2.5.5
   http: ^1.6.0
+  # The editor saves and opens level files in the browser with it.
+  web: ^1.1.1
   supabase_flutter: ^2.17.2
 dev_dependencies:
   flutter_test:
