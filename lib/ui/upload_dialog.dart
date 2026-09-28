@@ -7,7 +7,7 @@ import '../level/level_upload.dart';
 /// needed, send it, and say where it went.
 ///
 /// A dialog rather than a panel on the bench because it is rare and it takes
-/// the keyboard — an email and a six-digit code — and the bench's panel is
+/// the keyboard — an email and a password — and the bench's panel is
 /// built so that nothing in it ever does.
 class UploadDialog extends StatefulWidget {
   const UploadDialog({super.key, required this.level, required this.upload});
@@ -28,13 +28,13 @@ class UploadDialog extends StatefulWidget {
   State<UploadDialog> createState() => _UploadDialogState();
 }
 
-enum _Step { working, refused, email, code, sent, failed }
+enum _Step { working, refused, signIn, sent, failed }
 
 class _UploadDialogState extends State<UploadDialog> {
   _Step _step = _Step.working;
   String _message = '';
   final _email = TextEditingController();
-  final _code = TextEditingController();
+  final _password = TextEditingController();
 
   LevelBackend get _backend => widget.upload.backend;
 
@@ -47,7 +47,7 @@ class _UploadDialogState extends State<UploadDialog> {
   @override
   void dispose() {
     _email.dispose();
-    _code.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -61,7 +61,7 @@ class _UploadDialogState extends State<UploadDialog> {
           _step = _Step.refused;
           _message = reasons;
         case NeedsSignIn():
-          _step = _Step.email;
+          _step = _Step.signIn;
           _message = '';
         case Submitted(:final id):
           _step = _Step.sent;
@@ -75,23 +75,19 @@ class _UploadDialogState extends State<UploadDialog> {
     });
   }
 
-  Future<void> _attempt(_Step next, Future<void> Function() action) async {
+  Future<void> _signInAndSend() async {
     setState(() => _step = _Step.working);
     try {
-      await action();
-      if (!mounted) return;
-      if (next == _Step.working) return _send();
-      setState(() {
-        _step = next;
-        _message = '';
-      });
+      await _backend.signIn(_email.text.trim(), _password.text);
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _step = next == _Step.code ? _Step.email : _Step.code;
+        _step = _Step.signIn;
         _message = '$error';
       });
+      return;
     }
+    if (mounted) await _send();
   }
 
   @override
@@ -120,13 +116,11 @@ class _UploadDialogState extends State<UploadDialog> {
     _Step.refused => _text(
       'The gate would refuse this, so it was not sent:\n\n$_message',
     ),
-    _Step.email => Column(
+    _Step.signIn => Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _text(
-          'It passes. Sign in to send it — a code will come to this address.',
-        ),
+        _text('It passes. Sign in to send it.'),
         TextField(
           key: const Key('email'),
           controller: _email,
@@ -134,20 +128,12 @@ class _UploadDialogState extends State<UploadDialog> {
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(labelText: 'email'),
         ),
-        if (_message.isNotEmpty) _error(_message),
-      ],
-    ),
-    _Step.code => Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _text('The code from the email sent to ${_email.text.trim()}:'),
         TextField(
-          key: const Key('code'),
-          controller: _code,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'code'),
+          key: const Key('password'),
+          controller: _password,
+          obscureText: true,
+          decoration: const InputDecoration(labelText: 'password'),
+          onSubmitted: (_) => _signInAndSend(),
         ),
         if (_message.isNotEmpty) _error(_message),
       ],
@@ -159,25 +145,9 @@ class _UploadDialogState extends State<UploadDialog> {
   };
 
   List<Widget> _actions() => switch (_step) {
-    _Step.email => [
+    _Step.signIn => [
       FilledButton(
-        onPressed: () => _attempt(
-          _Step.code,
-          () => _backend.sendCode(_email.text.trim()),
-        ),
-        child: const Text('send code'),
-      ),
-    ],
-    _Step.code => [
-      TextButton(
-        onPressed: () => setState(() => _step = _Step.email),
-        child: const Text('another email'),
-      ),
-      FilledButton(
-        onPressed: () => _attempt(
-          _Step.working,
-          () => _backend.verifyCode(_email.text.trim(), _code.text.trim()),
-        ),
+        onPressed: _signInAndSend,
         child: const Text('sign in and send'),
       ),
     ],

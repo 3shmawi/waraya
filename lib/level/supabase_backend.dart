@@ -27,15 +27,8 @@ class SupabaseBackend implements LevelBackend {
   String? get signedInAs => _client.auth.currentUser?.email;
 
   @override
-  Future<void> sendCode(String email) =>
-      _client.auth.signInWithOtp(email: email);
-
-  @override
-  Future<void> verifyCode(String email, String code) => _client.auth.verifyOTP(
-    email: email,
-    token: code,
-    type: OtpType.email,
-  );
+  Future<void> signIn(String email, String password) =>
+      _client.auth.signInWithPassword(email: email, password: password);
 
   @override
   Future<void> submit(String id, Map<String, Object?> data) async {

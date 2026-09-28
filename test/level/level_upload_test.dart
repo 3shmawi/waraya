@@ -14,15 +14,11 @@ class FakeBackend implements LevelBackend {
   String? signedInAs;
 
   final sent = <String, Map<String, Object?>>{};
-  final codes = <String>[];
   Object? refuseWith;
 
   @override
-  Future<void> sendCode(String email) async => codes.add(email);
-
-  @override
-  Future<void> verifyCode(String email, String code) async {
-    if (code != '123456') throw Exception('wrong code');
+  Future<void> signIn(String email, String password) async {
+    if (password != 'right') throw Exception('Invalid login credentials');
     signedInAs = email;
   }
 
@@ -97,17 +93,13 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('email')), 'me@example.com');
-    await tester.tap(find.text('send code'));
-    await tester.pumpAndSettle();
-    expect(backend.codes, ['me@example.com']);
-
-    await tester.enterText(find.byKey(const Key('code')), '000000');
+    await tester.enterText(find.byKey(const Key('password')), 'wrong');
     await tester.tap(find.text('sign in and send'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('wrong code'), findsOneWidget);
+    expect(find.textContaining('Invalid login credentials'), findsOneWidget);
     expect(backend.sent, isEmpty);
 
-    await tester.enterText(find.byKey(const Key('code')), '123456');
+    await tester.enterText(find.byKey(const Key('password')), 'right');
     await tester.tap(find.text('sign in and send'));
     await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     await tester.pumpAndSettle();

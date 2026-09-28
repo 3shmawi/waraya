@@ -8,14 +8,15 @@ abstract interface class LevelBackend {
   /// Who is signed in, or null. An email, for showing.
   String? get signedInAs;
 
-  /// Emails a one-time code to [email].
+  /// Signs in with an email and a password.
   ///
-  /// A code rather than a link: a link has to come back into the app, which
-  /// is a deep link on every platform and a redirect URL on the web, and a
-  /// code is six digits typed into the box that asked for them.
-  Future<void> sendCode(String email);
-
-  Future<void> verifyCode(String email, String code);
+  /// A password rather than an emailed link or code, because both of those
+  /// need an email Supabase will only let you change with your own SMTP
+  /// server — and the link would have to come back into the app, which is a
+  /// deep link on every platform. The one author there is makes their account
+  /// once in the dashboard (Authentication → Users → Add user), and the bench
+  /// keeps the session after that.
+  Future<void> signIn(String email, String password);
 
   /// Puts the level in the table as `pending`, or puts an author's own
   /// earlier submission back to `pending` with new data. Throws
