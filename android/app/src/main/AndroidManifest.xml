@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Published levels are fetched from Supabase (docs/phase-8-server.md).
+         Debug builds get this for free; a release build without it fails
+         the fetch silently and plays only the built-in campaign. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="waraya"
         android:name="${applicationName}"

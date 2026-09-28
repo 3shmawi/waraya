@@ -20,6 +20,7 @@ class LabControls extends StatefulWidget {
     required this.onReload,
     this.onReread,
     this.onDump,
+    this.onUpload,
     this.status,
   });
 
@@ -32,6 +33,10 @@ class LabControls extends StatefulWidget {
 
   /// Print the level on screen as JSON, to start a new one from.
   final VoidCallback? onDump;
+
+  /// Send the level on the bench to be judged and published. Null when the
+  /// bench could not reach the server's client at startup.
+  final VoidCallback? onUpload;
 
   /// The last thing the two above had to say, good or bad.
   ///
@@ -98,6 +103,16 @@ class _LabControlsState extends State<LabControls> {
           tooltip: 'print this level as JSON',
           onPressed: widget.onDump,
           icon: const Icon(Icons.code, size: 18, color: Color(0xFFEDEDED)),
+        ),
+      if (widget.onUpload != null)
+        IconButton(
+          tooltip: 'send this level to be published',
+          onPressed: widget.onUpload,
+          icon: const Icon(
+            Icons.cloud_upload_outlined,
+            size: 18,
+            color: Color(0xFFEDEDED),
+          ),
         ),
       if (widget.onReread != null)
         IconButton(

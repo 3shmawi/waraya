@@ -8,9 +8,12 @@ import 'level/file_levels.dart';
 import 'level/level.dart';
 import 'level/level_game.dart';
 import 'level/level_source.dart';
+import 'level/level_upload.dart';
 import 'level/levels.dart';
+import 'level/supabase_backend.dart';
 import 'licenses.dart';
 import 'ui/lab_controls.dart';
+import 'ui/upload_dialog.dart';
 
 /// The tuning bench — the shadow, on grey boxes, with every number exposed.
 ///
@@ -31,14 +34,27 @@ import 'ui/lab_controls.dart';
 /// edit the file, alt-tab, look — is what makes "a level is data" true in
 /// practice; a level being JSON is worth nothing on its own if seeing your
 /// edit means a rebuild.
+///
+/// And it is where a level leaves: the cloud button checks the level on screen
+/// with the gate's own rules and, if it passes, sends it to be published.
+/// Signing in is here and nowhere else — an account is for sending a level,
+/// never for playing one.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerFontLicenses();
 
   final authoring = _authoring;
+  LevelUpload? upload;
+  try {
+    upload = LevelUpload(await SupabaseBackend.start());
+  } catch (error) {
+    // The bench works without it; only the cloud button goes away.
+    debugPrint('no uploading this session: $error');
+  }
   runApp(
     ShadowLabApp(
       authoring: authoring,
+      upload: upload,
       // Read once before the first frame: a bench that opens on a spinner and
       // then a level is two things to look at where there should be one.
       levels: authoring == null ? null : await authoring.load(),
@@ -53,7 +69,12 @@ LevelSource? get _authoring {
 }
 
 class ShadowLabApp extends StatefulWidget {
-  const ShadowLabApp({super.key, this.authoring, this.levels});
+  const ShadowLabApp({
+    super.key,
+    this.authoring,
+    this.levels,
+    this.upload,
+  });
 
   /// Set when the bench was pointed at a file or folder, so the panel can
   /// offer to read it again.
@@ -61,6 +82,9 @@ class ShadowLabApp extends StatefulWidget {
 
   /// What was on the disk at startup. Null means the bench level in the code.
   final List<Level>? levels;
+
+  /// Where the cloud button sends a level. Null hides the button.
+  final LevelUpload? upload;
 
   @override
   State<ShadowLabApp> createState() => _ShadowLabAppState();
@@ -122,6 +146,13 @@ class _ShadowLabAppState extends State<ShadowLabApp> {
             onReload: game.reload,
             onReread: widget.authoring == null ? null : _reread,
             onDump: _dump,
+            onUpload: widget.upload == null
+                ? null
+                : () => UploadDialog.show(
+                    context,
+                    level: game.level,
+                    upload: widget.upload!,
+                  ),
             status: _status,
           ),
         },
