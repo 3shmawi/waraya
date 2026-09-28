@@ -1,0 +1,109 @@
+name: gate
+
+# Decides which submitted levels are published. See docs/phase-8-server.md.
+#
+# Three steps, and only the outer two see the key. The middle one replays
+# levels strangers wrote, and it runs with nothing in its environment worth
+# taking. The level data is data — parsed and played, never executed — but
+# the step that handles it still has no business holding a key that can
+# rewrite the table.
+#
+# Never add a pull_request_target trigger here: that runs with the secrets
+# on code a stranger's pull request can change.
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      recheck:
+        description: 'Judge the published levels again, not only the pending'
+        type: boolean
+        default: false
+  # A change to the game can change what a level does. When one lands, every
+  # published level is judged again by the build that now ships.
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'pubspec.lock'
+
+concurrency:
+  group: gate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SUPABASE_URL: https://anuohrvxlmthfvbnukrb.supabase.co
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch what is waiting
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RECHECK: ${{ github.event_name == 'push' || inputs.recheck == true }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_SERVICE_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_KEY is not set in the repository's Actions secrets"
+            exit 1
+          fi
+          auth=(-H "apikey: $SUPABASE_SERVICE_KEY")
+          # A legacy service_role key is a JWT and wants to be the bearer too.
+          case "$SUPABASE_SERVICE_KEY" in
+            eyJ*) auth+=(-H "Authorization: Bearer $SUPABASE_SERVICE_KEY") ;;
+          esac
+          if [ "$RECHECK" = "true" ]; then
+            which='status=in.(pending,published)'
+          else
+            which='status=eq.pending'
+          fi
+          curl -sS --fail-with-body "${auth[@]}" \
+            "$SUPABASE_URL/rest/v1/levels?select=id,data&$which&order=created_at.asc&limit=50" \
+            -o rows.json
+          echo "count=$(jq length rows.json)" >> "$GITHUB_OUTPUT"
+          jq -r '.[].id' rows.json
+        id: fetch
+
+      - uses: subosito/flutter-action@v2
+        if: steps.fetch.outputs.count != '0'
+        with:
+          flutter-version: 3.44.9
+          channel: stable
+          cache: true
+
+      # No secret in this step's environment, on purpose.
+      - name: Judge
+        if: steps.fetch.outputs.count != '0'
+        run: |
+          flutter pub get
+          GATE_IN=rows.json GATE_OUT=decisions.json flutter test tool/gate.dart --reporter expanded
+
+      - name: Write the decisions back
+        if: steps.fetch.outputs.count != '0'
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          auth=(-H "apikey: $SUPABASE_SERVICE_KEY")
+          case "$SUPABASE_SERVICE_KEY" in
+            eyJ*) auth+=(-H "Authorization: Bearer $SUPABASE_SERVICE_KEY") ;;
+          esac
+          jq -c '.[]' decisions.json | while read -r decision; do
+            id=$(jq -r '.id | @uri' <<<"$decision")
+            body=$(jq -c --arg by "$GITHUB_SHA" \
+              '{status, verdict, checked_by: $by}' <<<"$decision")
+            curl -sS --fail-with-body "${auth[@]}" -X PATCH \
+              -H 'Content-Type: application/json' \
+              -H 'Prefer: return=minimal' \
+              -d "$body" \
+              "$SUPABASE_URL/rest/v1/levels?id=eq.$id"
+            echo "$(jq -r '.id + ": " + .status' <<<"$decision")"
+          done
