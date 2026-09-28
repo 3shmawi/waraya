@@ -113,6 +113,15 @@ const clips = <Clip>[
   // somewhere, because a body that walked past standing up is not a floor
   // any more — this is the level where that is the whole question.
   Clip(number: 10, slug: 'duck-to-build', levelId: 'not-every-step'),
+  // Phase 7. Each is still one rule, but these are the first clips where the
+  // rule only shows up *because* of something earlier in the same clip: the
+  // step you stand on was built by a step, the lamp answer is undone a room
+  // later, the gates open to a plan laid down before the first one moved.
+  Clip(number: 11, slug: 'a-stair-of-you', levelId: 'stair-of-yourself'),
+  Clip(number: 12, slug: 'three-gates', levelId: 'three-gates-one-past'),
+  Clip(number: 13, slug: 'under-the-lamp', levelId: 'under-the-light'),
+  Clip(number: 14, slug: 'dont-have-been-there', levelId: 'your-past-shuts-it'),
+  Clip(number: 15, slug: 'all-of-it', levelId: 'all-of-it'),
 ];
 
 void main() {
@@ -133,6 +142,8 @@ void main() {
   final only = Platform.environment['WARAYA_CLIP'];
   for (final clip in clips) {
     if (only != null && only != clip.slug && only != '${clip.number}') continue;
+    // Twenty-five minutes a clip: the last level's is twenty seconds long and
+    // renders at about two frames a second, which ran out of ten.
     test('clip ${clip.name}', () async {
       final shot = await render(clip);
       // A clip that runs the whole script and never reaches the goal is a
@@ -147,7 +158,7 @@ void main() {
         '${clip.name}: ${shot.frames} frames '
         '(${(shot.frames / fps).toStringAsFixed(1)}s) -> $outRoot/${clip.name}',
       );
-    }, timeout: const Timeout(Duration(minutes: 10)));
+    }, timeout: const Timeout(Duration(minutes: 25)));
   }
 }
 

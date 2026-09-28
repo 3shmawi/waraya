@@ -156,10 +156,26 @@ class PressurePlate extends PositionComponent {
 /// web build cannot be trusted with — and god rays are already in the art
 /// direction, so a lit column strengthens the scene rather than fighting it.
 class LightZone extends PositionComponent {
-  LightZone(this.area, {this.look = LevelLook.greyBox, super.priority = 60});
+  LightZone(
+    this.area, {
+    this.look = LevelLook.greyBox,
+    this.landsOnSomething = true,
+    super.priority = 60,
+  });
 
   final Rect area;
   final LevelLook look;
+
+  /// Whether the beam comes down onto a floor, or stops in the air.
+  ///
+  /// A beam that stops short — the lamp in `underTheLight`, which ends above
+  /// a ducked head — used to be drawn exactly like one that reaches the
+  /// floor: a hard-sided pool at its bottom edge, hanging in mid-air. Reported
+  /// from playing as looking cut off. With nothing to land on it now thins
+  /// out over its last stretch instead, and gets no pool: a pool is light
+  /// *on* something. The rule is the same rectangle either way — the fade
+  /// ends where the rule does.
+  final bool landsOnSomething;
 
   bool get _lit => look == LevelLook.silhouette;
 
@@ -173,13 +189,38 @@ class LightZone extends PositionComponent {
 
   late final Paint _beam = Paint()
     ..blendMode = _lit ? BlendMode.plus : BlendMode.srcOver
-    ..shader = ui.Gradient.linear(
-      Offset(0, area.top),
-      Offset(0, area.bottom),
-      _lit
-          ? const [Color(0x44E8B55E), Color(0x14E8B55E)]
-          : const [Color(0x40FFFFFF), Color(0x18FFFFFF)],
-    );
+    ..shader = landsOnSomething
+        ? ui.Gradient.linear(
+            Offset(0, area.top),
+            Offset(0, area.bottom),
+            _lit
+                ? const [Color(0x44E8B55E), Color(0x14E8B55E)]
+                : const [Color(0x40FFFFFF), Color(0x18FFFFFF)],
+          )
+        : ui.Gradient.linear(
+            Offset(0, area.top),
+            Offset(0, area.bottom),
+            _lit
+                ? const [
+                    Color(0x44E8B55E),
+                    Color(0x2AE8B55E),
+                    Color(0x00E8B55E),
+                  ]
+                : const [
+                    Color(0x40FFFFFF),
+                    Color(0x26FFFFFF),
+                    Color(0x00FFFFFF),
+                  ],
+            [0, _fadeFrom, 1],
+          );
+
+  /// Where a beam with nothing under it starts thinning out, as a fraction of
+  /// its height.
+  double get _fadeFrom =>
+      (1 - _fadeDepth / area.height).clamp(0.0, 1.0).toDouble();
+
+  /// How far above its bottom edge a hanging beam fades to nothing.
+  static const double _fadeDepth = 90;
 
   /// A narrower, brighter core, so the column reads as a beam rather than as a
   /// tinted rectangle.
@@ -250,15 +291,17 @@ class LightZone extends PositionComponent {
 
     canvas.drawRect(area, _beam);
     canvas.drawRect(area.deflate(area.width * 0.28), _core);
-    canvas.drawRect(
-      Rect.fromLTRB(
-        area.left,
-        max(area.top, area.bottom - _poolDepth),
-        area.right,
-        area.bottom,
-      ),
-      _pool,
-    );
+    if (landsOnSomething) {
+      canvas.drawRect(
+        Rect.fromLTRB(
+          area.left,
+          max(area.top, area.bottom - _poolDepth),
+          area.right,
+          area.bottom,
+        ),
+        _pool,
+      );
+    }
     if (_lit) return;
     // The bench is for measuring, so there the rectangle has an outline and
     // you can see exactly where it ends.
