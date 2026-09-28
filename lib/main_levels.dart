@@ -20,9 +20,9 @@ import 'ui/level_select.dart';
 /// flutter run -t lib/main_levels.dart
 /// ```
 ///
-/// A third entry point rather than a mode: `main.dart` is the finished
+/// An entry point rather than a mode: `main_scene.dart` is the finished
 /// environment, `main_lab.dart` is the bench with all the sliders, and this is
-/// the campaign with none of them. Nothing here can be tuned mid-play on
+/// the campaign with none of them — and what `main.dart` ships. Nothing here can be tuned mid-play on
 /// purpose — a level is meant to be beaten at the numbers it was designed
 /// around.
 Future<void> main() async {

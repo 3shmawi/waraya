@@ -13,3 +13,7 @@ changes, and opening `index.html` straight off disk should look right.
 The OFL requires the licence to travel with the font, which is why
 `fonts/Cairo-LICENSE.txt` is here as well as in `assets/`. `test/app/fonts_test.dart`
 pins the same rule for the bundled copy.
+
+`privacy.html` is the page the stores ask for. It names every field the game
+sends by its key, and `test/app/privacy_test.dart` fails when `Attempt.toJson`
+gains one the page does not mention.

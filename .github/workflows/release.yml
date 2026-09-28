@@ -1,0 +1,215 @@
+# Builds the game for every platform a runner can build it on, and puts the
+# builds on a GitHub Release — the page the landing page's download link
+# points at (https://github.com/3shmawi/waraya/releases/latest).
+#
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# The tag has to match `version:` in pubspec.yaml (the part before the +), or
+# nothing is built: a release called v1.1.0 whose app says 1.0.0 is two
+# numbers for one thing. Run by hand (workflow_dispatch) it builds everything
+# and uploads the builds as workflow artifacts, with no release — a dry run.
+#
+# What each build is, and is not (docs/phase-10-release.md has the why):
+# - Android: an APK to sideload and an AAB for Google Play. Signed with the
+#   upload key when the four ANDROID_* secrets exist; with the debug key when
+#   they do not, which installs fine and which Play refuses.
+# - Windows, Linux: the release bundle, zipped. Unsigned — Windows SmartScreen
+#   warns on first run.
+# - macOS: the .app, zipped. Unsigned and not notarised — Gatekeeper blocks a
+#   double-click; right-click → Open once gets past it.
+# - iOS: not built here. An .ipa nobody can install without a signing
+#   identity and a provisioning profile is not a release.
+# - Web: not built here. pages.yml publishes it on every push to main.
+#
+# Every build is `lib/main.dart`, which is the campaign;
+# test/app/entry_point_test.dart is what keeps that true.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # Same pin as ci.yml, pages.yml and .fvmrc.
+  FLUTTER_VERSION: 3.44.9
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: |
+          version=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME but pubspec.yaml says $version"
+            exit 1
+          fi
+
+  # The tests run before anything is built. A tag is a promise that the
+  # recorded solutions still solve and the wrong ideas still fail.
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  android:
+    needs: [version, checks]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+
+      # The keystore exists on disk for the length of this job and nowhere
+      # else. android/app/build.gradle.kts signs with it when
+      # android/key.properties names one, and with the debug key otherwise.
+      - name: Upload key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then
+            echo "::warning::no ANDROID_KEYSTORE_BASE64 secret: signing with the debug key, which Google Play refuses"
+            exit 0
+          fi
+          echo "$KEYSTORE" | base64 --decode > android/app/upload.jks
+          {
+            echo "storeFile=upload.jks"
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/key.properties
+
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - run: |
+          mkdir -p out
+          cp build/app/outputs/flutter-apk/app-release.apk "out/waraya-${{ needs.version.outputs.version }}.apk"
+          cp build/app/outputs/bundle/release/app-release.aab "out/waraya-${{ needs.version.outputs.version }}.aab"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: out/
+
+  linux:
+    needs: [version, checks]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        # GTK for the window, GStreamer for audioplayers.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build linux --release
+      - run: |
+          mkdir -p out
+          tar -C build/linux/x64/release/bundle -czf \
+            "out/waraya-${{ needs.version.outputs.version }}-linux-x64.tar.gz" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: out/
+
+  windows:
+    needs: [version, checks]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Compress-Archive -Path build/windows/x64/runner/Release/* `
+            -DestinationPath "out/waraya-${{ needs.version.outputs.version }}-windows-x64.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: out/
+
+  macos:
+    needs: [version, checks]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build macos --release
+      # ditto, not zip: it keeps the bundle's symlinks and extended
+      # attributes, and a .app zipped without them does not open.
+      - run: |
+          mkdir -p out
+          ditto -c -k --keepParent build/macos/Build/Products/Release/waraya.app \
+            "out/waraya-${{ needs.version.outputs.version }}-macos.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: out/
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: [version, android, linux, windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ورايا ${{ needs.version.outputs.version }}
+          generate_release_notes: true
+          files: out/*
+          body: |
+            **Play in the browser, no install:** https://3shmawi.github.io/waraya/play/
+
+            - **Android:** the `.apk` installs directly (allow installs from this source when asked). The `.aab` is for Google Play.
+            - **Windows:** unzip and run `waraya.exe`. SmartScreen warns on first run: the build is not signed.
+            - **macOS:** unzip, then right-click `waraya.app` → Open the first time. The build is not notarised.
+            - **Linux:** untar and run `./waraya`.
+
+            What the game sends, and does not: https://3shmawi.github.io/waraya/privacy.html

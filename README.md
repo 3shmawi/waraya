@@ -66,9 +66,10 @@ touch. The tuning bench (`lib/main_lab.dart`) stays grey on purpose.
 | 4 | Puzzle design, 5–8 levels | ✅ 7 built |
 | 5 | Death and retry, level transitions, saving, menus | ✅ |
 | 6 | Level vocabulary — new data a level can be made of | ✅ |
-| 7 | The hard levels, built out of that vocabulary | current |
-| 8 | Server, submissions, authoring | |
-| 9 | Polish and release | |
+| 7 | The hard levels, built out of that vocabulary | ✅ 6 built |
+| 8 | Server, submissions, the acceptance gate | ✅ |
+| 9 | The level editor, inside the bench | ✅ built, not yet used by hand |
+| 10 | Polish and release | current |
 
 Phase 6 adds **vocabulary, not levels**. Seven levels used up most of what
 rectangles, plates and doors can say, and "harder" with the same pieces only
@@ -100,7 +101,7 @@ whatever decides to publish a level somebody else wrote.
 
 It is a hobby project, built one day a week. The plan it follows, and the
 reasoning behind each phase, is in [`CLAUDE.md`](CLAUDE.md), with the current
-phase in [`docs/phase-6-vocabulary.md`](docs/phase-6-vocabulary.md).
+phase in [`docs/phase-10-release.md`](docs/phase-10-release.md).
 
 ## Playing it
 
@@ -112,6 +113,11 @@ Arrows or **WASD** to walk, **space** to jump, **down** to crouch, **R** to put
 the level back if you have painted yourself into a corner — which in one of
 them is the intended way to find out you did. On a phone there are four drawn
 buttons: two arrows bottom left, jump and crouch bottom right.
+
+Desktop and Android builds are on the
+[releases page](https://github.com/3shmawi/waraya/releases/latest); a `v*` tag
+builds them (`.github/workflows/release.yml`). What the game sends, and does
+not, is on [the privacy page](https://3shmawi.github.io/waraya/privacy.html).
 
 **R** (or «من الأول» at the top) puts the level back. **Escape** (or
 «المراحل») opens the level list. Progress is kept
@@ -132,18 +138,19 @@ The Flutter version is pinned in `.fvmrc`. Install [FVM](https://fvm.app), then:
 fvm install                                  # fetches the pinned SDK
 fvm flutter pub get
 
-fvm flutter run -t lib/main_levels.dart      # the puzzles
+fvm flutter run                              # the game
 fvm flutter run -t lib/main_lab.dart         # the bench, and the level editor
-fvm flutter run                              # the finished environment
+fvm flutter run -t lib/main_scene.dart       # the Phase 1 scene, nothing to solve
 ```
 
 **Three entry points.** `main_levels.dart` is the campaign — the puzzles, in
-teaching order. `main_lab.dart` is the same game on a bench scene, and the
+teaching order — and `main.dart` is it too, because `main.dart` is what every
+build without a `-t` ships (until Phase 10 that was the scenery demo). `main_lab.dart` is the same game on a bench scene, and the
 level editor: drag the rectangles about, press Tab to be inside the level you
 are drawing, record its solution and its wrong ideas, and watch the gate's own
 rules judge it as you go (`docs/phase-9-editor.md`). While playing, a live
 panel sets the delay, the shadow's opacity, and whether the shadow is solid,
-kills you, or shows the path it is about to walk. `main.dart` is the Phase 1
+kills you, or shows the path it is about to walk. `main_scene.dart` is the Phase 1
 scene with nothing to solve in it — one walker, one horizon.
 
 The bench stays grey on purpose. Nice art flatters a mechanic, so the puzzles
@@ -325,7 +332,9 @@ carries weight, which is the flight phase that separates the two.
 
 ```
 lib/
-  main.dart                      the game
+  main.dart                      the game (main_levels.dart, re-exported)
+  main_levels.dart               the campaign
+  main_scene.dart                the Phase 1 scene
   main_lab.dart                  the shadow lab, and the level editor
   editor/
     editor_doc.dart              a level being edited, as a plain value

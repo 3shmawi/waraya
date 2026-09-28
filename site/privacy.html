@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>الخصوصية · ورايا</title>
+<meta name="description" content="اللعبة بتبعت إيه، ومش بتبعت إيه.">
+<meta name="theme-color" content="#0E0A10">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<!--
+  Every field the game sends is named on this page by the key it is sent
+  under, and test/app/privacy_test.dart fails if one is added to
+  Attempt.toJson() without being added here. A store asks for this page; a
+  page that has quietly fallen behind the code is worse than none.
+-->
+<style>
+  @font-face {
+    font-family: 'Cairo';
+    src: url('fonts/Cairo-Regular.ttf') format('truetype');
+    font-display: swap;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+    background: #0E0A10;
+    color: #D6C8B6;
+    line-height: 1.8;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: clamp(32px, 7vw, 64px) 22px 56px; }
+  h1 { font-weight: 400; font-size: clamp(28px, 7vw, 40px); color: #FFE7B0; margin: 0 0 6px; }
+  h2 { font-weight: 400; font-size: 21px; color: #FFE7B0; margin: 34px 0 10px; }
+  p, li { font-size: 16.5px; }
+  ul { padding: 0 20px 0 0; }
+  li { margin-bottom: 8px; }
+  a { color: #E8B55E; }
+  code {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 13.5px;
+    background: rgba(255,231,176,.1);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: #FFE7B0;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  .lead { font-size: 19px; color: #FFE7B0; }
+  .rule { height: 1px; background: rgba(217,162,92,.22); border: 0; margin: 44px 0; }
+  .en { direction: ltr; text-align: left; }
+  .en ul { padding: 0 0 0 20px; }
+  .en p, .en li { font-family: system-ui, -apple-system, sans-serif; font-size: 15.5px; }
+  footer { text-align: center; font-size: 14px; color: #8A7C6C; padding-bottom: 40px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>الخصوصية</h1>
+  <p class="lead">
+    مفيش حساب، ولا اسم، ولا إيميل، ولا إعلانات، ولا مكانك. اللعبة بتبعت
+    أرقام عن المراحل، مش عنك.
+  </p>
+
+  <h2>اللي بيتحفظ على جهازك وبس</h2>
+  <ul>
+    <li>المراحل اللي خلّصتها — عشان تقفل وترجع تلاقي نفسك مكانك.</li>
+    <li>رقم عشوائي الجهاز بيعمله أول مرة يفتح فيها اللعبة (<code>device_id</code>).
+      مش مربوط بأي حاجة: لا بالجهاز ولا بحسابك ولا بيك.</li>
+  </ul>
+  <p>
+    على الويب دول في تخزين المتصفح للصفحة دي. لو مسحت بيانات الموقع أو
+    الأبلكيشن، الاتنين بيروحوا، والرقم اللي بعده بيبقى رقم جديد مالوش علاقة
+    بالقديم.
+  </p>
+
+  <h2>اللي بيتبعت</h2>
+  <p>
+    لما تخلّص مرحلة، أو تسيبها لمرحلة تانية، أو تقفل اللعبة وانت في نصها، بيتبعت
+    سطر واحد عن المحاولة دي لسيرفر اللعبة (<a href="https://supabase.com">Supabase</a>):
+  </p>
+  <ul>
+    <li><code>device_id</code> — الرقم العشوائي اللي فوق.</li>
+    <li><code>attempt_id</code> — رقم عشوائي تاني للمحاولة دي بس.</li>
+    <li><code>level_id</code> — اسم المرحلة.</li>
+    <li><code>delays</code> — تأخير الظل في المرحلة (ده من المرحلة، مش منك).</li>
+    <li><code>outcome</code> — خلّصتها، ولا سبتها، ولا قفلت اللعبة.</li>
+    <li><code>seconds</code> — قعدت فيها قد إيه، بوقت اللعبة.</li>
+    <li><code>reloads</code> — عدد المرات اللي بدأت فيها من الأول.</li>
+    <li><code>deaths</code> — مكانك في المرحلة كل مرة بدأت من الأول (لحد ٢٠٠).</li>
+  </ul>
+  <p>
+    السبب سؤال واحد: <b>أنهي مرحلة ظالمة؟</b> مرحلة الناس بتعيدها عشرين مرة،
+    أو المكان اللي الكل بيموت فيه. مفيش حاجة تانية بتتعمل بالأرقام دي، ومبتتباعش
+    ولا بتتشارك مع حد.
+  </p>
+  <p>
+    والبعت ده بيتبعت ويتنسي: لو مفيش نت، مبيتحفظش ومبيتبعتش بعدين.
+  </p>
+
+  <h2>اللي بيتنزل</h2>
+  <p>
+    اللعبة بتسأل السيرفر لو فيه مراحل جديدة. الطلب ده مفيهوش أي حاجة عنك.
+  </p>
+
+  <h2>السيرفرات نفسها</h2>
+  <p>
+    أي سيرفر بيشوف عنوان الاتصال اللي جايله الطلب منه، وده مش استثناء: الصفحة
+    دي على GitHub Pages والأرقام على Supabase، والاتنين بيحتفظوا بسجلات عادية
+    لفترة قصيرة. اللعبة مبتحفظش العنوان ده في أي جدول ومبتقراش السجلات دي.
+  </p>
+
+  <h2>لو عايز تمسح</h2>
+  <p>
+    الأرقام اللي اتبعتت مش مربوطة بيك، فمفيش طريقة نعرف بيها أنهي سطور بتاعتك
+    عشان نمسحها. اللي تقدر تعمله إنك تمسح بيانات اللعبة من جهازك، ومن ساعتها
+    مفيش حاجة بتربط اللي جاي باللي فات. ولأي سؤال:
+    <a href="https://github.com/3shmawi/waraya/issues">github.com/3shmawi/waraya/issues</a>.
+  </p>
+
+  <hr class="rule">
+
+  <div class="en">
+    <h2>In English</h2>
+    <p>
+      No account, no name, no email, no ads, no location. The game sends
+      numbers about levels, not about you.
+    </p>
+    <p><b>Kept on your device only:</b> which levels you have finished, and a
+      random id (<code>device_id</code>) the game makes up the first time it
+      runs. It is not derived from the device, an account or you. Clearing the
+      app's or the site's data removes both, and the next id is unrelated.</p>
+    <p><b>Sent</b>, when you finish a level, leave it for another, or close the
+      game partway through one — one row to the game's server (Supabase):</p>
+    <ul>
+      <li><code>device_id</code> — the random id above</li>
+      <li><code>attempt_id</code> — another random id, for this attempt</li>
+      <li><code>level_id</code> — which level</li>
+      <li><code>delays</code> — the level's shadow delay (a property of the level)</li>
+      <li><code>outcome</code> — finished, left, or closed</li>
+      <li><code>seconds</code> — how long, in game time</li>
+      <li><code>reloads</code> — how many times you restarted</li>
+      <li><code>deaths</code> — where you were each time you restarted (up to 200)</li>
+    </ul>
+    <p>It exists to answer one question — which level is unfair — and is not
+      sold, shared or used for anything else. It is sent once and forgotten:
+      offline, nothing is queued.</p>
+    <p><b>Downloaded:</b> the game asks the server for new levels. That request
+      carries nothing about you.</p>
+    <p><b>The servers themselves</b> see the network address a request comes
+      from, like any server. This page is on GitHub Pages and the numbers are
+      on Supabase, and both keep ordinary logs for a short time. The game does
+      not store that address in any table, and does not read those logs.</p>
+    <p><b>Deleting:</b> nothing sent is tied to you, so there is no way to find
+      your rows to delete them. Clearing the game's data on your device breaks
+      the link between everything before and everything after. Questions:
+      <a href="https://github.com/3shmawi/waraya/issues">github.com/3shmawi/waraya/issues</a>.</p>
+  </div>
+</main>
+<footer>
+  <a href="./">ورايا</a>
+</footer>
+</body>
+</html>

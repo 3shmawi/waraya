@@ -1,25 +1,11 @@
-import 'package:flame/game.dart';
-import 'package:flutter/widgets.dart';
+/// The game — what every build that does not name a target ships.
+///
+/// `flutter build apk`, `ios`, `macos`, `windows`, `linux` and `web` all build
+/// `lib/main.dart` unless told otherwise, and until Phase 10 this file was the
+/// Phase 1 walker: one horizon, nothing to solve. So the default store build
+/// was a scenery demo, and nothing failed to say so. The walker lives on as
+/// `main_scene.dart`; this is the campaign, and `main_levels.dart` stays the
+/// name every script and doc already uses for it.
+library;
 
-import 'audio/flame_audio_out.dart';
-import 'game/waraya_game.dart';
-import 'licenses.dart';
-
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  registerFontLicenses();
-  runApp(const WarayaApp());
-}
-
-class WarayaApp extends StatelessWidget {
-  const WarayaApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // No MaterialApp: the game owns the whole surface, and skipping Material
-    // keeps the web bundle a little smaller.
-    return GameWidget.controlled(
-      gameFactory: () => WarayaGame(audio: FlameAudioOut()),
-    );
-  }
-}
+export 'main_levels.dart' show main;
