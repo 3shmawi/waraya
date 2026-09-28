@@ -113,6 +113,15 @@ const clips = <Clip>[
   // somewhere, because a body that walked past standing up is not a floor
   // any more — this is the level where that is the whole question.
   Clip(number: 10, slug: 'duck-to-build', levelId: 'not-every-step'),
+  // Phase 7. Each is still one rule, but these are the first clips where the
+  // rule only shows up *because* of something earlier in the same clip: the
+  // step you stand on was built by a step, the lamp answer is undone a room
+  // later, the gates open to a plan laid down before the first one moved.
+  Clip(number: 11, slug: 'a-stair-of-you', levelId: 'stair-of-yourself'),
+  Clip(number: 12, slug: 'three-gates', levelId: 'three-gates-one-past'),
+  Clip(number: 13, slug: 'under-the-lamp', levelId: 'under-the-light'),
+  Clip(number: 14, slug: 'dont-have-been-there', levelId: 'your-past-shuts-it'),
+  Clip(number: 15, slug: 'all-of-it', levelId: 'all-of-it'),
 ];
 
 void main() {
