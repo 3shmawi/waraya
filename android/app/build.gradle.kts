@@ -19,7 +19,7 @@ val keyProperties = Properties().apply {
 val hasUploadKey = keyProperties.getProperty("storeFile") != null
 
 android {
-    namespace = "com.waraya.waraya"
+    namespace = "com.mohager.waraya"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -31,7 +31,7 @@ android {
     defaultConfig {
         // Once a build is on a store this is permanent: the store knows the
         // app by it, and changing it is publishing a different app.
-        applicationId = "com.waraya.waraya"
+        applicationId = "com.mohager.waraya"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

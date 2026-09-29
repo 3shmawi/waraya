@@ -1,4 +1,4 @@
-package com.waraya.waraya
+package com.mohager.waraya
 
 import io.flutter.embedding.android.FlutterActivity
 
