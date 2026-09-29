@@ -117,39 +117,122 @@ git tag v1.0.1 && git push origin v1.0.1
 
 ## ٣) اللي محتاج صاحب المشروع
 
-ولا واحدة من دول تتعمل من سيشن:
+ولا واحدة من دول تتعمل من سيشن. الحسابين موجودين؛ اللي تحت بالترتيب.
 
-**مفتاح أندرويد (مرة واحدة، ومتضيّعوش — Play بيعرف الأبلكيشن بيه):**
+**الـID: `com.mohager.waraya`** — على أندرويد (`applicationId` و`namespace`
+و`MainActivity`) وiOS وماك ولينكس. **بعد أول رفع مبيتغيّرش تاني أبداً**: الستور
+بيعرف الأبلكيشن بيه، وتغييره = أبلكيشن تاني.
+
+### ٣.١ — مفتاح الرفع بتاع أندرويد (مرة واحدة)
+
+`keytool` جاي مع Java؛ لو مش عندك، Android Studio فيه واحد:
+`/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin/keytool`.
 
 ```sh
 keytool -genkey -v -keystore ~/waraya-upload.jks -keyalg RSA \
   -keysize 2048 -validity 10000 -alias upload
-base64 -i ~/waraya-upload.jks | pbcopy     # ماك
 ```
 
-وبعدين في GitHub: Settings ← Secrets and variables ← Actions، أربعة:
-`ANDROID_KEYSTORE_BASE64`، `ANDROID_STORE_PASSWORD`، `ANDROID_KEY_ALIAS`
-(`upload`)، `ANDROID_KEY_PASSWORD`. ولو عايز تبني ممضي على جهازك:
-`android/key.properties` بنفس الأربع مفاتيح (`storeFile` مساره من
-`android/app/`).
+بيسأل على باسورد (مرتين) وعلى اسم وبلد — الاسم والبلد مش مهمين ومحدش بيشوفهم.
+**خُد نسخة من الملف والباسورد في password manager.** مع Play App Signing
+(الـdefault) جوجل هي اللي ماسكة مفتاح الإمضا الحقيقي، وده مفتاح **الرفع** بس —
+لو ضاع بيتعمل reset من الـconsole، بس بياخد أيام.
 
-**`applicationId` (`com.waraya.waraya`)** — بعد أول رفع على Play مبيتغيّرش
-تاني أبداً. لو فيه اسم تاني عايزه (دومين بتاعك مثلاً)، دلوقتي.
+وبعدين الأربع secrets في GitHub (Settings ← Secrets and variables ←
+Actions ← New repository secret):
 
-**Google Play:** حساب مطوّر (٢٥ دولار)، وبعدين الـAAB، وصفحة الخصوصية
-(`https://3shmawi.github.io/waraya/privacy.html`)، و«Data safety» — والإجابات
-كلها مكتوبة في صفحة الخصوصية: بيانات أداء اللعبة، مجهولة، مبتتشاركش، مش
-إجبارية للعب… والأخيرة دي صح بس نص صح: **مفيش زرار يقفل الإرسال.** لو
-Play طلب واحد، ده أول صقل.
+| الاسم | القيمة |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | ناتج `base64 -i ~/waraya-upload.jks \| pbcopy` |
+| `ANDROID_STORE_PASSWORD` | باسورد الـkeystore |
+| `ANDROID_KEY_ALIAS` | `upload` |
+| `ANDROID_KEY_PASSWORD` | نفس الباسورد (keytool الجديد بيستخدم واحد للاتنين) |
 
-**App Store:** حساب Apple Developer (٩٩ دولار في السنة) وجهاز ماك. مش
-مستعجل: الويب شغال على الآيفون.
+وللبيلد على جهازك: `android/key.properties` (متعملوش commit — في الـ`.gitignore`):
 
-**أول تاج:** `version: 1.0.0+1` موجودة، فـ`git tag v1.0.0` بيطلّع أول نسخة.
+```properties
+storeFile=/Users/<انت>/waraya-upload.jks
+storePassword=...
+keyAlias=upload
+keyPassword=...
+```
+
+**اتأكد قبل التاج:** Actions ← release ← Run workflow. من غير تاج بيبني كله
+ومبيعملش release، والـAAB بيبقى artifact على الـrun. لو التحذير «signing with
+the debug key» ظهر، فيه secret ناقص.
+
+### ٣.٢ — Google Play
+
+1. **Create app** — الاسم «ورايا»، Game، Free. (Free مبيرجعش paid بعد كده.)
+2. **App content** — كله إجباري قبل أي نشر:
+   - **Privacy policy:** `https://3shmawi.github.io/waraya/privacy.html`
+   - **Ads:** لأ.
+   - **Content rating** (IARC): مفيش عنف غير إن الشخصية بتموت وترجع، ولا
+     تواصل بين لاعبين، ولا شرا. المتوقع PEGI 3 / Everyone.
+   - **Target audience:** ‎13+ هو الأسهل. لو اخترت أعمار تحت ١٣، سياسة
+     Families بتنطبق، وأي إرسال بيانات بيتراجع بشدة.
+   - **Data safety** — من صفحة الخصوصية بالظبط:
+     - Collects data: **Yes**. Shared: **No**.
+     - **App activity → Other actions**: تفاعل مع اللعبة. **Device or other
+       IDs**: الـ`device_id` العشوائي. الاتنين: Analytics، مش مربوطين بهوية،
+       مش ephemeral.
+     - Encrypted in transit: **Yes** (HTTPS). Deletion request: مفيش حسابات،
+       فمش مطلوب.
+     - Optional or required: **Required** — مفيش زرار يقفله (القسم ٤).
+3. **Store listing:** اسم ≤٣٠ حرف، وصف قصير ≤٨٠، وصف كامل ≤٤٠٠٠، أيقونة
+   512×512 (`web/icons/Icon-512.png`)، feature graphic 1024×500، وتليفون
+   ٢ screenshots على الأقل (نسبة ≤ 2:1). والإيميل بتاع التواصل **بيظهر للناس**.
+4. **الرفع:** Testing ← Internal testing ← Create release ← الـAAB من الـGitHub
+   Release. أول رفع بيسألك توافق على Play App Signing: وافق.
+5. **لو الحساب شخصي واتعمل بعد نوفمبر ٢٠٢٣:** قبل Production لازم **Closed
+   testing بـ١٢ tester على الأقل، ١٤ يوم متواصلين**. ده أطول خطوة في الموضوع
+   كله — ابدأها بدري (اللي بيتابعوا على تيكتوك أسهل مصدر).
+6. **كل رفع بعد كده** محتاج `versionCode` أكبر: الرقم اللي بعد `+` في
+   `pubspec.yaml` (`1.0.0+1` ← `1.0.1+2`).
+
+### ٣.٣ — App Store
+
+محتاج ماك عليه Xcode — مش بيتبني من الـworkflow.
+
+1. **developer.apple.com ← Identifiers ← +** — App ID، الـBundle ID
+   `com.mohager.waraya` (Explicit)، ومفيش capabilities محتاجها.
+2. **App Store Connect ← Apps ← +** — iOS، الاسم «ورايا» (لازم يكون مش
+   محجوز)، Primary language Arabic، الـBundle ID ده، وأي SKU (`waraya`).
+3. **التوقيع:** افتح `ios/Runner.xcworkspace` (مش `.xcodeproj`) ← Runner ←
+   Signing & Capabilities ← Team = حسابك، و«Automatically manage signing».
+4. **البيلد والرفع:**
+   ```sh
+   flutter build ipa --release
+   ```
+   وبعدين افتح `build/ios/archive/Runner.xcarchive` (بيفتح في Xcode
+   Organizer) ← Distribute App ← App Store Connect. أو ارفع الـ`.ipa` اللي في
+   `build/ios/ipa/` بأبلكيشن **Transporter**. سؤال التشفير مش هيتسأل:
+   `ITSAppUsesNonExemptEncryption = false` في `Info.plist` (HTTPS من النظام
+   بس = معفي).
+5. **App Privacy** (نفس صفحة الخصوصية):
+   - Data Used to Track You: **لأ** — فمفيش popup بتاع ATT.
+   - Data Not Linked to You: **Identifiers → Device ID** و**Usage Data →
+     Product Interaction**، الاتنين للـAnalytics.
+6. **الباقي:** Privacy Policy URL (نفس اللينك)، **Support URL إجباري**
+   (`https://github.com/3shmawi/waraya/issues` أو الصفحة الرئيسية)، Category:
+   Games ← Puzzle، Age rating questionnaire (كله None)، وscreenshots:
+   **iPhone 6.9"** (1320×2868 أو 1290×2796) إجباري، و**iPad 13"**
+   (2064×2752) إجباري برضه لأن الأبلكيشن معمول للآيباد كمان
+   (`TARGETED_DEVICE_FAMILY = "1,2"`). لو مش عايز تعمل صور آيباد، الأبلكيشن
+   يبقى آيفون بس — ده قرار، ومش هيتعمل من غيرك.
+7. **TestFlight الأول:** البيلد بيظهر هناك بعد ربع ساعة تقريباً، جرّبه على
+   تليفونك قبل Submit for Review.
+
+**أول تاج:** `version: 1.0.0+1` موجودة، فـ`git tag v1.0.0` بيطلّع أول نسخة
+أندرويد. وللـApp Store، نفس الرقم في `flutter build ipa`.
 
 ---
 
 ## ٤) الصقل اللي لسه — بالترتيب
+
+**٠. زرار يقفل الإرسال.** Play بيسأل «optional or required» وApple
+بتسأل برضه؛ النهاردة الإجابة «required». مش إجباري، بس هو اللي بيخلّي
+الإجابة الأحسن صادقة.
 
 **١. لعب بإيد على موبايل متوسط.** الجو كله (التراب والضباب والـgod rays)
 full-screen overdraw، والفريمات اللي في الريبو **من software renderer ومعناها
