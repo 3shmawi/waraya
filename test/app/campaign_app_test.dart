@@ -49,6 +49,32 @@ void main() {
     }
   });
 
+  testWidgets('the bar steps aside for the menu it opened', (tester) async {
+    // In English every menu's close button is top right, under the bar, and a
+    // bar left on top took the tap meant for it.
+    await tester.pumpWidget(
+      WarayaLevels(
+        levels: Levels.campaign,
+        progress: MemoryProgress(),
+        beaten: const {},
+        settings: SettingsKeeper(const GameSettings(language: Lang.en)),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(labelled('Pause'));
+    await tester.pump();
+    final game = tester
+        .widget<GameWidget<LevelGame>>(find.byType(GameWidget<LevelGame>))
+        .game!;
+    // The game is stopped under it, and the bar is gone from over it. (The
+    // menu itself is drawn once the game has loaded, which a widget test
+    // does not wait for.)
+    expect(game.overlays.isActive('pause'), isTrue);
+    expect(game.paused, isTrue);
+    expect(labelled('Pause'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('speaks English when asked to', (tester) async {
     await tester.pumpWidget(
       WarayaLevels(

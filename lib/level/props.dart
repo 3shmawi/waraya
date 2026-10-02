@@ -751,10 +751,14 @@ class ShadowForecast extends PositionComponent {
   Offset? get point {
     final steps = (ahead / tickRate).round();
     final pending = recorder.pending;
-    // The next tick plays the head of the queue, so the pose [steps] ticks
-    // from now is the one at [steps] - 1.
-    if (steps < 1 || pending.length < steps) return null;
-    final pose = pending.elementAt(steps - 1);
+    // The head plays only once the buffer holds a whole delay. Each tick adds
+    // one pose and, past `delayTicks`, plays one — so pose i plays on tick
+    // delayTicks - length + 1 + i. While the buffer is still filling, a
+    // second from now may be a pose far down the queue, or nothing at all.
+    if (steps < 1) return null;
+    final i = steps - 1 - recorder.delayTicks + pending.length;
+    if (i < 0 || i >= pending.length) return null;
+    final pose = pending.elementAt(i);
     return Offset(pose.x, pose.y);
   }
 

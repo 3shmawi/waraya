@@ -21,12 +21,16 @@ String _json(Level level) => jsonEncode(level.toJson());
 
 void main() {
   group('a level through the editor', () {
-    for (final level in [...Levels.campaign, Levels.lab]) {
+    for (final level in [...Levels.campaign, ...Levels.bench, Levels.lab]) {
       test('${level.id} comes out exactly as it went in', () {
         final doc = EditorDoc.fromLevel(level);
         expect(_json(doc.toLevel()), _json(level));
-        // And through JSON, which is how it leaves the editor.
-        final back = levelFromJson(jsonDecode(_json(doc.toLevel())));
+        // And through JSON, which is how it leaves the editor — read back the
+        // way the bench reads, so a level on trial comes back with it.
+        final back = levelFromJson(
+          jsonDecode(_json(doc.toLevel())),
+          accepts: Level.benchMechanics,
+        );
         expect(_json(EditorDoc.fromLevel(back).toLevel()), _json(level));
       });
     }

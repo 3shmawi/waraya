@@ -106,19 +106,28 @@ class LevelTitle extends PositionComponent {
     _age += dt;
 
     final level = game.level;
-    // A level with no English is shown in Arabic to everyone, and laid out as
-    // Arabic: the language of the words decides the direction, not the
-    // language that was asked for.
-    final shown = level.speaks(game.lang) ? game.lang : Lang.ar;
-    _nameText
-      ..textRenderer = _names[shown]!
-      ..text = level.nameIn(game.lang);
-    _teachesText
-      ..textRenderer = _lines[shown]!
-      ..text = game.completed
-          ? Words(game.lang).done
-          : level.teachesIn(game.lang);
+    final lang = game.lang;
+    // The language of the words decides the direction, not the language that
+    // was asked for — each line on its own, since a level can have its name
+    // in English and its line only in Arabic.
+    final english = lang == Lang.en;
+    final done = game.completed;
+    _direct(_nameText, _names, english && level.nameEn != null);
+    _direct(_teachesText, _lines, english && (done || level.teachesEn != null));
+    _nameText.text = level.nameIn(lang);
+    _teachesText.text = done ? Words(lang).done : level.teachesIn(lang);
     _place();
+  }
+
+  /// Sets a line's paint, only when it changes. Flame lays the text out again
+  /// on every assignment, and this runs every frame.
+  static void _direct(
+    TextComponent line,
+    Map<Lang, TextPaint> paints,
+    bool english,
+  ) {
+    final paint = paints[english ? Lang.en : Lang.ar]!;
+    if (!identical(line.textRenderer, paint)) line.textRenderer = paint;
   }
 
   /// Between the middle and the corner, by [settled].

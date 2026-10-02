@@ -106,6 +106,7 @@ class _CampaignEndState extends State<CampaignEnd>
   @override
   Widget build(BuildContext context) {
     final en = widget.lang == Lang.en;
+    final words = Words(widget.lang);
     return Directionality(
       textDirection: en ? TextDirection.ltr : TextDirection.rtl,
       child: GestureDetector(
@@ -138,7 +139,7 @@ class _CampaignEndState extends State<CampaignEnd>
                     _Rise(
                       at: _fade(1.15),
                       child: Text(
-                        en ? 'Done' : 'خلصت',
+                        words.theEnd,
                         style: const TextStyle(
                           fontFamily: arabicFontFamily,
                           fontSize: 40,
@@ -152,10 +153,7 @@ class _CampaignEndState extends State<CampaignEnd>
                       at: _fade(1.55),
                       child: Text(
                         // The thesis, said out loud exactly once.
-                        en
-                            ? 'Every door you walked through,\n'
-                                  'you opened before you needed it.'
-                            : 'كل باب عدّيت منه،\nانت اللي فتحته من قبل ما تحتاجه.',
+                        words.thesis,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontFamily: arabicFontFamily,
@@ -169,10 +167,7 @@ class _CampaignEndState extends State<CampaignEnd>
                     _Rise(
                       at: _fade(1.95),
                       child: Text(
-                        en
-                            ? '${_countEn(widget.levels.length)}. '
-                                  'And more on the way.'
-                            : '${_count(widget.levels.length)}. وفيه كمان جاي.',
+                        words.moreComing(widget.levels.length),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontFamily: arabicFontFamily,
@@ -191,11 +186,11 @@ class _CampaignEndState extends State<CampaignEnd>
                         alignment: WrapAlignment.center,
                         children: [
                           _Button(
-                            label: Words(widget.lang).levels,
+                            label: words.levels,
                             onTap: widget.onLevels,
                           ),
                           _Button(
-                            label: en ? 'From level one' : 'من أول مرحلة',
+                            label: words.fromLevelOne,
                             onTap: widget.onRestart,
                             quiet: true,
                           ),
@@ -237,30 +232,6 @@ class _Rise extends StatelessWidget {
     );
   }
 }
-
-/// How many levels, in Arabic that agrees with itself.
-///
-/// Not `'$n مراحل'`: three to ten take the plural, eleven and up take the
-/// singular, and the campaign is a list that is meant to grow — a server can
-/// append to it, so the number here is not a constant anybody will remember to
-/// re-read.
-String _count(int levels) => switch (levels) {
-  1 => 'مرحلة واحدة',
-  2 => 'مرحلتين',
-  <= 10 => '${_arabicDigits(levels)} مراحل',
-  _ => '${_arabicDigits(levels)} مرحلة',
-};
-
-String _countEn(int levels) =>
-    levels == 1 ? 'One level' : '$levels levels';
-
-/// Western digits read as a foreign object in the middle of an Arabic
-/// sentence set in an Arabic face. The readout in the corner keeps its Latin
-/// ones — that is a gauge, in a monospace, and it is not a sentence.
-String _arabicDigits(int value) => '$value'.replaceAllMapped(
-  RegExp(r'[0-9]'),
-  (digit) => String.fromCharCode(0x0660 + int.parse(digit[0]!)),
-);
 
 class _Button extends StatelessWidget {
   const _Button({required this.label, required this.onTap, this.quiet = false});

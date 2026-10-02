@@ -23,6 +23,16 @@ void main() {
       run.play(const [Move(1.0)]);
       expect(game.shadow.x, closeTo(said.dx, 1), reason: run.where);
       expect(game.shadow.y, closeTo(said.dy, 1));
+
+      // And while the buffer is still filling — just after a reset, before
+      // the past exists — it does not pretend to know.
+      game.reload();
+      run.play(const [Move.right(0.5)]);
+      expect(forecast.point, isNull, reason: 'the past is 2s away');
+      run.play(const [Move.right(1.3)]);
+      final early = forecast.point!;
+      run.play(const [Move(1.0)]);
+      expect(game.shadow.x, closeTo(early.dx, 1), reason: run.where);
     },
   );
 }

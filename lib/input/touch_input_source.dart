@@ -319,17 +319,30 @@ class TouchInputSource extends PositionComponent
   static const Color _rimColor = Color(0x59FFE7B0);
   static const Color _glyphColor = Color(0xE6FFE7B0);
 
-  Paint _fill(Color color, double strength) =>
-      Paint()..color = color.withValues(alpha: color.a * strength);
+  /// Paints by colour and strength, made once. The strength only changes
+  /// when the setting does, and a dozen fresh paints every frame is garbage
+  /// on exactly the phones this is drawn on.
+  final Map<(Color, double), Paint> _paints = {};
+
+  Paint _fill(Color color, double strength) => _paints.putIfAbsent(
+    (color, strength),
+    () => Paint()..color = color.withValues(alpha: color.a * strength),
+  );
+
+  final Map<double, Paint> _rims = {};
 
   @override
   void render(Canvas canvas) {
     if (!isTouchPlatform) return;
     final strength = _opacity().clamp(0.0, 1.0);
     final k = _k;
-    final rim = _fill(_rimColor, strength)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6;
+    final rim = _rims.putIfAbsent(
+      strength,
+      () => Paint()
+        ..color = _rimColor.withValues(alpha: _rimColor.a * strength)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6,
+    );
     final glyph = _fill(_glyphColor, strength);
 
     // The stick: where the thumb landed, or — with no thumb on it — a faint

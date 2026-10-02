@@ -602,7 +602,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     // The floor ends somewhere, and walking off the end of a level is a dead
     // state that looks like a crash. Put them back instead.
     if (player.y > WarayaConfig.worldHeight + 240) {
-      reload();
+      die();
       return;
     }
 
@@ -672,7 +672,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     if (settings.shadowKills &&
         !_completed &&
         ghosts.any(playerBox.overlaps)) {
-      reload();
+      die();
     }
   }
 
@@ -828,8 +828,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       // The same number drives both, so what you hear and what you feel are
       // the same landing.
       audio.play(Sfx.land, volume: 0.35 + 0.5 * weight);
-      // Only a landing worth a shake is worth a buzz; every hop buzzing is a
-      // phone that buzzes all the time, which is a phone that says nothing.
+      // Only a landing worth a shake is worth a buzz. A jump gets the
+      // lightest tick there is, because the thumb asked for it; a landing
+      // nobody asked for buzzes only when it was hard enough to matter, or
+      // walking off every kerb would be a phone that buzzes all the time.
       haptics.buzz(Buzz.medium);
       // And seen at the feet: a hard landing kicks up the floor.
       world.add(
@@ -863,20 +865,27 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// Separate from [reload] so the two can be told apart. The editor needs it
   /// because a fall is part of a recorded run and replays with it, and a key
   /// pressed halfway through a recording is not something a recording can
-  /// hold; the phone needs it because a death is felt in the hand and a
-  /// button you pressed yourself is not.
-  void retry() {
-    _asked = true;
-    try {
-      reload();
-    } finally {
-      _asked = false;
-    }
-  }
+  /// hold.
+  void retry() => reload();
 
-  /// True only inside [retry]: being put back because you asked is not
-  /// something to feel in your hand.
-  bool _asked = false;
+  /// The level killed you — a fall off the world, or your past catching you —
+  /// and puts you back.
+  ///
+  /// Separate from [reload] for what is seen and felt: a death comes apart
+  /// into dust where it happened and buzzes in the hand. Nothing else that
+  /// puts the level back does — not the retry button, not the editor
+  /// starting a take, not the bench's reload — because none of those is the
+  /// player dying.
+  void die() {
+    world.add(
+      Puff.death(
+        Vector2(player.x, player.y),
+        color: _lit ? SilhouettePalette.bodyColor : Palette.bodyColor,
+      ),
+    );
+    haptics.buzz(Buzz.heavy);
+    reload();
+  }
 
   /// The whole death-and-retry system for this phase: put everything back.
   ///
@@ -886,16 +895,6 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   void reload() {
     // Where the body was, before it is put back.
     attempts?.reloaded(player.x, player.y);
-    // A death comes apart where it happened; a retry you asked for is just
-    // put back.
-    if (!_asked) {
-      world.add(
-        Puff.death(
-          Vector2(player.x, player.y),
-          color: _lit ? SilhouettePalette.bodyColor : Palette.bodyColor,
-        ),
-      );
-    }
     for (final line in recorders) {
       line.clear();
     }
@@ -928,7 +927,6 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     // dying.
     resetFlash.show();
     audio.play(Sfx.reset, volume: 0.45);
-    if (!_asked) haptics.buzz(Buzz.heavy);
   }
 }
 

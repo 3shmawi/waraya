@@ -157,22 +157,7 @@ Future<Verdict> checkLevelJson(Object? json) async {
   try {
     level = levelFromJson(json);
   } on LevelUnsupportedException catch (error) {
-    final bench = error.onTheBench;
-    final absent = error.missing.difference(bench);
-    return Verdict(error.levelId, [
-      if (absent.isNotEmpty)
-        Finding(
-          Refusal.unsupported,
-          'needs ${absent.join(', ')}, which this build does not have',
-        ),
-      // Named apart, because the answer is different: not "wait for a
-      // newer build" but "this is still being tried" (docs/lab.md §1).
-      if (bench.isNotEmpty)
-        Finding(
-          Refusal.unsupported,
-          '${bench.join(', ')}: still on the bench, not in the game yet',
-        ),
-    ]);
+    return Verdict(error.levelId, _unsupported(error.missing));
   } on LevelFormatException catch (error) {
     return Verdict(_idOf(json), [Finding(Refusal.malformed, error.message)]);
   }
@@ -273,22 +258,15 @@ bool spawnsInside(Level level) {
 }
 
 Iterable<Finding> _requires(Level level) sync* {
-  final missing = level.requires.difference(Level.knownMechanics);
-  final bench = missing.intersection(Level.labMechanics);
-  final absent = missing.difference(bench);
-  if (absent.isNotEmpty) {
-    yield Finding(
-      Refusal.unsupported,
-      'needs ${absent.join(', ')}, which this build does not have',
-    );
-  }
-  if (bench.isNotEmpty) {
-    yield Finding(
-      Refusal.unsupported,
-      '${bench.join(', ')}: still on the bench, not in the game yet',
-    );
-  }
+  yield* _unsupported(level.requires.difference(Level.knownMechanics));
 }
+
+/// A level needing [missing] is refused — see
+/// [LevelUnsupportedException.whyRefused] for why the reasons are two.
+List<Finding> _unsupported(Set<String> missing) => [
+  for (final reason in LevelUnsupportedException.whyRefused(missing))
+    Finding(Refusal.unsupported, reason),
+];
 
 Iterable<Finding> _recordings(Level level) sync* {
   if (level.solution.isEmpty) {

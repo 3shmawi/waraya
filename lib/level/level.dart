@@ -74,10 +74,11 @@ class Level {
   String teachesIn(Lang lang) =>
       lang == Lang.en ? teachesEn ?? teaches : teaches;
 
-  /// Whether what [nameIn] gives for [lang] is actually in [lang] — false for
-  /// an English reader of a level with no English, whose Arabic has to be
-  /// laid out right to left all the same.
-  bool speaks(Lang lang) => lang == Lang.ar || nameEn != null;
+  /// Whether both [nameIn] and [teachesIn] are actually in [lang] — false
+  /// for an English reader of a level with no English, or with only half of
+  /// it.
+  bool speaks(Lang lang) =>
+      lang == Lang.ar || (nameEn != null && teachesEn != null);
 
   /// How far behind each shadow runs, nearest first. One entry is one shadow.
   ///
@@ -572,16 +573,25 @@ class LevelUnsupportedException implements Exception {
   Set<String> get onTheBench => missing.intersection(Level.labMechanics);
 
   @override
-  String toString() {
-    final bench = onTheBench;
+  String toString() =>
+      'LevelUnsupportedException: level "$levelId" — '
+      '${whyRefused(missing).join('; ')}';
+
+  /// Why a level needing [missing] is refused, one line per reason, worded
+  /// the same everywhere it is said — here, and by the gate.
+  ///
+  /// Two reasons, because they have two different answers: a name this build
+  /// has never heard of means *wait for a newer build*; a name still on the
+  /// bench means *this is being tried, not shipped* (`docs/lab.md` §1).
+  static List<String> whyRefused(Set<String> missing) {
+    final bench = missing.intersection(Level.labMechanics);
     final absent = missing.difference(bench);
-    final reasons = [
+    return [
       if (absent.isNotEmpty)
-        '${absent.join(', ')}, which this build does not have',
-      if (bench.isNotEmpty) '${bench.join(', ')}, which is still on the bench',
+        'needs ${absent.join(', ')}, which this build does not have',
+      if (bench.isNotEmpty)
+        '${bench.join(', ')}: still on the bench, not in the game yet',
     ];
-    return 'LevelUnsupportedException: level "$levelId" needs '
-        '${reasons.join('; and ')}';
   }
 }
 

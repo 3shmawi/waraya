@@ -113,7 +113,7 @@ void main() {
   );
 
   testWithGame<LevelGame>(
-    'a death buzzes, and asking to start over does not',
+    'a death buzzes, and nothing else that puts the level back does',
     () => LevelGame(
       levels: [Levels.notTheSameWayBack],
       inputs: [ScriptedInput()],
@@ -122,10 +122,12 @@ void main() {
     (game) async {
       await game.ready();
       _felt.buzzes.clear();
-      game.reload();
+      game.die();
       expect(_felt.buzzes, [Buzz.heavy]);
       game.retry();
       expect(_felt.buzzes, [Buzz.heavy], reason: 'the button you pressed');
+      game.reload();
+      expect(_felt.buzzes, [Buzz.heavy], reason: 'the editor starting a take');
     },
   );
 }

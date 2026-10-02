@@ -230,12 +230,19 @@ class _WarayaLevelsState extends State<WarayaLevels>
     // where it kills you, reading the menu would be fatal.
     _hold(overlay);
     _game.overlays.add(overlay);
+    // The bar goes while anything is over the game (see `build`).
+    setState(() {});
   }
 
   void _hide(String overlay) {
+    if (!_game.overlays.isActive(overlay)) return;
     _game.overlays.remove(overlay);
     _release(overlay);
+    setState(() {});
   }
+
+  /// Whether a menu, the ending, the pause or the settings are up.
+  bool get _overlaid => _game.overlays.activeOverlays.isNotEmpty;
 
   void _openMenu() {
     _hide(_pause);
@@ -340,12 +347,16 @@ class _WarayaLevelsState extends State<WarayaLevels>
           //
           // Top right, out of the thumbs' way: an accidental retry is a level
           // thrown away. All three are deliberate acts and worth reaching for.
-          TopBar(
-            onRetry: _game.retry,
-            onMenu: _openMenu,
-            onPause: () => _show(_pause),
-            labels: (words.retry, words.levels, words.pause),
-          ),
+          // Not over a menu. Each of them has its own close button in the same
+          // corner — in English, under the pause icon — and a bar that stayed
+          // on top swallowed the tap meant for it.
+          if (!_overlaid)
+            TopBar(
+              onRetry: _game.retry,
+              onMenu: _openMenu,
+              onPause: () => _show(_pause),
+              labels: (words.retry, words.levels, words.pause),
+            ),
           if (_upright) Positioned.fill(child: TurnPhone(lang: lang)),
         ],
       ),

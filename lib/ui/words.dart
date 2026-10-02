@@ -25,6 +25,16 @@ class Words {
   // The level title.
   String get done => _en ? 'Done.' : 'خلصت.';
 
+  // The ending.
+  String get theEnd => _en ? 'Done' : 'خلصت';
+  String get thesis => _en
+      ? 'Every door you walked through,\nyou opened before you needed it.'
+      : 'كل باب عدّيت منه،\nانت اللي فتحته من قبل ما تحتاجه.';
+  String get fromLevelOne => _en ? 'From level one' : 'من أول مرحلة';
+  String moreComing(int levels) => _en
+      ? '${levels == 1 ? 'One level' : '$levels levels'}. And more on the way.'
+      : '${_count(levels)}. وفيه كمان جاي.';
+
   // The level list.
   String get levelsHint => _en
       ? 'Pick one, or carry on with this one.'
@@ -58,3 +68,24 @@ class Words {
   String get strong => _en ? 'Strong' : 'واضح';
   String get device => _en ? 'Device' : 'زي الجهاز';
 }
+
+/// How many levels, in Arabic that agrees with itself.
+///
+/// Not `'$n مراحل'`: three to ten take the plural, eleven and up take the
+/// singular, and the campaign is a list that is meant to grow — a server can
+/// append to it, so the number here is not a constant anybody will remember to
+/// re-read.
+String _count(int levels) => switch (levels) {
+  1 => 'مرحلة واحدة',
+  2 => 'مرحلتين',
+  <= 10 => '${_arabicDigits(levels)} مراحل',
+  _ => '${_arabicDigits(levels)} مرحلة',
+};
+
+/// Western digits read as a foreign object in the middle of an Arabic
+/// sentence set in an Arabic face. The readout in the corner keeps its Latin
+/// ones — that is a gauge, in a monospace, and it is not a sentence.
+String _arabicDigits(int value) => '$value'.replaceAllMapped(
+  RegExp(r'[0-9]'),
+  (digit) => String.fromCharCode(0x0660 + int.parse(digit[0]!)),
+);

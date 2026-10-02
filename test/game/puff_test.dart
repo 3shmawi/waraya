@@ -12,7 +12,7 @@ void main() {
   Iterable<Puff> puffs(LevelGame game) => game.world.children.whereType<Puff>();
 
   testWithGame<LevelGame>(
-    'a death comes apart into dust, a retry does not, and the dust goes',
+    'a death comes apart into dust, a reset does not, and the dust goes',
     () => LevelGame(
       levels: [Levels.notTheSameWayBack],
       inputs: [ScriptedInput()],
@@ -20,10 +20,11 @@ void main() {
     (game) async {
       await game.ready();
       game.retry();
-      game.update(1 / 60);
-      expect(puffs(game), isEmpty, reason: 'a button you pressed');
-
       game.reload();
+      game.update(1 / 60);
+      expect(puffs(game), isEmpty, reason: 'a button, or the editor');
+
+      game.die();
       game.update(1 / 60);
       expect(puffs(game), hasLength(1));
 
