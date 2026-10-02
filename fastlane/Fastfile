@@ -249,6 +249,9 @@ platform :ios do
       api_key: key,
       app_identifier: PACKAGE,
       distribute_only: true,
+      # Without an .ipa there is nothing to read the platform from, and
+      # pilot stops to ask for it — which, on CI, is a crash.
+      app_platform: "ios",
       app_version: version,
       build_number: build,
       distribute_external: true,
