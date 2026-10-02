@@ -49,3 +49,8 @@ app.*.map.json
 
 # FVM: the pin in .fvmrc is committed, the downloaded SDKs are not.
 .fvm/
+
+# fastlane writes these on every run.
+/fastlane/README.md
+/fastlane/report.xml
+/fastlane/test_output/

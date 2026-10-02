@@ -234,8 +234,6 @@ the debug key» ظهر، فيه secret ناقص.
 **أول تاج:** `version: 1.0.0+1` موجودة، فـ`git tag v1.0.0` بيطلّع أول نسخة
 أندرويد. وللـApp Store، نفس الرقم في `flutter build ipa`.
 
----
-
 ### ٣.٤ — الرفع الأوتوماتيك للستورات
 
 **الشكل كله:**
@@ -329,6 +327,8 @@ Actions → store → Run workflow
 3. Actions ← release ← Run workflow ← ✅ **upload** — تجربة كاملة من غير تاج.
 4. لو الاتنين نزلوا: `git tag v1.0.0 && git push origin v1.0.0`.
 5. بعد ما التسترز يلعبوا: Actions ← **store** ← Run workflow.
+
+---
 
 ## ٤) الصقل اللي لسه — بالترتيب
 
