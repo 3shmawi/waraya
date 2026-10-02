@@ -160,6 +160,26 @@
   a { color: #E8B55E; }
 
   /* The English block reads left to right inside an otherwise Arabic page. */
+  /* The download cards. A store that is not live yet is a greyed pill rather
+     than a missing card: the player sees it is coming, and swapping it for a
+     link is changing one href (search the page for "data-store"). */
+  .get { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .get .card p { font-size: 15px; color: #C9BBA9; margin: 0 0 12px; }
+  .get .card ol { margin: 0; padding: 0 20px 0 0; font-size: 14.5px; color: #B8AA98; }
+  .get .card li { margin-bottom: 6px; color: #B8AA98; }
+  .btn {
+    display: inline-block;
+    margin: 0 0 12px 8px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: #FFE7B0;
+    color: var(--night);
+    text-decoration: none;
+    font-size: 15px;
+  }
+  .btn.ghost { background: transparent; color: #FFE7B0; border: 1px solid rgba(255,231,176,.35); }
+  .btn.soon { background: rgba(255,231,176,.08); color: #8A7C6C; border: 1px dashed rgba(255,231,176,.2); pointer-events: none; }
+  .note { font-size: 13.5px; color: #8A7C6C; }
   .en { direction: ltr; text-align: left; }
   .en p { font-family: system-ui, -apple-system, sans-serif; font-size: 15.5px; }
 </style>
@@ -205,6 +225,7 @@
 
   <a class="play" href="play/">إلعب دلوقتي</a>
   <p class="free">في المتصفح · من غير تحميل · موبايل وكمبيوتر</p>
+  <p class="free"><a href="#get" style="color:inherit">أو نزّلها على أندرويد وآيفون والكمبيوتر</a></p>
 </header>
 
 <main>
@@ -233,6 +254,60 @@
       <img src="media/lit-level.jpg" alt="اللاعب أسود واقف قدام باب مقفول، وظله الفاتح بيجري ناحية الزرار وراه" loading="lazy">
       <figcaption>المرحلة الأولى. الأسود ده انت. الفاتح ده انت كمان، من تلات ثواني ونص.</figcaption>
     </figure>
+  </section>
+
+  <hr class="rule">
+
+  <section id="get">
+    <h2>نزّل اللعبة</h2>
+    <p>
+      نفس اللعبة في كل حتة، ونفس المراحل. ومجانية في كله.
+    </p>
+    <div class="get">
+      <div class="card">
+        <h3>المتصفح</h3>
+        <p>من غير تحميل خالص — موبايل أو كمبيوتر.</p>
+        <a class="btn" href="play/">إلعب دلوقتي</a>
+        <ol>
+          <li>عايزها أيقونة على الشاشة؟ على أندرويد من قايمة <bdi>Chrome</bdi> اختار «إضافة إلى الشاشة الرئيسية».</li>
+          <li>على الكمبيوتر، أيقونة التسطيب في آخر شريط العنوان في <bdi>Chrome</bdi> أو <bdi>Edge</bdi></li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>أندرويد</h3>
+        <!-- data-store="google-play": swap for the listing link once it is public. -->
+        <span class="btn soon" data-store="google-play">Google Play — قريباً</span>
+        <p>ولحد ما تنزل على المتجر، تقدر تسطّب الـAPK على طول:</p>
+        <a class="btn ghost" href="https://github.com/3shmawi/waraya/releases/latest">نزّل الـAPK</a>
+        <ol>
+          <li>افتح الصفحة من الموبايل ونزّل الملف اللي آخره <kbd>.apk</kbd></li>
+          <li>افتحه، ولو سأل اسمح بالتسطيب من المصدر ده.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>آيفون وآيباد</h3>
+        <!-- data-store="app-store": swap for the listing link once it is public. -->
+        <span class="btn soon" data-store="app-store">App Store — قريباً</span>
+        <p>ولحد ما تنزل، اللعبة شغالة من Safari كأنها أبلكيشن:</p>
+        <ol>
+          <li>افتح <a href="play/">صفحة اللعب</a> في <bdi>Safari</bdi></li>
+          <li>زرار المشاركة ← «إضافة إلى الشاشة الرئيسية».</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>كمبيوتر</h3>
+        <a class="btn" href="https://github.com/3shmawi/waraya/releases/latest">ويندوز · ماك · لينكس</a>
+        <ol>
+          <li><b>ويندوز:</b> فك الـzip وشغّل <kbd>waraya.exe</kbd> — ولو ظهر تحذير <bdi>SmartScreen</bdi> اختار <kbd>More info</kbd> وبعدين <kbd>Run anyway</kbd></li>
+          <li><b>ماك:</b> فك الـzip، وأول مرة كليك يمين على <kbd>waraya.app</kbd> واختار <kbd>Open</kbd></li>
+          <li><b>لينكس:</b> فك الملف وشغّل <kbd>./waraya</kbd></li>
+        </ol>
+        <p class="note">التحذيرات دي عشان النسخة مش ممضية بشهادة مدفوعة، مش عشان فيها حاجة.</p>
+      </div>
+    </div>
   </section>
 
   <hr class="rule">
@@ -283,8 +358,34 @@
         will do a few seconds from now. It repeats everything you did, that long
         ago, and it is a real thing in the world while it does it: something to
         stand on, something in your way, something that can catch you. Sixteen
-        puzzles, in the browser, no install. Built in Flutter and Flame, one day
+        puzzles, in the browser, no install — or on Android, iPhone and desktop
+        (<a href="#get">how to install</a>). Built in Flutter and Flame, one day
         a week. <a href="https://github.com/3shmawi/waraya">Source on GitHub.</a>
+      </p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section id="contact">
+    <h2>تواصل</h2>
+    <p>
+      لقيت باج، أو مرحلة حاسس إنها ظالمة، أو عندك فكرة؟ اكتبها هنا — عربي أو
+      إنجليزي، ومن غير ما تعرف أي حاجة في البرمجة:
+    </p>
+    <p>
+      <a class="btn" href="https://github.com/3shmawi/waraya/issues/new">ابعت رسالة</a>
+      <a class="btn ghost" href="https://github.com/3shmawi/waraya/issues">اللي اتبعت قبل كده</a>
+    </p>
+    <p class="note">
+      محتاج حساب GitHub (مجاني). ولو بتبلّغ عن مرحلة، اكتب اسمها اللي بيظهر
+      على الشاشة، وجهازك إيه.
+    </p>
+    <div class="en">
+      <p>
+        <b>Contact:</b> bugs, unfair levels and ideas go to
+        <a href="https://github.com/3shmawi/waraya/issues/new">GitHub issues</a>
+        (a free account is needed), in Arabic or English.
       </p>
     </div>
   </section>
@@ -294,7 +395,8 @@
   <p><a class="play" href="play/" style="font-size:17px;padding:12px 38px">إلعب</a></p>
   <p style="margin-top:26px">ورايا · <a href="https://github.com/3shmawi/waraya">github.com/3shmawi/waraya</a></p>
   <p>
-    <a href="https://github.com/3shmawi/waraya/releases/latest">نسخة للكمبيوتر والأندرويد</a>
+    <a href="#get">نزّل اللعبة</a>
+    · <a href="#contact">تواصل</a>
     · <a href="privacy.html">الخصوصية</a>
   </p>
 </footer>
