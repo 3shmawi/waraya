@@ -66,28 +66,36 @@ jobs:
 
       - run: flutter pub get
 
-      # A project page is served from /<repo>/play/, not from the domain root,
-      # so the asset URLs have to be written for it. Without this every request
-      # for a font, an image or the CanvasKit bundle 404s and the page stays
-      # blank.
+      # WebAssembly (--wasm): a browser that can run it gets the dart2wasm
+      # build and the skwasm renderer — measured, 2.4 MB compressed to the
+      # first frame against 3.0 MB for dart2js and CanvasKit — and one that
+      # cannot (an older Safari) is handed the dart2js build from the same
+      # folder. Same game either way.
       #
-      # --no-web-resources-cdn bundles CanvasKit with the build instead of
-      # fetching it from gstatic. It costs about a megabyte and buys the game
-      # working on a connection that cannot reach Google's CDN.
+      # --no-web-resources-cdn bundles the renderer with the build instead of
+      # fetching it from gstatic: the game works on a connection that cannot
+      # reach Google's CDN.
+      #
+      # The same files are served from two places — GitHub Pages at
+      # /waraya/play/ and Cloudflare Pages at /play/ — so the one absolute
+      # path Flutter writes, <base href="/">, is made relative: "./" finds
+      # the files from either. (The game routes with the URL's #, so a
+      # relative base costs nothing.) Tried: the build starts from a nested
+      # folder in Chromium, with no file missing.
       - run: >
           flutter build web
           -t lib/main_levels.dart
           --release
+          --wasm
           --no-web-resources-cdn
-          --base-href /${{ github.event.repository.name }}/play/
 
       - run: >
           flutter build web
           -t lib/main_lab.dart
           --release
+          --wasm
           --no-web-resources-cdn
           --dart-define=WARAYA_LEVELS=bundled
-          --base-href /${{ github.event.repository.name }}/lab/
           --output build/web-lab
 
       - name: Assemble the site
@@ -97,9 +105,41 @@ jobs:
           rm -f _site/README.md
           cp -r build/web/. _site/play/
           cp -r build/web-lab/. _site/lab/
+          for page in _site/play/index.html _site/lab/index.html; do
+            sed -i 's|<base href="/">|<base href="./">|' "$page"
+            grep -q '<base href="./">' "$page"
+          done
           # Unlinked is not hidden; this at least keeps it out of search.
           sed -i 's|<head>|<head>\n  <meta name="robots" content="noindex">|' _site/lab/index.html
           grep -q 'name="robots"' _site/lab/index.html
+
+      # The same site on Cloudflare Pages, when its secrets are there:
+      # brotli rather than gzip, a data centre in Cairo, and the headers in
+      # site/_headers, which let the WebAssembly renderer draw on several
+      # threads (measured: 60 fps against 15 on the same machine). GitHub
+      # Pages keeps being published either way.
+      #
+      # Needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID; the project is
+      # "waraya", or the CLOUDFLARE_PAGES_PROJECT variable. Made on the
+      # first deploy if it does not exist.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'waraya' }}
+          WRANGLER: wrangler@4.147.0
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::no CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets: not publishing to Cloudflare Pages"
+            exit 0
+          fi
+          npx --yes "$WRANGLER" pages project list | grep -qw "$PROJECT" \
+            || npx --yes "$WRANGLER" pages project create "$PROJECT" --production-branch main
+          npx --yes "$WRANGLER" pages deploy _site \
+            --project-name "$PROJECT" --branch main --commit-hash "$GITHUB_SHA"
 
       - uses: actions/upload-pages-artifact@v5
         with:

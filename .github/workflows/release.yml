@@ -422,7 +422,8 @@ jobs:
       # writes — <base href="/"> — is made relative: "./" finds the files
       # wherever the folder is. --no-web-resources-cdn keeps CanvasKit in the
       # upload, so nothing is fetched from anywhere but itch.io.
-      - run: flutter build web --release --no-web-resources-cdn
+      # WebAssembly with the dart2js fallback, as on the website (pages.yml).
+      - run: flutter build web --release --wasm --no-web-resources-cdn
       - run: |
           sed -i 's|<base href="/">|<base href="./">|' build/web/index.html
           grep -q '<base href="./">' build/web/index.html

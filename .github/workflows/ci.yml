@@ -46,5 +46,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter build web -t lib/main_scene.dart --no-web-resources-cdn
-      - run: flutter build web -t lib/main_lab.dart --no-web-resources-cdn
-      - run: flutter build web -t lib/main_levels.dart --no-web-resources-cdn
+      # --wasm, as pages.yml publishes it: dart2wasm refuses some code
+      # dart2js accepts, and that should fail here, not on the deploy.
+      - run: flutter build web -t lib/main_levels.dart --wasm --no-web-resources-cdn
+      - run: flutter build web -t lib/main_lab.dart --wasm --no-web-resources-cdn

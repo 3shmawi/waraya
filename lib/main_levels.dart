@@ -99,6 +99,11 @@ class _WarayaLevelsState extends State<WarayaLevels>
       // mechanic, and the bench exists to find out whether one holds up
       // without help.
       look: LevelLook.silhouette,
+      // The delay, and nothing else. Ticks buffered, solid on/off, fps and
+      // the reload count are the bench's instruments; to a player they are
+      // a debug panel over the sky, and the one number that explains the
+      // game was lost among them.
+      readoutDetail: false,
       // Straight back to where they stopped. No title screen in the way: a
       // first-time visitor starts in level one because nothing is beaten yet,
       // and everyone else carries on.

@@ -1,0 +1,16 @@
+# Cloudflare Pages reads this file; GitHub Pages serves it as a plain file
+# and ignores it.
+#
+# Cross-origin isolation for the game and the bench: it is what lets the
+# WebAssembly renderer (skwasm) draw on several threads instead of one —
+# measured, 60 fps against 15 on the same machine. "credentialless" rather
+# than "require-corp": the levels from Supabase and Flutter's fallback font
+# from Google are fetched without credentials either way, and nothing else
+# the game loads comes from another origin.
+/play/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless
+
+/lab/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless
