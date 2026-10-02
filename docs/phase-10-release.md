@@ -161,6 +161,14 @@ keyPassword=...
 ومبيعملش release، والـAAB بيبقى artifact على الـrun. لو التحذير «signing with
 the debug key» ظهر، فيه secret ناقص.
 
+### ٣.١ب — بيانات الستور
+
+النصوص كلها (الوصف القصير والطويل بالعربي والإنجليزي، الكلمات المفتاحية،
+اللينكات) في `docs/store-listing.md`، متقاسة على حدود كل ستور. والصور
+(screenshots لـPlay والآيفون والآيباد، والـfeature graphic) بتترسم من اللعبة
+نفسها: `flutter test tool/store.dart` — كل صورة مرحلة ولحظة في حلها المسجّل،
+فمفيش صورة بتوري حاجة اللعبة مبقتش بتعملها.
+
 ### ٣.٢ — Google Play
 
 1. **Create app** — الاسم «ورايا»، Game، Free. (Free مبيرجعش paid بعد كده.)

@@ -98,12 +98,18 @@ Future<Uint8List> render(
 /// how big it is and what a pixel looks like, IDAT is every row zlib'd with a
 /// filter byte in front of it, IEND ends it. Colour type 2 is RGB, which is
 /// the whole point of writing this by hand.
-Uint8List rgbPng(Uint8List rgba, int size) {
+///
+/// Square unless [height] is given: the store images (`tool/store.dart`) are
+/// not, and Google Play refuses a screenshot or a feature graphic with an
+/// alpha channel for the same reason iOS refuses an icon with one.
+Uint8List rgbPng(Uint8List rgba, int size, [int? height]) {
+  final width = size;
+  final tall = height ?? size;
   final rows = BytesBuilder();
-  for (var y = 0; y < size; y++) {
+  for (var y = 0; y < tall; y++) {
     rows.addByte(0); // filter: none. These are tiny and compress fine flat.
-    for (var x = 0; x < size; x++) {
-      final at = (y * size + x) * 4;
+    for (var x = 0; x < width; x++) {
+      final at = (y * width + x) * 4;
       rows
         ..addByte(rgba[at])
         ..addByte(rgba[at + 1])
@@ -112,8 +118,8 @@ Uint8List rgbPng(Uint8List rgba, int size) {
   }
 
   final head = ByteData(13);
-  head.setUint32(0, size);
-  head.setUint32(4, size);
+  head.setUint32(0, width);
+  head.setUint32(4, tall);
   head.setUint8(8, 8); // bits per channel
   head.setUint8(9, 2); // colour type: RGB
   // Compression, filter and interlace all have exactly one defined value.
