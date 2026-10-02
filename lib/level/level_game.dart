@@ -811,12 +811,14 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     ],
   );
 
-  /// The player asked to start again — R, not a fall or a shadow.
+  /// The player asked to start again — R, or the retry button — not a fall
+  /// or a shadow.
   ///
-  /// Separate from [reload] only so the editor can tell the two apart: a
-  /// fall is part of a recorded run and replays with it, and a key pressed
-  /// halfway through a recording is not something a recording can hold.
-  @protected
+  /// Separate from [reload] so the two can be told apart. The editor needs it
+  /// because a fall is part of a recorded run and replays with it, and a key
+  /// pressed halfway through a recording is not something a recording can
+  /// hold; the phone needs it because a death is felt in the hand and a
+  /// button you pressed yourself is not.
   void retry() {
     _asked = true;
     try {

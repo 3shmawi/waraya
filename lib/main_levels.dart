@@ -251,7 +251,7 @@ class _WarayaLevelsState extends State<WarayaLevels>
 
   void _retry() {
     _hide(_pause);
-    _game.reload();
+    _game.retry();
   }
 
   void _showEnd() => _show(_end);
@@ -341,7 +341,7 @@ class _WarayaLevelsState extends State<WarayaLevels>
           // Top right, out of the thumbs' way: an accidental retry is a level
           // thrown away. All three are deliberate acts and worth reaching for.
           TopBar(
-            onRetry: _game.reload,
+            onRetry: _game.retry,
             onMenu: _openMenu,
             onPause: () => _show(_pause),
             labels: (words.retry, words.levels, words.pause),

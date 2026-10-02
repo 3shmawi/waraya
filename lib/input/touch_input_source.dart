@@ -215,9 +215,20 @@ class TouchInputSource extends PositionComponent
     if (pointerId == _stickPointer) _stickPointer = null;
   }
 
-  /// Whether a finger is on the stick, for tests and for the HUD.
+  /// Whether a finger is on the stick, for tests.
   @visibleForTesting
   bool get stickHeld => _stickPointer != null;
+
+  /// A finger, as the event handlers see one — for tests, which cannot
+  /// easily build Flame's events.
+  @visibleForTesting
+  void debugDown(int pointer, Vector2 at) => _down(pointer, at);
+
+  @visibleForTesting
+  void debugMove(int pointer, Vector2 to) => _move(pointer, to);
+
+  @visibleForTesting
+  void debugUp(int pointer) => _end(pointer);
 
   @override
   void onGameResize(Vector2 size) {

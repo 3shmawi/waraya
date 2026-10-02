@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/level/attempts.dart';
+import 'package:waraya/level/lang.dart';
+import 'package:waraya/ui/words.dart';
 
 /// `site/privacy.html` names every field the game sends, by the key it is
 /// sent under, in both languages.
@@ -34,6 +36,14 @@ void main() {
       expect(english, contains('<code>$key</code>'), reason: 'English half');
     });
   }
+
+  // The store forms call the statistics optional, and the page says where
+  // to turn them off. Named by the words on the switch itself, so renaming
+  // the switch without the page is a failure rather than a dead direction.
+  test('the page says where statistics are turned off', () {
+    expect(arabic, contains(const Words(Lang.ar).stats));
+    expect(english, contains(const Words(Lang.en).stats));
+  });
 
   test('the landing page links to it', () {
     expect(
