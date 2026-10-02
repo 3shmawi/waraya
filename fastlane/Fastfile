@@ -95,6 +95,46 @@ platform :ios do
     )
   end
 
+  # The states in which a version is closed to new builds: approved, on sale,
+  # or on its way there. Apple refuses a TestFlight upload for such a version
+  # — after the whole build and signing, with a message about "the previously
+  # approved version". Both fields, because Apple has been moving from
+  # appStoreState to appVersionState and an app can carry either.
+  CLOSED = %w[
+    ACCEPTED
+    PENDING_APPLE_RELEASE
+    PENDING_DEVELOPER_RELEASE
+    PROCESSING_FOR_APP_STORE
+    PROCESSING_FOR_DISTRIBUTION
+    PREORDER_READY_FOR_SALE
+    READY_FOR_SALE
+    READY_FOR_DISTRIBUTION
+    REPLACED_WITH_NEW_VERSION
+  ].freeze
+
+  desc "Fail now if this version is already approved or live on the App Store"
+  lane :check_version do |options|
+    version = options.fetch(:version)
+    api_key
+    app = Spaceship::ConnectAPI::App.find(PACKAGE)
+    UI.user_error!("no app with bundle id #{PACKAGE} in App Store Connect") if app.nil?
+
+    closed = app.get_app_store_versions(filter: { platform: "IOS" }).select do |v|
+      CLOSED.include?(v.app_version_state) || CLOSED.include?(v.app_store_state)
+    end
+    newest = closed.map { |v| Gem::Version.new(v.version_string) }.max
+
+    if newest && Gem::Version.new(version) <= newest
+      segments = newest.segments + [0, 0, 0]
+      UI.user_error!(
+        "#{version} is not above #{newest}, which is already approved or live " \
+        "on the App Store, and Apple refuses new builds for it. Bump the version: " \
+        "Actions -> bump -> patch makes it #{segments[0]}.#{segments[1]}.#{segments[2] + 1}."
+      )
+    end
+    UI.success("#{version} is open for new builds (newest approved: #{newest || "none"})")
+  end
+
   desc "Sign the built app and upload it to TestFlight"
   lane :beta do
     key = api_key
