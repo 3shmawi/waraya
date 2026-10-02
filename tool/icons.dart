@@ -38,6 +38,7 @@ void main() {
         icon.rounded,
         icon.opaque,
         icon.maskable,
+        layer: icon.layer,
       );
       File(icon.path).writeAsBytesSync(png);
       // ignore: avoid_print
@@ -64,8 +65,9 @@ Future<Uint8List> render(
   int size,
   bool rounded,
   bool opaque,
-  bool maskable,
-) async {
+  bool maskable, {
+  MarkLayer? layer,
+}) async {
   final recorder = ui.PictureRecorder();
   final box = Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble());
   final canvas = Canvas(recorder, box);
@@ -75,10 +77,10 @@ Future<Uint8List> render(
     // whole thing is laid on the mark's own darkest colour first.
     canvas.drawRect(box, Paint()..color = const Color(0xFF0E0A10));
   }
-  GameMark.icon(
-    rounded: rounded,
-    maskable: maskable,
-  ).paint(canvas, Size(box.width, box.height));
+  (layer == null
+          ? GameMark.icon(rounded: rounded, maskable: maskable)
+          : GameMark.adaptive(layer))
+      .paint(canvas, Size(box.width, box.height));
   final picture = recorder.endRecording();
   final image = await picture.toImage(size, size);
   picture.dispose();

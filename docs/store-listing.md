@@ -119,7 +119,7 @@ First release: sixteen levels.
 
 | Asset | Size | File |
 |---|---|---|
-| App icon | 512×512 | `web/icons/Icon-512.png` (committed) |
+| App icon | 512×512 | `store/play-icon-512.png` — a full square with no transparency. Play rounds it itself; the web's `Icon-512.png` comes pre-rounded and would be rounded twice. Made by `tool/icons.dart` |
 | Feature graphic | 1024×500 | `ar/play/feature-graphic.png`, `en/play/feature-graphic.png` |
 | Phone screenshots | 1080×1920 | `ar/play/1-…png` to `6-…png`, and the same in `en/play/` |
 

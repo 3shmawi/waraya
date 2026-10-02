@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 
+import '../licenses.dart';
+
 /// Retry, the level list and pause, as three icons in the top right corner.
 ///
 /// They used to be two worded pills in the top middle — «من الأول» and
@@ -23,7 +25,22 @@ class TopBar extends StatelessWidget {
     required this.onMenu,
     required this.onPause,
     this.labels = const ('من الأول', 'المراحل', 'وقفة'),
+    this.onLanguage,
+    this.languageLabel = 'EN',
+    this.languageName = 'English',
   });
+
+  /// Switches the game to the other language. One tap, from the first
+  /// screen: somebody who cannot read the language the game opened in cannot
+  /// read their way to the settings page to change it either.
+  final VoidCallback? onLanguage;
+
+  /// What the button says: the *other* language, in that language — "EN"
+  /// while the game is Arabic, "عربي" while it is English.
+  final String languageLabel;
+
+  /// The other language's name, for a screen reader.
+  final String languageName;
 
   final VoidCallback onRetry;
   final VoidCallback onMenu;
@@ -40,7 +57,7 @@ class TopBar extends StatelessWidget {
   /// The room the bar takes from the top right corner, for the level title to
   /// keep out of. Without the safe area, which the caller adds.
   static const Size footprint = Size(
-    margin + button * 3 + gap * 2 + 6,
+    margin + button * 4 + gap * 3 + 6,
     margin + button + 4,
   );
 
@@ -58,6 +75,14 @@ class TopBar extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (onLanguage != null) ...[
+                  _LetterButton(
+                    letter: languageLabel,
+                    label: languageName,
+                    onTap: onLanguage!,
+                  ),
+                  const SizedBox(width: gap),
+                ],
                 IconButtonish(
                   glyph: Glyph.retry,
                   label: labels.$1,
@@ -76,6 +101,55 @@ class TopBar extends StatelessWidget {
                   onTap: onPause,
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A round button with a word on it instead of a shape: the language switch.
+/// A flag would be wrong — a language is not a country — and a globe says
+/// "language" without saying which; the other language's own name does both.
+class _LetterButton extends StatelessWidget {
+  const _LetterButton({
+    required this.letter,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String letter;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: TopBar.button,
+          height: TopBar.button,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0x33140E08),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0x40FFE7B0)),
+          ),
+          child: Text(
+            letter,
+            style: TextStyle(
+              fontFamily: arabicFontFamily,
+              // "EN" fills the circle at 15; a whole word has to be smaller.
+              // A lone "ع" was tried and read as an ε.
+              fontSize: letter.length > 2 ? 11.5 : 15,
+              height: 1,
+              color: Color(0xE6FFE7B0),
             ),
           ),
         ),

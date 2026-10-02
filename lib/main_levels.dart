@@ -264,6 +264,13 @@ class _WarayaLevelsState extends State<WarayaLevels>
     if (update != null) applyUpdate(update);
   }
 
+  /// The other language, chosen outright — and kept, so the landing page
+  /// and the splash follow it too (they read the same setting).
+  void _switchLanguage() {
+    final next = _lang == Lang.ar ? Lang.en : Lang.ar;
+    _settings.value = _settings.value.copyWith(language: () => next);
+  }
+
   void _settingsChanged() {
     _game.lang = _lang;
     _game.settings.shadowOpacity = _settings.value.shadowOpacity;
@@ -477,6 +484,9 @@ class _WarayaLevelsState extends State<WarayaLevels>
               onMenu: _openMenu,
               onPause: () => _show(_pause),
               labels: (words.retry, words.levels, words.pause),
+              onLanguage: _switchLanguage,
+              languageLabel: lang == Lang.ar ? 'EN' : 'عربي',
+              languageName: lang == Lang.ar ? 'English' : 'عربي',
             ),
           // Over the game, under any menu: the bar's rule, for the same
           // reason — a card left over a menu covers its buttons.

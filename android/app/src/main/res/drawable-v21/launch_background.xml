@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The launch screen: the sky, and the mark in the middle of it — what the
-     web splash and the landing page open on, instead of a white screen. -->
+<!-- The launch screen before Android 12: the sky, and the mark in the
+     middle of it — what the web splash and the landing page open on. A
+     picture of its own (splash_mark), not @mipmap/ic_launcher: that is an
+     adaptive icon from Android 8, and a bitmap cannot draw one. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_sky" />
     <item>
         <bitmap
             android:gravity="center"
-            android:src="@mipmap/ic_launcher" />
+            android:src="@drawable/splash_mark" />
     </item>
 </layer-list>

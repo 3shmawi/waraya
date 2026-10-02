@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Android 12 and later draw their own launch screen — the app icon on
+    <!-- Dark mode needs its own copy: Android ranks the night qualifier above
+         the version, so in dark mode values-night/styles.xml won over
+         values-v31 and the launch screen was black — reported from a phone.
+         Android 12 and later draw their own launch screen — the app icon on
          a background colour — and ignore launch_background. Without this
          the colour is the theme's: white, or black in dark mode. -->
-    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:windowSplashScreenBackground">@color/splash_sky</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
     </style>
-    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@color/night</item>
     </style>
 </resources>

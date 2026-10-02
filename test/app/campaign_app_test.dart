@@ -196,6 +196,38 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('one tap on the bar switches the language, and keeps it', (
+    tester,
+  ) async {
+    final settings = arabic();
+    await tester.pumpWidget(
+      WarayaLevels(
+        levels: Levels.campaign,
+        progress: MemoryProgress(),
+        beaten: const {},
+        settings: settings,
+      ),
+    );
+    await tester.pump();
+    final game = tester
+        .widget<GameWidget<LevelGame>>(find.byType(GameWidget<LevelGame>))
+        .game!;
+    expect(game.lang, Lang.ar);
+    expect(find.text('EN'), findsOneWidget, reason: 'the other language');
+
+    await tester.tap(find.text('EN'));
+    await tester.pump();
+    expect(game.lang, Lang.en);
+    expect(settings.value.language, Lang.en, reason: 'kept, not just shown');
+    expect(labelled('Start over'), findsOneWidget);
+    expect(find.text('عربي'), findsOneWidget);
+
+    await tester.tap(find.text('عربي'));
+    await tester.pump();
+    expect(game.lang, Lang.ar);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('speaks English when asked to', (tester) async {
     await tester.pumpWidget(
       WarayaLevels(

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An adaptive icon: the launcher stacks these, cuts its own shape and
+     moves them a little apart. Without it Android 12's launch screen and
+     many launchers sat the old square icon on a white tile, shrunk.
+     Both layers are painted by tool/icons.dart from GameMark.adaptive. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

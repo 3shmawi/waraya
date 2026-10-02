@@ -20,6 +20,11 @@ import '../level/level.dart';
 /// It needs its patch of sunset. The two behind are the shadow's pale cold
 /// colour and the one in front is the player's black, and black on the near
 /// black the ending is painted in would be a gap rather than a body.
+/// Which part of the mark to paint. An Android adaptive icon is two layers
+/// the launcher stacks, cuts to its own shape and moves a little apart; the
+/// scenery is one and the people are the other.
+enum MarkLayer { all, scenery, people }
+
 class GameMark extends CustomPainter {
   const GameMark({
     required this.at,
@@ -30,6 +35,7 @@ class GameMark extends CustomPainter {
     this.scale = 1,
     this.phase = 0,
     this.entrance = 1,
+    this.layer = MarkLayer.all,
   });
 
   /// On the ending screen, in a panel half again as wide as it is tall.
@@ -67,6 +73,22 @@ class GameMark extends CustomPainter {
         border: rounded,
         scale: maskable ? 0.82 : 1,
       );
+
+  /// An Android adaptive icon's layer: full bleed, with everything that
+  /// matters inside the middle 66 of its 108 (the safe zone every launcher
+  /// mask keeps), and no corner or hairline of its own — the launcher cuts
+  /// the shape.
+  const GameMark.adaptive(MarkLayer layer)
+    : this(
+        at: const [0.665, 0.535, 0.405],
+        cornerRadius: 0,
+        border: false,
+        scale: 66 / 108,
+        layer: layer,
+      );
+
+  /// Which part to paint. See [MarkLayer].
+  final MarkLayer layer;
 
   /// Where each body stands across the tile, oldest first — which is the
   /// order they are painted in, so the body you are now is on top.
@@ -141,21 +163,25 @@ class GameMark extends CustomPainter {
     canvas.clipRRect(rounded);
 
     final ground = size.height * (0.5 + (groundY - 0.5) * scale);
-    canvas.drawRect(
-      box,
-      Paint()
-        ..shader = ui.Gradient.linear(
-          Offset.zero,
-          Offset(0, ground),
-          SkyBackdrop.colors,
-          SkyBackdrop.stops,
-        ),
-    );
+    final scenery = layer != MarkLayer.people;
+    final people = layer != MarkLayer.scenery;
+    if (scenery) {
+      canvas.drawRect(
+        box,
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset.zero,
+            Offset(0, ground),
+            SkyBackdrop.colors,
+            SkyBackdrop.stops,
+          ),
+      );
+    }
 
     // Oldest first, so the body you are now is painted over the top of them.
     final bodyPx = size.height * bodyHeight * scale;
     final span = 1 - (at.length - 1) * _stagger;
-    for (var i = 0; i < at.length; i++) {
+    for (var i = 0; people && i < at.length; i++) {
       final ahead = at.length - 1 - i;
       final home = 0.5 + (at[i] - 0.5) * scale;
 
@@ -186,14 +212,16 @@ class GameMark extends CustomPainter {
 
     // The ground they are all walking on, lit along its top edge by the same
     // backlight everything else in this game is cut out of.
-    canvas.drawRect(
-      Rect.fromLTRB(0, ground, size.width, size.height),
-      Paint()..color = SilhouettePalette.blockFill,
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(0, ground, size.width, size.height * 0.016),
-      Paint()..color = SilhouettePalette.blockTop,
-    );
+    if (scenery) {
+      canvas.drawRect(
+        Rect.fromLTRB(0, ground, size.width, size.height),
+        Paint()..color = SilhouettePalette.blockFill,
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(0, ground, size.width, size.height * 0.016),
+        Paint()..color = SilhouettePalette.blockTop,
+      );
+    }
     canvas.restore();
 
     // The ground inside the tile and the screen behind it are both very near

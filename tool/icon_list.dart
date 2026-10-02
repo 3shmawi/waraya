@@ -6,6 +6,8 @@
 // committed still matches this list. A tool that writes files nobody checks
 // is a tool whose output quietly rots.
 
+import 'package:waraya/ui/game_mark.dart';
+
 /// One icon file: where it goes, how big, and which shape of the mark.
 class Icon {
   const Icon(
@@ -14,7 +16,12 @@ class Icon {
     this.rounded = true,
     this.opaque = false,
     this.maskable = false,
+    this.layer,
   });
+
+  /// One layer of an Android adaptive icon (`GameMark.adaptive`), or null
+  /// for the whole mark.
+  final MarkLayer? layer;
 
   final String path;
   final int size;
@@ -34,7 +41,15 @@ class Icon {
   final bool maskable;
 }
 
-const icons = <Icon>[
+final icons = <Icon>[
+  ..._adaptive,
+  ..._launch,
+
+  // Google Play's listing icon: a full square, no alpha. Play rounds it
+  // itself, and a tile that came pre-rounded (the web's Icon-512, which the
+  // listing used to use) is rounded twice and sits small in its own corners.
+  Icon('store/play-icon-512.png', 512, rounded: false, opaque: true),
+
   // The browser tab, and the web app's own icons. The maskable pair is what
   // Android cuts a circle or a squircle out of when the page is installed, so
   // it is square: a tile that has already rounded its corners loses them.
@@ -180,3 +195,46 @@ const icons = <Icon>[
 /// The sizes inside `windows/runner/resources/app_icon.ico`.
 const windowsSizes = [16, 32, 48, 256];
 const windowsIco = 'windows/runner/resources/app_icon.ico';
+
+/// Android 8 and later: an adaptive icon, two layers per density, 108dp
+/// each. Without it Android 12's launch screen and many launchers put the
+/// old square icon on a white tile and shrink it — reported from playing as
+/// a white box with a small logo in it.
+final _adaptive = <Icon>[
+  for (final (dir, size) in [
+    ('mdpi', 108),
+    ('hdpi', 162),
+    ('xhdpi', 216),
+    ('xxhdpi', 324),
+    ('xxxhdpi', 432),
+  ]) ...[
+    Icon(
+      'android/app/src/main/res/mipmap-$dir/ic_launcher_background.png',
+      size,
+      rounded: false,
+      layer: MarkLayer.scenery,
+    ),
+    Icon(
+      'android/app/src/main/res/mipmap-$dir/ic_launcher_foreground.png',
+      size,
+      rounded: false,
+      layer: MarkLayer.people,
+    ),
+  ],
+];
+
+/// The mark on the launch screens before Android 12 and on iOS, over the
+/// sky colour: a picture, so a file — an adaptive icon cannot be drawn by a
+/// launch-screen bitmap, and iOS's launch image was Flutter's 1×1 blank.
+const _launch = <Icon>[
+  Icon('android/app/src/main/res/drawable-nodpi/splash_mark.png', 288),
+  Icon('ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png', 120),
+  Icon(
+    'ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png',
+    240,
+  ),
+  Icon(
+    'ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png',
+    360,
+  ),
+];
