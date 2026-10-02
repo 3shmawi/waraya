@@ -19,6 +19,18 @@ void main() {
     });
   }
 
+  // TestFlight's Test Information, one per language. Apple refuses an
+  // external submission without it, so an empty file is as bad as none.
+  for (final language in const ['ar', 'en']) {
+    test('testflight_description/$language.txt is there and fits', () {
+      final file = File('fastlane/testflight_description/$language.txt');
+      expect(file.existsSync(), isTrue);
+      final text = file.readAsStringSync().trim();
+      expect(text, isNotEmpty);
+      expect(text.length, lessThanOrEqualTo(4000));
+    });
+  }
+
   test('what_to_test.txt fits TestFlight', () {
     final text = File('fastlane/what_to_test.txt').readAsStringSync().trim();
     expect(text, isNotEmpty);

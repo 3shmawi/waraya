@@ -340,9 +340,12 @@ External** — job على لينكس (`testflight-external`) بيستنى Apple 
 يتوافق (أول مرة حوالي يوم، وبعدها عادةً ساعات). بيلد جديد بيلغي اللي لسه
 مستني مراجعة بدل ما يقف وراه. ومرة واحدة بس من الكونسول:
 
-1. TestFlight ← **Test Information** ← Beta App Description، Feedback Email،
-   وBeta App Review Information (اسم وتليفون وإيميل — Apple بس اللي بتشوفهم،
-   وSign-in required: لأ).
+1. TestFlight ← **Test Information** ← **Beta App Review Information** (اسم
+   وتليفون وإيميل — Apple بس اللي بتشوفهم، وSign-in required: لأ). الوصف
+   بيتبعت لوحده من `fastlane/testflight_description/ar.txt` و`en.txt`، و
+   Feedback Email من Variable اسمها **`TESTFLIGHT_FEEDBACK_EMAIL`** (أو
+   اكتبه في الكونسول مرة). أول run من غيرهم وقع بـ«Beta App Description is
+   missing».
 2. جروب **Mohager External** ← فعّل **Public Link** لو عايز لينك تحطه على
    تيكتوك (لحد ١٠٬٠٠٠ تستر).
 3. «What to Test» اللي التسترز بيشوفوه هو `fastlane/what_to_test.txt` —
@@ -370,7 +373,7 @@ Play ٥٠٠ حرف — `test/app/release_notes_test.dart` بيقع قبلها.
 2. itch.io ← Settings ← **API keys** ← Generate ← GitHub secret
    **`BUTLER_API_KEY`**.
 3. GitHub ← **Variables** ← **`ITCH_PROJECT`** = `<اسمك على itch>/<الـURL>`
-   (من لينك الصفحة: `https://اسمك.itch.io/waraya` ← `اسمك/waraya`).
+   أو لينك الصفحة نفسه (`https://اسمك.itch.io/waraya`) — الاتنين شغالين.
 4. **بعد أول رفع، مرة واحدة:** صفحة اللعبة ← Edit ← Uploads ← اللي اسمه
    `html5` ← ✅ **This file will be played in the browser**، وViewport
    1280×720، و✅ Fullscreen button، و✅ Mobile friendly. وبعدين Pricing (مثلاً
