@@ -3,10 +3,11 @@ import 'level_source.dart';
 
 /// The no-disk stand-in. See `file_levels.dart`.
 class FileLevels implements LevelSource {
-  const FileLevels(this.path, {this.onSkipped});
+  const FileLevels(this.path, {this.onSkipped, this.accepts});
 
   final String path;
   final void Function(LevelUnsupportedException skipped)? onSkipped;
+  final Set<String>? accepts;
 
   @override
   String get label => 'file $path';

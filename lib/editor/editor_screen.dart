@@ -258,6 +258,8 @@ class _EditorScreenState extends State<EditorScreen> {
       final levels = levelsFromJson(
         jsonDecode(text),
         onSkipped: (skipped) => setState(() => _status = '$skipped'),
+        // The bench: what is on trial opens here.
+        accepts: Level.benchMechanics,
       );
       if (levels.isEmpty) {
         setState(() => _status = 'no level this build can play in that');
@@ -615,6 +617,11 @@ class _EditorScreenState extends State<EditorScreen> {
       for (final level in _extra)
         PopupMenuItem(value: level, child: Text('${level.id} (from disk)')),
       PopupMenuItem(value: Levels.lab, child: const Text('the bench')),
+      for (final level in Levels.bench)
+        PopupMenuItem(
+          value: level,
+          child: Text('${level.id} · ${level.name} (on trial)'),
+        ),
       for (final level in Levels.campaign)
         PopupMenuItem(value: level, child: Text('${level.id} · ${level.name}')),
     ],

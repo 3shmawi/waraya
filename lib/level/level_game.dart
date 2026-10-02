@@ -10,6 +10,7 @@ import '../audio/haptics.dart';
 import '../audio/sfx.dart';
 import '../audio/step_detector.dart';
 import '../game/config.dart';
+import '../game/puff.dart';
 import '../game/scenery.dart';
 import '../game/screen_shake.dart';
 import '../input/input.dart';
@@ -28,6 +29,7 @@ import 'attempts.dart';
 import 'lang.dart';
 import 'level.dart';
 import 'player.dart';
+import 'prelude.dart';
 import 'props.dart';
 
 /// One game that plays any [Level].
@@ -164,6 +166,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
   /// The nearest shadow.
   ShadowFigure get shadow => shadows.first;
+
+  /// The level's demonstration, if it has one (`Level.prelude`). Seen only.
+  Prelude? prelude;
 
   final List<PressurePlate> plates = [];
   final List<Toggle> toggles = [];
@@ -374,8 +379,26 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       color: _lit ? SilhouettePalette.bodyColor : Palette.bodyColor,
     );
 
+    prelude = level.prelude.isEmpty
+        ? null
+        : Prelude(
+            moves: level.prelude,
+            figure: ShadowFigure(
+              color: _lit
+                  ? SilhouettePalette.shadowColor
+                  : Palette.shadowColor,
+              opacity: settings.shadowOpacity,
+              // Behind every real past: this one is not anybody's.
+              priority: 80,
+            ),
+            solids: _solids,
+            spawnX: level.spawnX,
+            floorTop: level.floorTop,
+          );
+
     await world.addAll([
       if (_lit) ..._scenery().world(),
+      ?prelude?.figure,
       Blocks(level.blocks, look: look),
       ...level.lights.map(
         (area) => LightZone(
@@ -477,6 +500,13 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     final step = dt > maxFrameSeconds ? maxFrameSeconds : dt;
     attempts?.tick(step);
     input.refresh();
+    final showing = prelude;
+    if (showing != null) {
+      // The first time the player asks for anything, the demonstration is
+      // over: from here on, the past on screen is theirs.
+      if (!input.intent.isIdle) showing.dismiss();
+      showing.figure.opacity = settings.shadowOpacity * showing.strength;
+    }
     // The panel drives the nearest one; the rest keep the delays their level
     // gave them, because the gap between two shadows is the puzzle and a
     // slider that closed it would be a slider that deletes the level.
@@ -520,12 +550,14 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     for (final ghost in shadows) {
       ghost.alpha = ticker.alpha;
     }
+    prelude?.figure.alpha = ticker.alpha;
     _reactToLanding(step);
     _playMovementSounds();
     _advance(step);
   }
 
   void _fixedTick() {
+    prelude?.tick(ticker.tickRate);
     final pose = player.capture();
     for (final (i, line) in recorders.indexed) {
       line.record(pose);
@@ -793,6 +825,14 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       // Only a landing worth a shake is worth a buzz; every hop buzzing is a
       // phone that buzzes all the time, which is a phone that says nothing.
       haptics.buzz(Buzz.medium);
+      // And seen at the feet: a hard landing kicks up the floor.
+      world.add(
+        Puff.landing(
+          Vector2(player.x, player.y),
+          color: _lit ? const Color(0x88D9C2A0) : const Color(0x88606060),
+          weight: weight,
+        ),
+      );
     }
     shake.advance(dt);
     if (shake.isShaking) camera.viewfinder.position += shake.offset;
@@ -840,6 +880,16 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   void reload() {
     // Where the body was, before it is put back.
     attempts?.reloaded(player.x, player.y);
+    // A death comes apart where it happened; a retry you asked for is just
+    // put back.
+    if (!_asked) {
+      world.add(
+        Puff.death(
+          Vector2(player.x, player.y),
+          color: _lit ? SilhouettePalette.bodyColor : Palette.bodyColor,
+        ),
+      );
+    }
     for (final line in recorders) {
       line.clear();
     }
@@ -849,6 +899,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       ghost.inLight = false;
     }
     player.resetToSpawn();
+    prelude?.restart();
     for (final door in doors) {
       door.reset();
     }

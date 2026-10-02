@@ -17,7 +17,7 @@ import 'level_source.dart';
 /// anything from elsewhere arrives over the network. This is the third case:
 /// the file you have open in an editor right now.
 class FileLevels implements LevelSource {
-  const FileLevels(this.path, {this.onSkipped});
+  const FileLevels(this.path, {this.onSkipped, this.accepts});
 
   /// A `.json` file, or a folder of them read in filename order.
   ///
@@ -30,6 +30,11 @@ class FileLevels implements LevelSource {
   /// Told about each level left out because it needs a mechanic this build
   /// does not have. See [Level.knownMechanics].
   final void Function(LevelUnsupportedException skipped)? onSkipped;
+
+  /// The mechanics to play, or null for [Level.knownMechanics]. The bench
+  /// passes [Level.benchMechanics], so a level on trial opens there and
+  /// nowhere else (`docs/lab.md` §1).
+  final Set<String>? accepts;
 
   @override
   String get label => 'file $path';
@@ -83,7 +88,7 @@ class FileLevels implements LevelSource {
       );
     }
     try {
-      return levelsFromJson(decoded, onSkipped: onSkipped);
+      return levelsFromJson(decoded, onSkipped: onSkipped, accepts: accepts);
     } on LevelFormatException catch (error) {
       throw LevelFormatException('${file.path}: ${error.message}');
     }

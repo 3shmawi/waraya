@@ -60,7 +60,11 @@ void main() async {
 LevelSource? get _authoring {
   const path = String.fromEnvironment('WARAYA_LEVELS');
   if (path.isEmpty) return null;
-  return path == 'bundled' ? const BundledLevels() : FileLevels(path);
+  // What is on trial opens here and nowhere else (docs/lab.md §1).
+  final accepts = Level.benchMechanics;
+  return path == 'bundled'
+      ? BundledLevels(accepts: accepts)
+      : FileLevels(path, accepts: accepts);
 }
 
 class ShadowLabApp extends StatelessWidget {

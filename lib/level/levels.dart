@@ -1706,6 +1706,61 @@ abstract final class Levels {
   /// The Phase 2 tuning bench, as a level so it runs on the same code as the
   /// puzzles. Not part of the campaign: it is where the numbers get argued
   /// with, not somewhere to be finished.
+  /// **Level zero: that's you.** On the bench, not in the campaign — it uses
+  /// [Level.prelude], which is still on trial (`docs/lab.md` §1).
+  ///
+  /// The first review of the game said the line under the name was not
+  /// understood, and a line was the only thing explaining the game. This one
+  /// is explained by a picture: the level opens with a pale body already
+  /// walking — standing on the plate under your feet, then walking through
+  /// the door your weight is holding open. Move, and it is gone; two seconds
+  /// later a new one comes out of the spawn and does exactly what you did.
+  ///
+  /// The puzzle is the first level's sentence made as small as it goes: the
+  /// plate is under the spawn and the door is ahead. Your own weight opens it
+  /// only while you stand there, so walking straight at it finds it shut —
+  /// unless you stood long enough first for your past to be on the plate when
+  /// you arrive. The demonstration is the solution, shown once, in a body the
+  /// player then watches turn into their own.
+  ///
+  /// **Before it can join the campaign** it needs playing by hand, and one
+  /// more line: `miserly_test` sweeps «wait for your shadow, then hold the way
+  /// out», and here that *is* the lesson, so it joins [cheapByDesign] the day
+  /// it is promoted — the waiting the other levels assume is what this one
+  /// teaches.
+  static final Level thatsYou = Level(
+    id: 'thats-you',
+    solution: const [
+      Move(1.5), // stand where you are: the plate is under you
+      Move.right(3.0), // to the door, which your past is holding now
+    ],
+    wrongIdeas: const [
+      // Straight at the door: it was only open while you stood still.
+      [Move.right(6)],
+    ],
+    prelude: const [Move(1.5), Move.right(3.0)],
+    name: 'ده انت',
+    teaches: 'الفاتح ده انت. اتحرك، وبعد ثانيتين هيعمل زيك.',
+    nameEn: "That's You",
+    teachesEn:
+        'The pale one is you. Move, and two seconds later it does what you did.',
+    delaySeconds: 2,
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [_ground(-700, 900)],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-30, 608, 30, 620), opens: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(300, 360, 326, 620)),
+    ],
+    goal: const Rect.fromLTRB(420, 548, 500, 620),
+  );
+
+  /// Levels on the bench and not in the campaign: they use something still
+  /// on trial. The editor's start menu offers them.
+  static final List<Level> bench = [thatsYou];
+
   static final Level lab = Level(
     id: 'lab',
     name: 'الورشة',

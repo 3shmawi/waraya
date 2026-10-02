@@ -36,6 +36,7 @@ class Level {
     this.floorTop = 620,
     this.solution = const [],
     this.wrongIdeas = const [],
+    this.prelude = const [],
   }) : assert(
          (delaySeconds == null) != (delays == null),
          'a level sets either delaySeconds or delays, never both',
@@ -163,6 +164,21 @@ class Level {
   /// finish the level.
   final List<List<Move>> wrongIdeas;
 
+  /// A past you never lived, shown before you move (`docs/phase-11-feel.md`
+  /// §4.1). Empty — every level but one — shows nothing.
+  ///
+  /// The level opens with a pale body already walking these moves from the
+  /// spawn, over and over, and the moment the player moves it is gone; D
+  /// seconds later their own past arrives and does what *they* did. The
+  /// comparison is the rule, said without a word.
+  ///
+  /// It is **seen and nothing else**: it presses no plate, holds no door,
+  /// carries and kills nobody, so a level's recorded solution and wrong ideas
+  /// play the same with it or without it. It is still named in [requires],
+  /// and for the dangerous reason: a level built around showing the rule is a
+  /// level that makes no sense to a build that drops the showing.
+  final List<Move> prelude;
+
   /// Whether this level can be checked by somebody who did not write it.
   ///
   /// A level with no recorded solution cannot be shown to be finishable, and
@@ -199,6 +215,23 @@ class Level {
     'crouched-solid',
   };
 
+  /// Mechanics whose code is here but which are **still being tried on the
+  /// bench** (`docs/lab.md` §1).
+  ///
+  /// The bench reads levels with these; the game and the gate do not, so a
+  /// level using one is refused by name everywhere a player could meet it.
+  /// Promotion is moving the name into [knownMechanics], in the commit that
+  /// puts the level proving it into the campaign, with its solution, its
+  /// wrong idea, and a version bump. A mechanic that fails is deleted from
+  /// here and from the code, and its levels stay refused.
+  static const Set<String> labMechanics = <String>{'prelude'};
+
+  /// What the bench accepts: everything the game does, and what is on trial.
+  static Set<String> get benchMechanics => {
+    ...knownMechanics,
+    ...labMechanics,
+  };
+
   /// What this level needs beyond the baseline, worked out from its contents.
   ///
   /// Derived rather than stored, so it cannot be forgotten: the level says
@@ -226,6 +259,7 @@ class Level {
     // player takes — which does not look broken, it looks easy, and it
     // finishes without the player ever ducking.
     if (solidWhen != ShadowSolidity.always) 'crouched-solid',
+    if (prelude.isNotEmpty) 'prelude',
   };
 }
 
@@ -463,6 +497,8 @@ extension LevelJson on Level {
       for (final idea in wrongIdeas)
         [for (final move in idea) _moveToJson(move)],
     ],
+    if (prelude.isNotEmpty)
+      'prelude': [for (final move in prelude) _moveToJson(move)],
     'goal': _rectToJson(goal),
     'blocks': blocks.map(_rectToJson).toList(),
     'lights': lights.map(_rectToJson).toList(),
@@ -531,17 +567,32 @@ class LevelUnsupportedException implements Exception {
   /// The names this build does not know. See [Level.knownMechanics].
   final Set<String> missing;
 
+  /// The ones among [missing] that this build has the code for but has not
+  /// let out of the bench yet. See [Level.labMechanics].
+  Set<String> get onTheBench => missing.intersection(Level.labMechanics);
+
   @override
-  String toString() =>
-      'LevelUnsupportedException: level "$levelId" needs '
-      '${missing.join(', ')}, which this build does not have';
+  String toString() {
+    final bench = onTheBench;
+    final absent = missing.difference(bench);
+    final reasons = [
+      if (absent.isNotEmpty)
+        '${absent.join(', ')}, which this build does not have',
+      if (bench.isNotEmpty) '${bench.join(', ')}, which is still on the bench',
+    ];
+    return 'LevelUnsupportedException: level "$levelId" needs '
+        '${reasons.join('; and ')}';
+  }
 }
 
 /// Builds a [Level] from decoded JSON.
 ///
 /// Throws [LevelFormatException] if the data does not describe a level, and
 /// [LevelUnsupportedException] if it describes one this build cannot play.
-Level levelFromJson(Object? source) {
+///
+/// [accepts] is what this reader will play: [Level.knownMechanics] for the
+/// game and the gate, [Level.benchMechanics] for the bench.
+Level levelFromJson(Object? source, {Set<String>? accepts}) {
   final json = _asMap(source, 'level');
   final id = _asString(json['id'], 'id');
 
@@ -551,7 +602,7 @@ Level levelFromJson(Object? source) {
   final missing = _stringList(
     json['requires'],
     'requires',
-  ).toSet().difference(Level.knownMechanics);
+  ).toSet().difference(accepts ?? Level.knownMechanics);
   if (missing.isNotEmpty) throw LevelUnsupportedException(id, missing);
 
   try {
@@ -578,6 +629,7 @@ Level levelFromJson(Object? source) {
         ).indexed)
           _moveList(idea, 'wrongIdeas[$i]'),
       ],
+      prelude: _moveList(json['prelude'], 'prelude'),
       blocks: _rectList(json['blocks'], 'blocks'),
       lights: _rectList(json['lights'], 'lights'),
       markers: _rectList(json['markers'], 'markers'),
@@ -646,12 +698,13 @@ Level levelFromJson(Object? source) {
 List<Level> levelsFromJson(
   Object? source, {
   void Function(LevelUnsupportedException skipped)? onSkipped,
+  Set<String>? accepts,
 }) {
   final entries = source is Map ? [source] : _asList(source, 'levels');
   final levels = <Level>[];
   for (final entry in entries) {
     try {
-      levels.add(levelFromJson(entry));
+      levels.add(levelFromJson(entry, accepts: accepts));
     } on LevelUnsupportedException catch (error) {
       onSkipped?.call(error);
     }
