@@ -212,7 +212,7 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build linux --release
+      - run: flutter build linux --release --build-number=${{ needs.version.outputs.build }}
       - run: |
           mkdir -p out
           tar -C build/linux/x64/release/bundle -czf \
@@ -233,7 +233,7 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build windows --release
+      - run: flutter build windows --release --build-number=${{ needs.version.outputs.build }}
       - shell: pwsh
         run: |
           New-Item -ItemType Directory -Force out | Out-Null
