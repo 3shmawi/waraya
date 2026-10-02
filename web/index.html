@@ -62,6 +62,10 @@
     }
     #splash.done { opacity: 0; pointer-events: none; }
 
+    /* One language shown: the script at the top of <body> decides which. */
+    html[data-lang="en"] #splash [lang="ar"],
+    html:not([data-lang="en"]) #splash [lang="en"] { display: none !important; }
+
     #splash svg { width: 92px; height: 92px; filter: drop-shadow(0 6px 18px rgba(20, 10, 0, .28)); }
 
     #splash h1 {
@@ -100,7 +104,7 @@
     /* Touch devices get the thumb zones; pointer devices get the keys. */
     #splash .touch { display: none; }
     @media (hover: none) and (pointer: coarse) {
-      #splash .keyboard { display: none; }
+      #splash .keyboard { display: none !important; }
       #splash .touch { display: flex; }
     }
 
@@ -160,6 +164,9 @@
        off the edge, the way a shadow does not exist until the buffer has
        filled. Pure CSS on the SVG, and still for anyone who asked for less
        motion. */
+    /* Every delay is 1.5s earlier than the past it draws, so you are
+       already part-way across when the splash appears; the gaps between
+       the three — the delays that are the game — are unchanged. */
     #splash .walker {
       animation: cross 4.4s linear infinite backwards;
       animation-delay: var(--lag);
@@ -206,12 +213,30 @@
   </style>
 </head>
 <body>
+  <script>
+    // The same language as the landing page and the game: the game's own
+    // setting if it was ever chosen (shared_preferences keeps it here), the
+    // browser's otherwise. Before the splash is painted, so it never flickers
+    // from one language to the other.
+    (function () {
+      var lang = null;
+      try {
+        var v = JSON.parse(localStorage.getItem('flutter.waraya.settings.language'));
+        if (v === 'ar' || v === 'en') lang = v;
+      } catch (e) {}
+      if (!lang) lang = (navigator.language || '').toLowerCase().indexOf('ar') === 0 ? 'ar' : 'en';
+      var root = document.documentElement;
+      root.setAttribute('data-lang', lang);
+      root.setAttribute('lang', lang);
+      root.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    })();
+  </script>
   <div id="splash">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
       <!-- You, and your past: the same walk, legs and all, the near one a
            beat behind and the far one two — and neither there at all until
            its delay has passed, as in the game. Drawn furthest first. -->
-      <g class="walker far" style="--lag: 1.7s; --rest: 70px" color="#DCE4EE" opacity="0.30">
+      <g class="walker far" style="--lag: 0.2s; --rest: 70px" color="#DCE4EE" opacity="0.30">
         <g class="bob" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <path class="leg b" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
           <path class="arm b" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
@@ -222,7 +247,7 @@
           <path class="arm a" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
         </g>
       </g>
-      <g class="walker near" style="--lag: 0.85s; --rest: 58px" color="#DCE4EE" opacity="0.55">
+      <g class="walker near" style="--lag: -0.65s; --rest: 58px" color="#DCE4EE" opacity="0.55">
         <g class="bob" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <path class="leg b" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
           <path class="arm b" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
@@ -233,7 +258,7 @@
           <path class="arm a" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
         </g>
       </g>
-      <g class="walker you" style="--lag: 0s; --rest: 44px" color="#07050A" opacity="1">
+      <g class="walker you" style="--lag: -1.5s; --rest: 44px" color="#07050A" opacity="1">
         <g class="bob" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <path class="leg b" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
           <path class="arm b" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
@@ -249,21 +274,36 @@
     </svg>
 
     <h1>ورايا</h1>
-    <p class="pitch">
+    <p class="pitch" lang="ar">
       <span class="a">انت مش بتتحكم في ظلك.</span>
       <span class="b">بتتحكم في اللي هيعمله بعد شوية.</span>
     </p>
+    <p class="pitch" lang="en">
+      <span class="a">You don't control your shadow.</span>
+      <span class="b">You control what it will do a moment from now.</span>
+    </p>
 
-    <div class="keys keyboard">
+    <div class="keys keyboard" lang="ar">
       <span>الأسهم أو WASD للمشي</span>
       <span>مسافة للنطة</span>
       <span>سهم تحت للقعدة</span>
       <span>R لإعادة المرحلة</span>
     </div>
-    <div class="keys touch">
+    <div class="keys keyboard" lang="en">
+      <span>Arrows or WASD to walk</span>
+      <span>Space to jump</span>
+      <span>Down to crouch</span>
+      <span>R to restart</span>
+    </div>
+    <div class="keys touch" lang="ar">
       <span>الدايرة تحت شمال للمشي</span>
       <span>تحت يمين: نطة وقعدة</span>
       <span>الموبايل بالعرض</span>
+    </div>
+    <div class="keys touch" lang="en">
+      <span>The circle bottom left walks</span>
+      <span>Bottom right: jump, crouch</span>
+      <span>Hold the phone sideways</span>
     </div>
 
     <div class="bar"><i></i></div>

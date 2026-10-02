@@ -210,9 +210,47 @@
     padding-left: max(22px, env(safe-area-inset-left));
     padding-right: max(22px, env(safe-area-inset-right));
   }
+
+  /* Two languages, one shown (see the comment at the top of <body>). */
+  html[data-lang="en"] [lang="ar"],
+  html:not([data-lang="en"]) [lang="en"] { display: none !important; }
+  html[data-lang="en"] body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  html[data-lang="en"] h1, html[data-lang="en"] .langswitch [lang="en"] { font-family: 'Cairo', system-ui, sans-serif; }
+
+  .langswitch {
+    position: fixed;
+    z-index: 10;
+    top: max(12px, env(safe-area-inset-top));
+    inset-inline-start: max(12px, env(safe-area-inset-left));
+    padding: 7px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(20,16,10,.25);
+    background: rgba(255,231,176,.82);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(20,10,0,.18);
+    backdrop-filter: blur(6px);
+  }
+  .langswitch [lang="en"] { font-family: 'Cairo', system-ui, sans-serif; }
+  .langswitch:focus-visible { outline: 3px solid var(--night); outline-offset: 3px; }
+
+  /* Lists and button gaps follow the reading direction. */
+  ul, .get .card ol { padding: 0; padding-inline-start: 20px; }
+  .btn { margin: 0; margin-inline-end: 8px; margin-bottom: 12px; }
 </style>
 </head>
 <body>
+
+<!-- One page, two languages: every piece of text is here twice, lang="ar"
+     and lang="en", and data-lang on <html> shows one. The choice is the
+     game's own setting (shared_preferences keeps it in localStorage as
+     flutter.waraya.settings.language), so a language picked here is the
+     language the game opens in, and the other way round. -->
+<button class="langswitch" type="button" id="langswitch">
+  <span lang="ar">English</span><span lang="en">عربي</span>
+</button>
 
 <header class="hero">
   <div class="hero-id">
@@ -249,33 +287,56 @@
   </div>
 
   <div class="hero-go">
-  <p class="pitch">
+  <p class="pitch" lang="ar">
     <span class="a">انت مش بتتحكم في ظلك.</span>
     <span class="b">بتتحكم في اللي هيعمله بعد شوية.</span>
   </p>
+  <p class="pitch" lang="en">
+    <span class="a">You don't control your shadow.</span>
+    <span class="b">You control what it will do a moment from now.</span>
+  </p>
 
-  <a class="play" href="play/">إلعب دلوقتي</a>
-  <p class="free">في المتصفح · من غير تحميل · موبايل وكمبيوتر</p>
-  <p class="free"><a href="#get" style="color:inherit">أو نزّلها على أندرويد وآيفون والكمبيوتر</a></p>
+  <a class="play" href="play/"><span lang="ar">إلعب دلوقتي</span><span lang="en">Play now</span></a>
+  <p class="free" lang="ar">في المتصفح · من غير تحميل · موبايل وكمبيوتر</p>
+    <p class="free" lang="en">In the browser · no download · phone and computer</p>
+  <p class="free"><a href="#get" style="color:inherit"><span lang="ar">أو نزّلها على أندرويد وآيفون والكمبيوتر</span><span lang="en">Or install it on Android, iPhone and computer</span></a></p>
   </div>
 </header>
 
 <main>
   <section>
-    <h2>الفكرة</h2>
-    <p>
+    <h2 lang="ar">الفكرة</h2>
+    <h2 lang="en">The idea</h2>
+    <p lang="ar">
       ظلك بيعيد كل حاجة عملتها، بعد كام ثانية ثابتة. وهو ماشي بيعيد، بيبقى
       <b>حاجة حقيقية في الدنيا</b> — تقف عليه، يقف في طريقك، أو يمسكك.
     </p>
-    <p>
+    <p lang="en">
+      Your shadow repeats everything you did, the same few seconds later, every
+      time. And while it repeats it, it is <b>a real thing in the world</b> —
+      you stand on it, it stands in your way, or it catches you.
+    </p>
+    <p lang="ar">
       يعني لو عايز زرار يفضل مدوس هناك، لازم تروح تقف عليه انت بنفسك قبلها
       بشوية، وبعدين تمشي وتكون في مكان تاني لما نفسك القديمة توصل وتدوسه. فبتقضي
       اللعبة وانت بتعمل حاجات شكلها ملهاش لازمة، وانت عارف إنها الحل لمشكلة
       لسه موصلتش لها.
     </p>
-    <p>
+    <p lang="en">
+      So if you need a button held down over there, you have to go and stand on
+      it yourself a little earlier, then walk away and be somewhere else when
+      your old self arrives and presses it. You spend the game doing things that
+      look pointless, knowing they are the answer to a problem you have not
+      reached yet.
+    </p>
+    <p lang="ar">
       <b>مفيش زرار تسجيل ومفيش رجوع بالوقت.</b> التأخير شغال سواء انت جاهز أو لأ،
       وده اللي بيخلي الإحساس أقرب لإنك متطارد من إنه لغز هادي.
+    </p>
+    <p lang="en">
+      <b>No record button, no rewinding time.</b> The delay runs whether you are
+      ready or not, which makes it feel closer to being chased than to a quiet
+      puzzle.
     </p>
   </section>
 
@@ -283,63 +344,90 @@
 
   <section>
     <figure>
-      <img src="media/lit-level.jpg" alt="اللاعب أسود واقف قدام باب مقفول، وظله الفاتح بيجري ناحية الزرار وراه" loading="lazy">
-      <figcaption>المرحلة الأولى. الأسود ده انت. الفاتح ده انت كمان، من تلات ثواني ونص.</figcaption>
+      <img src="media/lit-level.jpg" alt="اللاعب أسود واقف قدام باب مقفول، وظله الفاتح بيجري ناحية الزرار وراه — The player, in black, at a closed door while their pale shadow runs to the button behind them" loading="lazy">
+      <figcaption lang="ar">المرحلة الأولى. الأسود ده انت. الفاتح ده انت كمان، من تلات ثواني ونص.</figcaption>
+    <figcaption lang="en">The first level. The black one is you. The pale one is you too, three and a half seconds ago.</figcaption>
     </figure>
   </section>
 
   <hr class="rule">
 
   <section id="get">
-    <h2>نزّل اللعبة</h2>
-    <p>
-      نفس اللعبة في كل حتة، ونفس المراحل. ومجانية في كله.
-    </p>
+    <h2 lang="ar">نزّل اللعبة</h2>
+    <h2 lang="en">Get the game</h2>
+    <p lang="ar">نفس اللعبة في كل حتة، ونفس المراحل. ومجانية في كله.</p>
+    <p lang="en">The same game everywhere, with the same levels. Free everywhere.</p>
     <div class="get">
       <div class="card">
-        <h3>المتصفح</h3>
-        <p>من غير تحميل خالص — موبايل أو كمبيوتر.</p>
-        <a class="btn" href="play/">إلعب دلوقتي</a>
-        <ol>
+        <h3 lang="ar">المتصفح</h3>
+    <h3 lang="en">Browser</h3>
+        <p lang="ar">من غير تحميل خالص — موبايل أو كمبيوتر.</p>
+    <p lang="en">No download at all — phone or computer.</p>
+        <a class="btn" href="play/"><span lang="ar">إلعب دلوقتي</span><span lang="en">Play now</span></a>
+        <ol lang="ar">
           <li>عايزها أيقونة على الشاشة؟ على أندرويد من قايمة <bdi>Chrome</bdi> اختار «إضافة إلى الشاشة الرئيسية».</li>
           <li>على الكمبيوتر، أيقونة التسطيب في آخر شريط العنوان في <bdi>Chrome</bdi> أو <bdi>Edge</bdi></li>
         </ol>
+        <ol lang="en">
+          <li>Want an icon on your home screen? On Android, choose “Add to Home screen” in the Chrome menu.</li>
+          <li>On a computer, the install icon at the end of the address bar in Chrome or Edge.</li>
+        </ol>
       </div>
 
       <div class="card">
-        <h3>أندرويد</h3>
+        <h3 lang="ar">أندرويد</h3>
+    <h3 lang="en">Android</h3>
         <!-- data-store="google-play": swap for the listing link once it is public. -->
-        <span class="btn soon" data-store="google-play">Google Play — قريباً</span>
-        <p>ولحد ما تنزل على المتجر، تقدر تسطّب الـAPK على طول:</p>
-        <a class="btn ghost" href="https://github.com/3shmawi/waraya/releases/latest">نزّل الـAPK</a>
-        <ol>
+        <span class="btn soon" data-store="google-play"><span lang="ar">Google Play — قريباً</span><span lang="en">Google Play — soon</span></span>
+        <p lang="ar">ولحد ما تنزل على المتجر، تقدر تسطّب الـAPK على طول:</p>
+    <p lang="en">Until it is on the store, you can install the APK directly:</p>
+        <a class="btn ghost" href="https://github.com/3shmawi/waraya/releases/latest"><span lang="ar">نزّل الـAPK</span><span lang="en">Download the APK</span></a>
+        <ol lang="ar">
           <li>افتح الصفحة من الموبايل ونزّل الملف اللي آخره <kbd>.apk</kbd></li>
           <li>افتحه، ولو سأل اسمح بالتسطيب من المصدر ده.</li>
         </ol>
-      </div>
-
-      <div class="card">
-        <h3>آيفون وآيباد</h3>
-        <!-- data-store="app-store": swap for the listing link once it is public. -->
-        <span class="btn soon" data-store="app-store">App Store — قريباً</span>
-        <p>ولحد ما تنزل، اللعبة شغالة من Safari كأنها أبلكيشن:</p>
-        <ol>
-          <li>افتح <a href="play/">صفحة اللعب</a> في <bdi>Safari</bdi></li>
-          <li>زرار المشاركة ← «إضافة إلى الشاشة الرئيسية».</li>
+        <ol lang="en">
+          <li>Open the page on your phone and download the file ending in <kbd>.apk</kbd></li>
+          <li>Open it, and if asked, allow installs from this source.</li>
         </ol>
       </div>
 
       <div class="card">
-        <h3>كمبيوتر</h3>
-        <a class="btn" href="https://3shmawiii.itch.io/waraya">على itch.io</a>
-        <a class="btn ghost" href="https://github.com/3shmawi/waraya/releases/latest">أو من GitHub</a>
-        <p>الأسهل: أبلكيشن <a href="https://itch.io/app">itch</a> بيسطّبها ويحدّثها لوحده كل نسخة. أو نزّل الملف وفكّه:</p>
-        <ol>
+        <h3 lang="ar">آيفون وآيباد</h3>
+    <h3 lang="en">iPhone and iPad</h3>
+        <!-- data-store="app-store": swap for the listing link once it is public. -->
+        <span class="btn soon" data-store="app-store"><span lang="ar">App Store — قريباً</span><span lang="en">App Store — soon</span></span>
+        <p lang="ar">ولحد ما تنزل، اللعبة شغالة من Safari كأنها أبلكيشن:</p>
+    <p lang="en">Until then, the game runs from Safari like an app:</p>
+        <ol lang="ar">
+          <li>افتح <a href="play/">صفحة اللعب</a> في <bdi>Safari</bdi></li>
+          <li>زرار المشاركة ← «إضافة إلى الشاشة الرئيسية».</li>
+        </ol>
+        <ol lang="en">
+          <li>Open the <a href="play/">play page</a> in Safari</li>
+          <li>Share button → “Add to Home Screen”.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3 lang="ar">كمبيوتر</h3>
+    <h3 lang="en">Computer</h3>
+        <a class="btn" href="https://3shmawiii.itch.io/waraya"><span lang="ar">على itch.io</span><span lang="en">On itch.io</span></a>
+        <a class="btn ghost" href="https://github.com/3shmawi/waraya/releases/latest"><span lang="ar">أو من GitHub</span><span lang="en">or from GitHub</span></a>
+        <p lang="ar">الأسهل: أبلكيشن <a href="https://itch.io/app">itch</a> بيسطّبها ويحدّثها لوحده كل نسخة. أو نزّل الملف وفكّه:</p>
+        <p lang="en">Easiest: the <a href="https://itch.io/app">itch</a> app installs it and updates it on its own, every version. Or download the file and unpack it:</p>
+        <ol lang="ar">
           <li><b>ويندوز:</b> فك الـzip وشغّل <kbd>waraya.exe</kbd> — ولو ظهر تحذير <bdi>SmartScreen</bdi> اختار <kbd>More info</kbd> وبعدين <kbd>Run anyway</kbd></li>
           <li><b>ماك:</b> فك الـzip وافتح <kbd>waraya.app</kbd>. لو قال إنه مش قادر يتأكد منه: <bdi>System Settings</bdi> ← <bdi>Privacy &amp; Security</bdi> ← <kbd>Open Anyway</kbd>، مرة واحدة</li>
           <li><b>لينكس:</b> فك الملف وشغّل <kbd>./waraya</kbd></li>
         </ol>
-        <p class="note">التحذيرات دي عشان النسخة مش ممضية بشهادة مدفوعة، مش عشان فيها حاجة.</p>
+        <ol lang="en">
+          <li><b>Windows:</b> unzip and run <kbd>waraya.exe</kbd> — if SmartScreen warns, choose <kbd>More info</kbd>, then <kbd>Run anyway</kbd></li>
+          <li><b>Mac:</b> unzip and open <kbd>waraya.app</kbd>. If it says it cannot verify it: System Settings → Privacy &amp; Security → <kbd>Open Anyway</kbd>, once</li>
+          <li><b>Linux:</b> unpack it and run <kbd>./waraya</kbd></li>
+        </ol>
+        <p class="note" lang="ar">التحذيرات دي عشان النسخة مش ممضية بشهادة مدفوعة، مش عشان فيها حاجة.</p>
+    <p class="note" lang="en">The warnings are because the build is not signed with a paid certificate, not because anything is wrong with it.</p>
       </div>
     </div>
   </section>
@@ -347,9 +435,10 @@
   <hr class="rule">
 
   <section>
-    <h2>التحكم</h2>
+    <h2 lang="ar">التحكم</h2>
+    <h2 lang="en">Controls</h2>
     <div class="controls">
-      <div class="card">
+      <div class="card" lang="ar">
         <h3>كمبيوتر</h3>
         <div><kbd>A</kbd> <kbd>D</kbd> أو الأسهم — مشي</div>
         <div><kbd>Space</kbd> — نطة. امسكها تنط أعلى</div>
@@ -358,12 +447,28 @@
         <div><kbd>Esc</kbd> — قايمة المراحل</div>
         <div>الإعدادات (الصوت، اللغة، الإحصائيات) من زرار الوقفة ⏸</div>
       </div>
-      <div class="card">
+      <div class="card" lang="en">
+        <h3>Computer</h3>
+        <div><kbd>A</kbd> <kbd>D</kbd> or the arrows — walk</div>
+        <div><kbd>Space</kbd> — jump. Hold it to jump higher</div>
+        <div><kbd>S</kbd> or down arrow — crouch</div>
+        <div><kbd>R</kbd> — restart the level</div>
+        <div><kbd>Esc</kbd> — the level list</div>
+        <div>Settings (sound, language, statistics) under pause ⏸</div>
+      </div>
+      <div class="card" lang="ar">
         <h3>موبايل — بالعرض</h3>
         <div>الدايرة تحت شمال — دوس يمينها أو شمالها تمشي</div>
         <div>تحت يمين: زرار النطة، وجنبه زرار القعدة</div>
-        <div>ماضيك بتقف عليه بس لو كان واطي — ساعتها فوقه خط منوّر زي الأرض</div>
+        <div>ماضيك بتقف عليه بس في المكان اللي وطيت فيه</div>
         <div>فوق يمين: من الأول ⟲، المراحل ☰، وقفة ⏸</div>
+      </div>
+      <div class="card" lang="en">
+        <h3>Phone — held sideways</h3>
+        <div>The circle bottom left — press its left or right side to walk</div>
+        <div>Bottom right: jump, and crouch beside it</div>
+        <div>You can stand on your past only where you crouched</div>
+        <div>Top right: start over ⟲, levels ☰, pause ⏸</div>
       </div>
     </div>
   </section>
@@ -371,79 +476,103 @@
   <hr class="rule">
 
   <section>
-    <h2>عن المشروع</h2>
-    <p>
+    <h2 lang="ar">عن المشروع</h2>
+    <h2 lang="en">About</h2>
+    <p lang="ar">
       ستاشر مرحلة. العشرة الأولانيين كل واحدة بتعلّم حاجة واحدة وبعدين تسيبها:
       الزرار، المنصة، العقبة، التضحية، المفتاح اللي ماضيك بيقلبه تاني، النور اللي
       جوّاه ظلك مش موجود، وظلين في نفس الوقت. والست اللي بعدهم بيجمعوا ده كله.
       التأخير بيتغير من مرحلة للي بعدها — نفس التصميم بتأخير تاني بيبقى لغز
       تاني. وتقدّمك بيتحفظ: تقفل وترجع تلاقي نفسك مكانك.
     </p>
-    <p>
+    <p lang="en">
+      Sixteen levels. The first ten each teach one thing and then let it go:
+      the button, the platform, the obstacle, the sacrifice, the switch your
+      past flips back, the light where your shadow does not exist, and two
+      shadows at once. The six after them put it all together. The delay
+      changes from level to level — the same layout with a different delay is
+      a different puzzle. Your progress is saved: close it and come back to
+      find yourself where you were.
+    </p>
+    <p lang="ar">
       المكان مصر المعاصرة، مش مصر القديمة. كل حاجة غامقة في الصورة فوق دي صورة
       فوتوغرافية لمكان حقيقي، متقصوصة silhouette ومتحطة في طبقات.
     </p>
-    <p>
+    <p lang="en">
+      The place is today's Egypt, not ancient Egypt. Everything dark in the
+      picture above is a photograph of a real place, cut out as a silhouette
+      and layered.
+    </p>
+    <p lang="ar">
       مشروع شخص واحد، يوم في الأسبوع، بـ<bdi>Flutter</bdi> و<a href="https://flame-engine.org"><bdi>Flame</bdi></a>.
       الكود كله مفتوح على <a href="https://github.com/3shmawi/waraya"><bdi>GitHub</bdi></a>.
     </p>
-
-    <div class="en">
-      <p>
-        <b>In English:</b> you do not control your shadow — you control what it
-        will do a few seconds from now. It repeats everything you did, that long
-        ago, and it is a real thing in the world while it does it: something to
-        stand on, something in your way, something that can catch you. Sixteen
-        puzzles, in the browser, no install — or on Android, iPhone and desktop
-        (<a href="#get">how to install</a>). Built in Flutter and Flame, one day
-        a week. <a href="https://github.com/3shmawi/waraya">Source on GitHub.</a>
-      </p>
-      <p>
-        The game speaks English when your device does, or pick it under
-        Pause ⏸ → Settings. <b>Controls:</b> on a computer, A/D or the arrows
-        to walk, Space to jump, S to crouch, R to restart. On a phone, held
-        sideways: the pad bottom left walks, the buttons bottom right jump and
-        crouch. Your past is something to stand on only where you crouched —
-        it gets a lit top edge, like the floor.
-      </p>
-    </div>
+    <p lang="en">
+      One person's project, one day a week, in Flutter and
+      <a href="https://flame-engine.org">Flame</a>. All of the code is open on
+      <a href="https://github.com/3shmawi/waraya">GitHub</a>.
+    </p>
   </section>
 
   <hr class="rule">
 
   <section id="contact">
-    <h2>تواصل</h2>
+    <h2 lang="ar">تواصل</h2>
+    <h2 lang="en">Contact</h2>
+    <p lang="ar">لقيت باج، أو مرحلة حاسس إنها ظالمة، أو عندك فكرة؟ اكتبها هنا — عربي أو إنجليزي، ومن غير ما تعرف أي حاجة في البرمجة:</p>
+    <p lang="en">Found a bug, a level that feels unfair, or have an idea? Write it here — in Arabic or English, no programming needed:</p>
     <p>
-      لقيت باج، أو مرحلة حاسس إنها ظالمة، أو عندك فكرة؟ اكتبها هنا — عربي أو
-      إنجليزي، ومن غير ما تعرف أي حاجة في البرمجة:
+      <a class="btn" href="https://github.com/3shmawi/waraya/issues/new"><span lang="ar">ابعت رسالة</span><span lang="en">Send a message</span></a>
+      <a class="btn ghost" href="https://github.com/3shmawi/waraya/issues"><span lang="ar">اللي اتبعت قبل كده</span><span lang="en">What has been sent</span></a>
     </p>
-    <p>
-      <a class="btn" href="https://github.com/3shmawi/waraya/issues/new">ابعت رسالة</a>
-      <a class="btn ghost" href="https://github.com/3shmawi/waraya/issues">اللي اتبعت قبل كده</a>
-    </p>
-    <p class="note">
-      محتاج حساب GitHub (مجاني). ولو بتبلّغ عن مرحلة، اكتب اسمها اللي بيظهر
-      على الشاشة، وجهازك إيه.
-    </p>
-    <div class="en">
-      <p>
-        <b>Contact:</b> bugs, unfair levels and ideas go to
-        <a href="https://github.com/3shmawi/waraya/issues/new">GitHub issues</a>
-        (a free account is needed), in Arabic or English.
-      </p>
-    </div>
+    <p class="note" lang="ar">محتاج حساب GitHub (مجاني). ولو بتبلّغ عن مرحلة، اكتب اسمها اللي بيظهر على الشاشة، وجهازك إيه.</p>
+    <p class="note" lang="en">You need a (free) GitHub account. If it is about a level, write its name as shown on screen, and your device.</p>
   </section>
 </main>
 
 <footer>
-  <p><a class="play" href="play/" style="font-size:17px;padding:12px 38px">إلعب</a></p>
+  <p><a class="play" href="play/" style="font-size:17px;padding:12px 38px"><span lang="ar">إلعب</span><span lang="en">Play</span></a></p>
   <p style="margin-top:26px">ورايا · <a href="https://github.com/3shmawi/waraya">github.com/3shmawi/waraya</a></p>
-  <p>
+  <p lang="ar">
     <a href="#get">نزّل اللعبة</a>
     · <a href="#contact">تواصل</a>
     · <a href="privacy.html">الخصوصية</a>
   </p>
+  <p lang="en">
+    <a href="#get">Get the game</a>
+    · <a href="#contact">Contact</a>
+    · <a href="privacy.html">Privacy</a>
+  </p>
 </footer>
+
+<script>
+  // Which language: the one the game was set to, if it ever was (the
+  // settings page writes it here, JSON-encoded, by shared_preferences);
+  // otherwise the browser's — Arabic for Arabic, English for anything else,
+  // the same rule the game uses (Lang.forDevice).
+  (function () {
+    var key = 'flutter.waraya.settings.language';
+    var root = document.documentElement;
+    function stored() {
+      try { var v = JSON.parse(localStorage.getItem(key)); return v === 'ar' || v === 'en' ? v : null; }
+      catch (e) { return null; }
+    }
+    function apply(lang) {
+      root.setAttribute('data-lang', lang);
+      root.setAttribute('lang', lang);
+      root.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      document.title = lang === 'ar' ? 'ورايا · waraya' : 'Waraya · ورايا';
+    }
+    var start = stored() || ((navigator.language || '').toLowerCase().indexOf('ar') === 0 ? 'ar' : 'en');
+    apply(start);
+    document.getElementById('langswitch').addEventListener('click', function () {
+      var next = root.getAttribute('data-lang') === 'ar' ? 'en' : 'ar';
+      apply(next);
+      // Picked by hand, so it is kept — and the game opens in it too.
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch (e) {}
+    });
+  })();
+</script>
 
 </body>
 </html>
