@@ -183,6 +183,51 @@ platform :ios do
     upload_to_testflight(api_key: key, skip_waiting_for_build_processing: true)
   end
 
+  desc "Send a TestFlight build to the external testers (through Beta App Review)"
+  lane :external do |options|
+    version = options.fetch(:version)
+    build = options.fetch(:build).to_s
+    group = ENV.fetch("TESTFLIGHT_EXTERNAL_GROUP", "Mohager External")
+    key = api_key
+
+    # A build cannot go to anyone until Apple has processed it, and `beta`
+    # does not wait for that (ten to thirty minutes of an idle macOS runner).
+    # This lane runs on Linux, where waiting is cheap — it polls until the
+    # build has appeared and finished processing.
+    app = Spaceship::ConnectAPI::App.find(PACKAGE)
+    UI.user_error!("no app with bundle id #{PACKAGE} in App Store Connect") if app.nil?
+    FastlaneCore::BuildWatcher.wait_for_build_processing_to_be_complete(
+      app_id: app.id,
+      platform: "IOS",
+      app_version: version,
+      build_version: build,
+      poll_interval: 60,
+      timeout_duration: 90 * 60,
+      return_spaceship_testflight_build: false,
+      wait_for_build_beta_detail_processing: true,
+    )
+
+    upload_to_testflight(
+      api_key: key,
+      app_identifier: PACKAGE,
+      distribute_only: true,
+      app_version: version,
+      build_number: build,
+      distribute_external: true,
+      groups: [group],
+      # "What to test", shown to the testers in the TestFlight app. Edited by
+      # hand before a release that changes something worth pointing at.
+      changelog: File.read(File.join(__dir__, "what_to_test.txt")).strip,
+      notify_external_testers: true,
+      # Only HTTPS through the OS — the same answer as Info.plist gives.
+      uses_non_exempt_encryption: false,
+      # A newer build replaces one still waiting for Beta App Review rather
+      # than queueing behind it: the testers want the latest, not both.
+      reject_build_waiting_for_review: true,
+    )
+    UI.success("#{version} (#{build}) submitted to Beta App Review for \"#{group}\"")
+  end
+
   desc "Submit a TestFlight build for App Store review"
   lane :release do |options|
     deliver(

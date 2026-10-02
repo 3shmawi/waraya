@@ -334,6 +334,21 @@ Actions → store → Run workflow
 مبيستناش — بيوفّر دقايق ماك). ضيف نفسك في TestFlight ← Internal Testing ← group
 بـ«Automatic distribution»، وكل بيلد جديد بيوصلك لوحده.
 
+**والتسترز اللي بره (External):** نفس البيلد بيتبعت لوحده لجروب **Mohager
+External** — job على لينكس (`testflight-external`) بيستنى Apple تخلّص
+المعالجة، وبعدين بيقدّمه لـ**Beta App Review**، والتسترز بيوصلهم إشعار أول ما
+يتوافق (أول مرة حوالي يوم، وبعدها عادةً ساعات). بيلد جديد بيلغي اللي لسه
+مستني مراجعة بدل ما يقف وراه. ومرة واحدة بس من الكونسول:
+
+1. TestFlight ← **Test Information** ← Beta App Description، Feedback Email،
+   وBeta App Review Information (اسم وتليفون وإيميل — Apple بس اللي بتشوفهم،
+   وSign-in required: لأ).
+2. جروب **Mohager External** ← فعّل **Public Link** لو عايز لينك تحطه على
+   تيكتوك (لحد ١٠٬٠٠٠ تستر).
+3. «What to Test» اللي التسترز بيشوفوه هو `fastlane/what_to_test.txt` —
+   عدّله قبل نسخة فيها حاجة تستاهل يتبصّلها. ولو غيّرت اسم الجروب، Variable
+   اسمها `TESTFLIGHT_EXTERNAL_GROUP`.
+
 #### أول مرة، بالترتيب
 
 1. أسرار أندرويد (٣.١) + `PLAY_SERVICE_ACCOUNT_JSON`، وأول AAB بإيدك.
