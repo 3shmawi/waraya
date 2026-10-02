@@ -42,6 +42,17 @@ class LabSettings extends ChangeNotifier {
   bool get showTrail => _showTrail;
   set showTrail(bool value) => _set(() => _showTrail = value);
 
+  /// Phase 11's shadow counter, on trial (`docs/phase-11-feel.md` §4.2): a
+  /// mark on the ground where your past will be one second from now.
+  ///
+  /// Off by default, which is the game as players have it. The risk being
+  /// measured is that it solves the puzzle for the player — it may only ever
+  /// show **something you did**, never something to do, and whether that is
+  /// enough is a question for playing, not for this code.
+  bool _showForecast = false;
+  bool get showForecast => _showForecast;
+  set showForecast(bool value) => _set(() => _showForecast = value);
+
   void _set(VoidCallback change) {
     change();
     notifyListeners();

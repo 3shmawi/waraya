@@ -159,12 +159,13 @@ Phase 11 («فين الناس بتقف؟») متجاوب على المرحلة �
 | الحاجة | الحالة | فين |
 |---|---|---|
 | المحرر (Phase 9) | ✅ شغال، محدش بنى بيه بإيده | `lib/editor/` |
-| `labMechanics` | ⚪ خطة (القسم ١) | — |
+| `labMechanics` | ✅ شغال — الورشة بتقرا بـ`benchMechanics`، واللعبة والبوابة بيرفضوا بـ«still on the bench» | `Level.labMechanics` |
 | زرار النور | ⚪ خطة | `docs/phase-12-more.md` §٢ |
 | الرباط | ⚪ خطة | `docs/phase-12-more.md` §٣ |
-| عدّاد الظل | ⚪ خطة | `docs/phase-11-feel.md` §٤.٢ |
+| عدّاد الظل | 🔵 سويتش في اللوحة («in 1s (trial)»)، مقفول في اللعبة | `ShadowForecast` — `docs/phase-11-feel.md` §٤.٢ |
 | إطار الجهاز | ⚪ خطة (٣.٣) | — |
 | أرقام اللاعبين فوق المرحلة | ⚪ خطة (٣.٤) | — |
+| `prelude` + مرحلة الصفر «ده انت» | 🔵 في الورشة (قايمة «start from…» ← on trial)، مستنية لعب بإيد | `Levels.thatsYou`، `lib/level/prelude.dart` |
 | `tool/promote.dart` | ⚪ خطة (٢ب) | — |
 
 **الترتيب المقترح:** `labMechanics` الأول (يوم صغير، وبيفتح الباب لكل اللي

@@ -421,6 +421,12 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
         enabled: () => settings.showTrail,
         look: look,
       ),
+      ShadowForecast(
+        recorder: recorder,
+        enabled: () => settings.showForecast,
+        tickRate: ticker.tickRate,
+        look: look,
+      ),
       ...shadows,
       player,
     ]);

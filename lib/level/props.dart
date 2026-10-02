@@ -717,3 +717,69 @@ class ShadowTrail extends PositionComponent {
     canvas.drawCircle(trail.first, 5, _line);
   }
 }
+
+/// A mark on the ground where your past will be [ahead] from now
+/// (`docs/phase-11-feel.md` §4.2) — on the bench, behind a switch.
+///
+/// The hardest question in the game is *when will my past get here?*, and
+/// today the player counts it in their head. This answers it from the buffer,
+/// which already holds the answer: the pose [ahead] down the queue is exactly
+/// where the shadow will stand then. It shows only what the player **did**,
+/// never what to do — the rule any such aid has to keep to.
+///
+/// Paint only, like the trail. It reads the buffer and changes nothing.
+class ShadowForecast extends PositionComponent {
+  ShadowForecast({
+    required this.recorder,
+    required this.enabled,
+    this.ahead = 1,
+    this.tickRate = 1 / 60,
+    this.look = LevelLook.greyBox,
+    super.priority = 81,
+  });
+
+  final ShadowRecorder recorder;
+  final ValueGetter<bool> enabled;
+
+  /// Seconds into the future the mark stands.
+  final double ahead;
+  final double tickRate;
+  final LevelLook look;
+
+  /// Where the mark goes, or null when the buffer does not reach that far —
+  /// the delay is shorter than [ahead], or the past has not got there yet.
+  Offset? get point {
+    final steps = (ahead / tickRate).round();
+    final pending = recorder.pending;
+    // The next tick plays the head of the queue, so the pose [steps] ticks
+    // from now is the one at [steps] - 1.
+    if (steps < 1 || pending.length < steps) return null;
+    final pose = pending.elementAt(steps - 1);
+    return Offset(pose.x, pose.y);
+  }
+
+  late final Paint _ring = Paint()
+    ..color = (look == LevelLook.silhouette
+            ? SilhouettePalette.shadowColor
+            : Palette.shadowColor)
+        .withValues(alpha: 0.85)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2;
+
+  late final Paint _fill = Paint()
+    ..color = (look == LevelLook.silhouette
+            ? SilhouettePalette.shadowColor
+            : Palette.shadowColor)
+        .withValues(alpha: 0.3);
+
+  @override
+  void render(Canvas canvas) {
+    if (!enabled()) return;
+    final at = point;
+    if (at == null) return;
+    // A flat ring on the floor: a place, not a body.
+    final mark = Rect.fromCenter(center: at, width: 34, height: 9);
+    canvas.drawOval(mark, _fill);
+    canvas.drawOval(mark, _ring);
+  }
+}

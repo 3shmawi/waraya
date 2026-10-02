@@ -188,6 +188,11 @@ class _LabControlsState extends State<LabControls> {
         value: settings.showTrail,
         onChanged: (value) => settings.showTrail = value,
       ),
+      _toggle(
+        label: 'in 1s (trial)',
+        value: settings.showForecast,
+        onChanged: (value) => settings.showForecast = value,
+      ),
       const Padding(
         padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: Text(
