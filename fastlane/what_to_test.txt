@@ -1,0 +1,3 @@
+ورايا: ظلك بيعيد كل اللي عملته بعد كام ثانية. العب المراحل بالترتيب، ولو مرحلة حسيتها ظالمة أو لقيت حاجة غريبة، ابعت screenshot من TestFlight وقول اسم المرحلة.
+
+Waraya: your shadow repeats everything you did, a few seconds later. Play the levels in order, and if one feels unfair or something looks wrong, send a screenshot from TestFlight with the level's name.

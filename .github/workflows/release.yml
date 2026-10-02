@@ -26,7 +26,8 @@
 #
 # And the stores, on every tag (or a by-hand run with "upload" ticked):
 # - the AAB goes to Google Play's internal testing track;
-# - an iOS build goes to TestFlight.
+# - an iOS build goes to TestFlight, straight to the internal testers, and
+#   through Beta App Review to the external group.
 # Each one runs only when its secrets exist, so the workflow works before
 # the stores are set up and each store can be added on its own. Production
 # is never touched from here: that is .github/workflows/store.yml, by hand,
@@ -322,6 +323,35 @@ jobs:
           echo "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$IOS_CERTIFICATE_PATH"
           fastlane ios beta
           rm -f "$IOS_CERTIFICATE_PATH"
+
+  # The same build, to the external testers. A job of its own, on Linux:
+  # it mostly waits — for Apple to finish processing the upload, ten to
+  # thirty minutes — and a waiting macOS runner is the expensive kind. Each
+  # build goes through Beta App Review before the group gets it (about a
+  # day the first time, usually hours after that), and the testers are
+  # notified when it does. The group's name is the repository variable
+  # TESTFLIGHT_EXTERNAL_GROUP, "Mohager External" if it is not set; the
+  # "what to test" text is fastlane/what_to_test.txt.
+  testflight-external:
+    needs: [version, testflight]
+    if: needs.version.outputs.apple == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - run: gem install fastlane --no-document --version 2.240.1
+      - env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          TESTFLIGHT_EXTERNAL_GROUP: ${{ vars.TESTFLIGHT_EXTERNAL_GROUP || 'Mohager External' }}
+        run: >
+          fastlane ios external
+          version:"${{ needs.version.outputs.version }}"
+          build:"${{ needs.version.outputs.build }}"
 
   release:
     if: github.ref_type == 'tag'
