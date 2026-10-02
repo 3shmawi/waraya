@@ -1,0 +1,96 @@
+# A new version in one click: Actions -> bump -> Run workflow.
+#
+#   patch  1.0.0 -> 1.0.1   fixes
+#   minor  1.0.0 -> 1.1.0   new levels, new things
+#   major  1.0.0 -> 2.0.0   a different game
+#
+# It writes the new version into pubspec.yaml on main and commits it. With
+# "release" ticked (the default) it also tags that commit vX.Y.Z and starts
+# the release workflow on the tag — tests, every platform, the GitHub
+# Release, Play internal testing and TestFlight — which is the whole of
+# "make a new version" in one button.
+#
+# Why it starts release.yml itself instead of letting the tag do it: a tag
+# pushed with the workflow's own GITHUB_TOKEN deliberately triggers nothing
+# (GitHub's guard against workflows that start each other forever). Starting
+# a workflow by hand is the one thing that token is allowed to do.
+#
+# Only the version changes. The build number after the "+" in pubspec.yaml
+# is not used by any upload — release.yml takes its run number — so it is
+# left alone.
+#
+# Needs: Settings -> Actions -> General -> Workflow permissions -> "Read and
+# write", and nothing on main that stops github-actions[bot] from pushing.
+# If main is protected, this fails at the push and changes nothing.
+name: bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      part:
+        description: Which number goes up
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      release:
+        description: Also tag it and start the release (stores' test channels)
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: bump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - id: next
+        env:
+          PART: ${{ inputs.part }}
+        run: |
+          line=$(grep -E '^version: *[0-9]+\.[0-9]+\.[0-9]+' pubspec.yaml)
+          current=$(echo "$line" | sed -E 's/^version: *([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          IFS=. read -r major minor patch <<< "$current"
+          case "$PART" in
+            major) next="$((major + 1)).0.0" ;;
+            minor) next="$major.$((minor + 1)).0" ;;
+            patch) next="$major.$minor.$((patch + 1))" ;;
+          esac
+          if git rev-parse -q --verify "refs/tags/v$next" >/dev/null; then
+            echo "::error::tag v$next already exists"
+            exit 1
+          fi
+          # Only the X.Y.Z before the "+"; the build number stays as it is.
+          sed -i -E "s/^version: *$current/version: $next/" pubspec.yaml
+          grep -q "^version: $next" pubspec.yaml
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          echo "### $current → $next" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -am "Version ${{ steps.next.outputs.next }}"
+          git push origin HEAD:main
+
+      - name: Tag and release
+        if: inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.next.outputs.next }}
+        run: |
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh workflow run release.yml --ref "$TAG"
+          echo "Release started for $TAG: Actions -> release." >> "$GITHUB_STEP_SUMMARY"
