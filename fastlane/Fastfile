@@ -221,6 +221,24 @@ platform :ios do
     upload_to_testflight(api_key: key, skip_waiting_for_build_processing: true)
   end
 
+  # TestFlight's languages: Arabic first, as in App Store Connect.
+  TESTFLIGHT_LOCALES = { "ar" => "ar-SA", "en" => "en-US" }.freeze
+
+  # "What is this app", from fastlane/testflight_description/, and the
+  # feedback address when the TESTFLIGHT_FEEDBACK_EMAIL variable is set —
+  # a variable, so no address is written into the repository. Without it,
+  # whatever App Store Connect already has is left as it is.
+  def testflight_app_info
+    email = ENV["TESTFLIGHT_FEEDBACK_EMAIL"].to_s.strip
+    TESTFLIGHT_LOCALES.to_h do |file, locale|
+      text = File.read(File.join(__dir__, "testflight_description", "#{file}.txt"), encoding: "UTF-8").strip
+      UI.user_error!("fastlane/testflight_description/#{file}.txt is empty") if text.empty?
+      info = { description: text }
+      info[:feedback_email] = email unless email.empty?
+      [locale, info]
+    end
+  end
+
   desc "Send a TestFlight build to the external testers (through Beta App Review)"
   lane :external do |options|
     version = options.fetch(:version)
@@ -256,9 +274,15 @@ platform :ios do
       build_number: build,
       distribute_external: true,
       groups: [group],
-      # "What to test", shown to the testers in the TestFlight app. Edited by
-      # hand before a release that changes something worth pointing at.
-      changelog: File.read(File.join(__dir__, "what_to_test.txt")).strip,
+      # TestFlight's "Test Information" (what the app is, and where feedback
+      # goes) and the build's "What to Test", one entry per language. Named
+      # languages rather than a default: a default only fills languages that
+      # already exist, and on a fresh app none do — Apple then refuses the
+      # submission with "Beta App Description is missing".
+      localized_app_info: testflight_app_info,
+      localized_build_info: TESTFLIGHT_LOCALES.to_h do |_, locale|
+        [locale, { whats_new: File.read(File.join(__dir__, "what_to_test.txt"), encoding: "UTF-8").strip }]
+      end,
       notify_external_testers: true,
       # Only HTTPS through the OS — the same answer as Info.plist gives.
       uses_non_exempt_encryption: false,

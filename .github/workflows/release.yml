@@ -386,6 +386,7 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
           TESTFLIGHT_EXTERNAL_GROUP: ${{ vars.TESTFLIGHT_EXTERNAL_GROUP || 'Mohager External' }}
+          TESTFLIGHT_FEEDBACK_EMAIL: ${{ vars.TESTFLIGHT_FEEDBACK_EMAIL }}
         run: >
           fastlane ios external
           version:"${{ needs.version.outputs.version }}"
@@ -459,8 +460,18 @@ jobs:
           PROJECT: ${{ vars.ITCH_PROJECT }}
           USERVERSION: ${{ needs.version.outputs.version }} (${{ needs.version.outputs.build }})
         run: |
+          # "user/page", or the page's address as it is copied from the
+          # browser — https://user.itch.io/page — which is turned into it.
+          project=${PROJECT%/}
+          case "$project" in
+            http://*|https://*)
+              host=${project#*://}
+              project="${host%%.itch.io*}/${host#*/}"
+              ;;
+          esac
+          echo "itch.io project: $project"
           for channel in windows mac linux html5; do
-            butler/butler push "itch/$channel" "$PROJECT:$channel" --userversion "$USERVERSION"
+            butler/butler push "itch/$channel" "$project:$channel" --userversion "$USERVERSION"
           done
 
   release:
