@@ -7,7 +7,7 @@ on:
 
 jobs:
   analyze-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -36,7 +36,7 @@ jobs:
     # code every other target compiled happily -- see the comment on `noise()`
     # in lib/game/endless.dart -- so it gets compiled on every change rather
     # than discovered broken on release day.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
