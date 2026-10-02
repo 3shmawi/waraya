@@ -74,6 +74,12 @@ class TouchInputSource extends PositionComponent
   static const double _crouchRadius = 36;
   static const double _stickRadius = 54;
   static const double _margin = 26;
+
+  /// How much further in from the left edge the walk pad sits than the
+  /// buttons do from the right. Asked for after playing: at the bare margin
+  /// the thumb's natural resting place was off the pad's left side, and on
+  /// a phone with a curved edge the pad's rim was under the curve.
+  static const double _stickInset = 34;
   static const double _gap = 18;
 
   /// How far a thumb has to move before it means anything. Sideways for a
@@ -101,7 +107,10 @@ class TouchInputSource extends PositionComponent
   /// Where the pad is drawn, always.
   Vector2 get stickCentre {
     final ring = _stickRadius * _k;
-    return Vector2(_margin * _k + ring, size.y - _margin * _k - ring);
+    return Vector2(
+      (_margin + _stickInset) * _k + ring,
+      size.y - _margin * _k - ring,
+    );
   }
 
   /// Where the stick's thumb is from the pad's middle, or zero without one.

@@ -28,6 +28,7 @@ import '../ui/reset_flash.dart';
 import 'attempts.dart';
 import 'lang.dart';
 import 'level.dart';
+import 'levels.dart';
 import 'player.dart';
 import 'prelude.dart';
 import 'props.dart';
@@ -553,8 +554,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     // already in place when the player collides with it this frame.
     ticker.advance(step, _fixedTick);
     // Drawn from exactly the list the player's feet are checked against, so
-    // the edge can never say something the collision does not.
-    final steps = settings.shadowIsSolid
+    // the edge can never say something the collision does not — and only in
+    // the level that teaches the step (`Levels.showsSteps`).
+    final steps = settings.shadowIsSolid && Levels.showsSteps.contains(level.id)
         ? standableShadows.toSet()
         : const <ShadowFigure>{};
     for (final ghost in shadows) {

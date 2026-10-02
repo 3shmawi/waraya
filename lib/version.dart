@@ -10,3 +10,8 @@ const String appVersion = '1.0.0';
 /// Empty everywhere else: a web page changes on every push to `main`, a
 /// phone build only on a version.
 const String appBuild = String.fromEnvironment('WARAYA_BUILD');
+
+/// The release's build number (`release.yml` passes the run number). Zero
+/// for a build made anywhere else — which then compares by version alone.
+/// A rebuild of the same version is a newer build, and an update.
+const int appBuildNumber = int.fromEnvironment('WARAYA_BUILD_NUMBER');

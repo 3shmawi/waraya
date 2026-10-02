@@ -19,8 +19,10 @@ class Published {
   const Published({
     required this.version,
     this.build = '',
+    this.buildNumber = 0,
     this.notesAr = '',
     this.notesEn = '',
+    this.changes = const [],
   });
 
   final String version;
@@ -28,8 +30,22 @@ class Published {
   /// The commit the web game was built from. Empty on a release's copy.
   final String build;
 
+  /// The release's build number, or 0.
+  final int buildNumber;
+
   final String notesAr;
   final String notesEn;
+
+  /// The last commits, newest first: `(sha, subject)`.
+  final List<(String, String)> changes;
+
+  /// What changed since [build] — the commits above it — as lines to show.
+  /// Empty when [build] is not among them (too old, or unknown).
+  List<String> changesSince(String build) {
+    final at = changes.indexWhere((change) => change.$1 == build);
+    if (at <= 0) return const [];
+    return [for (final (_, subject) in changes.take(at).take(5)) '• $subject'];
+  }
 
   String notesIn(Lang lang) =>
       lang == Lang.en && notesEn.isNotEmpty ? notesEn : notesAr;
@@ -45,11 +61,22 @@ class Published {
         ? (notes[lang] as String).trim()
         : '';
     final build = json['build'];
+    final number = json['buildNumber'];
+    final changes = json['changes'];
     return Published(
       version: version,
       build: build is String ? build : '',
+      buildNumber: number is int ? number : 0,
       notesAr: note('ar'),
       notesEn: note('en'),
+      changes: [
+        if (changes is List)
+          for (final change in changes)
+            if (change is Map &&
+                change['sha'] is String &&
+                change['subject'] is String)
+              (change['sha'] as String, change['subject'] as String),
+      ],
     );
   }
 }
@@ -70,6 +97,7 @@ class Update {
     required this.published,
     required this.route,
     this.running = appVersion,
+    this.runningBuild = appBuild,
   });
 
   final Published published;
@@ -77,6 +105,19 @@ class Update {
 
   /// The version it was compared against: this copy's.
   final String running;
+
+  /// The web build it was compared against: this copy's commit.
+  final String runningBuild;
+
+  /// What to tell the player is in it, in [lang].
+  ///
+  /// A new version has its notes. A new web build of the same version has
+  /// the commits since the one on screen, when the file still lists it.
+  /// Anything else has no notes of its own and says nothing.
+  String notesIn(Lang lang) {
+    if (isNewVersion) return published.notesIn(lang);
+    return published.changesSince(runningBuild).join('\n');
+  }
 
   /// Whether the version number moved, or only the web build under it — a
   /// push between versions. The second still deserves a reload, but has no
@@ -113,6 +154,7 @@ class UpdateChecker {
     required this.route,
     this.running = appVersion,
     this.runningBuild = appBuild,
+    this.runningNumber = appBuildNumber,
     Future<String> Function(Uri uri)? fetch,
   }) : _fetch = fetch ?? _get;
 
@@ -121,6 +163,7 @@ class UpdateChecker {
   final UpdateRoute route;
   final String running;
   final String runningBuild;
+  final int runningNumber;
   final Future<String> Function(Uri uri) _fetch;
 
   /// The web game's file, next to it on the site. Relative, so it is right
@@ -152,7 +195,14 @@ class UpdateChecker {
       );
       final published = Published.fromJson(jsonDecode(await _fetch(fresh)));
       if (published == null) return null;
-      final newer = compareVersions(published.version, running) > 0;
+      final order = compareVersions(published.version, running);
+      // Same version, later build: a rebuild that went out with fixes. Only
+      // a build that knows its own number can tell; one made at a desk is 0.
+      final newer =
+          order > 0 ||
+          (order == 0 &&
+              runningNumber > 0 &&
+              published.buildNumber > runningNumber);
       // On the web the page itself is what changed, version or not. Only a
       // build that knows its own commit can tell — a local run does not.
       final rebuilt =
@@ -161,7 +211,12 @@ class UpdateChecker {
           published.build.isNotEmpty &&
           published.build != runningBuild;
       if (!newer && !rebuilt) return null;
-      return Update(published: published, route: route, running: running);
+      return Update(
+        published: published,
+        route: route,
+        running: running,
+        runningBuild: runningBuild,
+      );
     } catch (_) {
       return null;
     }

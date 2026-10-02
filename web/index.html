@@ -153,35 +153,53 @@
       #splash .bar { grid-area: bar; justify-self: center; margin-top: 6px; }
     }
 
-    /* The mark, alive: you walk, and your past arrives behind you — the near
-       one first, then the far one — exactly as the game does it. One loop is
-       one walk across. Pure CSS on the SVG: no GIF to download, sharp at any
-       size, and nothing at all for anyone who asked for less motion. */
-    #splash .walk { animation: walk 2.6s linear infinite; }
-    #splash .you { animation: step .33s ease-in-out infinite alternate; }
-    #splash .near { animation: arrive-near 2.6s linear infinite; }
-    #splash .far { animation: arrive-far 2.6s linear infinite; }
-    @keyframes walk {
-      from { transform: translateX(16px); }
-      to   { transform: translateX(-12px); }
+    /* The mark, alive, and doing what the game does: you walk across, and
+       your past walks the very same walk — every step and swing — 0.85s
+       and 1.7s later. Each past is the same animation with a delay, which
+       is the mechanic, not a picture of it; before its delay a past waits
+       off the edge, the way a shadow does not exist until the buffer has
+       filled. Pure CSS on the SVG, and still for anyone who asked for less
+       motion. */
+    #splash .walker {
+      animation: cross 4.4s linear infinite backwards;
+      animation-delay: var(--lag);
     }
-    @keyframes step {
+    #splash .bob { animation: bob .26s ease-in-out infinite alternate backwards; animation-delay: var(--lag); }
+    #splash .leg, #splash .arm {
+      animation-duration: .52s;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+      animation-direction: alternate;
+      animation-fill-mode: backwards;
+      animation-delay: var(--lag);
+    }
+    #splash .leg { transform-origin: 0px 52.2px; }
+    #splash .arm { transform-origin: -4.6px 34.3px; }
+    #splash .leg.a { animation-name: swing; }
+    #splash .leg.b { animation-name: swing-back; }
+    #splash .arm.a { animation-name: swing-back; }
+    #splash .arm.b { animation-name: swing; }
+    @keyframes cross {
+      from { transform: translateX(122px); }
+      to   { transform: translateX(-24px); }
+    }
+    @keyframes bob {
       from { transform: translateY(0); }
-      to   { transform: translateY(-1.6px); }
+      to   { transform: translateY(-1.4px); }
     }
-    @keyframes arrive-near {
-      0%, 22%  { opacity: 0; }
-      34%, 84% { opacity: .55; }
-      100%     { opacity: 0; }
+    @keyframes swing {
+      from { transform: rotate(20deg); }
+      to   { transform: rotate(-20deg); }
     }
-    @keyframes arrive-far {
-      0%, 44%  { opacity: 0; }
-      56%, 84% { opacity: .30; }
-      100%     { opacity: 0; }
+    @keyframes swing-back {
+      from { transform: rotate(-20deg); }
+      to   { transform: rotate(20deg); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      #splash .walk, #splash .you, #splash .near, #splash .far { animation: none; }
+      #splash .walker, #splash .bob, #splash .leg, #splash .arm { animation: none; }
+      /* Standing still, the mark as it is everywhere else. */
+      #splash .walker { transform: translateX(var(--rest)); }
       #splash .bar i { animation: none; width: 100%; opacity: .5; }
       #splash { transition: none; }
     }
@@ -190,23 +208,41 @@
 <body>
   <div id="splash">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
-      <!-- In defs: drawn only where it is used. Outside them it was also
-           drawn once at x=0, a stray limb on the mark's left edge. -->
-      <defs>
-      <g id="body" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
-        <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/>
-        <circle cx="-6.1" cy="28.4" r="4.3" stroke="none"/>
-        <path d="M0 52.2 L-7 65 L-10 78" fill="none" stroke-width="3.8"/>
-        <path d="M0 52.2 L5.5 65.5 L10.5 74.5" fill="none" stroke-width="3.8"/>
-        <path d="M-4.6 34.3 L-10.5 43 L-13.5 50.5" fill="none" stroke-width="3.2"/>
-        <path d="M-4.6 34.3 L2 43.5 L6 50.5" fill="none" stroke-width="3.2"/>
+      <!-- You, and your past: the same walk, legs and all, the near one a
+           beat behind and the far one two — and neither there at all until
+           its delay has passed, as in the game. Drawn furthest first. -->
+      <g class="walker far" style="--lag: 1.7s; --rest: 70px" color="#DCE4EE" opacity="0.30">
+        <g class="bob" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path class="leg b" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
+          <path class="arm b" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
+          <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
+          <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/>
+          <circle cx="-6.1" cy="28.4" r="4.3" stroke="none"/>
+          <path class="leg a" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
+          <path class="arm a" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
+        </g>
       </g>
-      </defs>
-      <g class="walk">
-        <use class="past far" href="#body" x="70" color="#DCE4EE" opacity="0.30"/>
-        <use class="past near" href="#body" x="58" color="#DCE4EE" opacity="0.55"/>
-        <use class="you" href="#body" x="44" color="#07050A"/>
+      <g class="walker near" style="--lag: 0.85s; --rest: 58px" color="#DCE4EE" opacity="0.55">
+        <g class="bob" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path class="leg b" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
+          <path class="arm b" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
+          <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
+          <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/>
+          <circle cx="-6.1" cy="28.4" r="4.3" stroke="none"/>
+          <path class="leg a" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
+          <path class="arm a" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
+        </g>
+      </g>
+      <g class="walker you" style="--lag: 0s; --rest: 44px" color="#07050A" opacity="1">
+        <g class="bob" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path class="leg b" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
+          <path class="arm b" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
+          <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
+          <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/>
+          <circle cx="-6.1" cy="28.4" r="4.3" stroke="none"/>
+          <path class="leg a" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
+          <path class="arm a" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
+        </g>
       </g>
       <rect x="0" y="78" width="100" height="22" fill="#0E0A10"/>
       <rect x="0" y="78" width="100" height="1.6" fill="#D9A25C"/>

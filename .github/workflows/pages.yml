@@ -49,7 +49,11 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
+      # All of history and the tags: latest.json's notes are the commits
+      # since the last release when nobody wrote any (tool/latest_json.sh).
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: subosito/flutter-action@v2
         with:
@@ -113,18 +117,11 @@ jobs:
             sed -i 's|<base href="/">|<base href="./">|' "$page"
             grep -q '<base href="./">' "$page"
           done
-          # What is live, for the game's update card: the version and the
-          # stores' notes for it, and the commit the game under play/ was
-          # built from. Not play/version.json — that one is Flutter's own.
-          version=$(sed -nE 's/^version: *([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' pubspec.yaml)
-          jq -n \
-            --arg version "$version" \
-            --arg build "${{ github.sha }}" \
-            --rawfile ar fastlane/release_notes/ar.txt \
-            --rawfile en fastlane/release_notes/en.txt \
-            '{version: $version, build: $build, notes: {ar: $ar, en: $en}}' \
-            > _site/latest.json
-          jq -e '.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' _site/latest.json
+          # What is live, for the game's update card: the version, the notes
+          # (written, or made from the commits), the recent commits, and the
+          # one the game under play/ was built from. Not play/version.json —
+          # that one is Flutter's own.
+          tool/latest_json.sh _site/latest.json --build "${{ github.sha }}"
           # Unlinked is not hidden; this at least keeps it out of search.
           sed -i 's|<head>|<head>\n  <meta name="robots" content="noindex">|' _site/lab/index.html
           grep -q 'name="robots"' _site/lab/index.html

@@ -79,6 +79,55 @@ void main() {
       },
     );
 
+    test('the same version with a later build number is an update', () async {
+      String numbered(int n) =>
+          jsonEncode({'version': '1.2.0', 'buildNumber': n, 'notes': {}});
+      UpdateChecker at(int running, int published) => UpdateChecker(
+        source: Uri.parse('https://example.com/latest.json'),
+        route: UpdateRoute.download,
+        running: '1.2.0',
+        runningNumber: running,
+        fetch: (_) async => numbered(published),
+      );
+      expect(await at(40, 41).check(), isNotNull);
+      expect(await at(41, 41).check(), isNull);
+      expect(await at(42, 41).check(), isNull);
+      // Made at a desk, it knows no number, and is never nagged by one.
+      expect(await at(0, 41).check(), isNull);
+    });
+
+    test('a new web build says which commits came with it', () async {
+      final update = await checker(
+        () => jsonEncode({
+          'version': '1.2.0',
+          'build': 'c3',
+          'changes': [
+            {'sha': 'c3', 'subject': 'A fixed walk pad'},
+            {'sha': 'c2', 'subject': 'One crouch'},
+            {'sha': 'c1', 'subject': 'Already here'},
+          ],
+        }),
+        route: UpdateRoute.reload,
+        runningBuild: 'c1',
+      ).check();
+      expect(update!.notesIn(Lang.en), '• A fixed walk pad\n• One crouch');
+    });
+
+    test('and nothing invented when its own commit is not listed', () async {
+      final update = await checker(
+        () => jsonEncode({
+          'version': '1.2.0',
+          'build': 'c3',
+          'changes': [
+            {'sha': 'c3', 'subject': 'Something'},
+          ],
+        }),
+        route: UpdateRoute.reload,
+        runningBuild: 'ancient',
+      ).check();
+      expect(update!.notesIn(Lang.en), isEmpty);
+    });
+
     test('every failure is silence', () async {
       expect(
         await checker(() => throw const SocketException('x')).check(),

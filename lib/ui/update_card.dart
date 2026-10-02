@@ -38,7 +38,9 @@ class UpdateCard extends StatelessWidget {
       title: update.isNewVersion
           ? '${w.newVersion} · ${published.version}'
           : w.newVersion,
-      notes: update.isNewVersion ? published.notesIn(lang) : w.smallChanges,
+      notes: update.notesIn(lang).isNotEmpty
+          ? update.notesIn(lang)
+          : w.smallChanges,
       action: update.route == UpdateRoute.reload ? w.refresh : w.download,
       onAction: onTake,
       onDismiss: onLater,

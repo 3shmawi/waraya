@@ -30,4 +30,41 @@ void main() {
       expect(game.shadow.standable, isTrue, reason: 'ducked: a step');
     },
   );
+
+  testWithGame<LevelGame>(
+    'and only in the level that teaches the step',
+    () => LevelGame(levels: [Levels.goInLow], inputs: [ScriptedInput()]),
+    (game) async {
+      await game.ready();
+      // Its own solution ducks and climbs: a step is there, and not marked.
+      final input = game.input.sources.first as ScriptedInput;
+      var ducked = false;
+      for (final intent in Playthrough.intentsOf(Levels.goInLow.solution)) {
+        input.next = intent;
+        game.update(Playthrough.dt);
+        if (game.standableShadows.isNotEmpty) ducked = true;
+        expect(game.shadow.standable, isFalse);
+      }
+      expect(ducked, isTrue, reason: 'the level does use a step');
+    },
+  );
+
+  for (final id in Levels.showsSteps) {
+    final level = Levels.campaign.firstWhere((l) => l.id == id);
+    testWithGame<LevelGame>(
+      '$id is marked because its solution stands on a past',
+      () => LevelGame(levels: [level], inputs: [ScriptedInput()]),
+      (game) async {
+        await game.ready();
+        final input = game.input.sources.first as ScriptedInput;
+        var stood = false;
+        for (final intent in Playthrough.intentsOf(level.solution)) {
+          input.next = intent;
+          game.update(Playthrough.dt);
+          if (game.player.isOnShadow) stood = true;
+        }
+        expect(stood, isTrue);
+      },
+    );
+  }
 }

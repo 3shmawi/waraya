@@ -1757,6 +1757,19 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(420, 548, 500, 620),
   );
 
+  /// The levels that draw a lit edge on a past you can stand on.
+  ///
+  /// One: the level that teaches the step. Every surface you can stand on
+  /// has a lit top edge, and putting one on your ducked past says *this is
+  /// a floor now* without a word — where that is the lesson. Everywhere
+  /// after, working out which of your pasts will hold you is part of the
+  /// puzzle, and an edge pointing at it would be solving it for the player.
+  /// Asked for after playing.
+  ///
+  /// Only levels whose recorded solution actually stands on a past belong
+  /// here; `step_edge_test.dart` holds that.
+  static const Set<String> showsSteps = {'stand-on-yourself'};
+
   /// Levels on the bench and not in the campaign: they use something still
   /// on trial. The editor's start menu offers them.
   static final List<Level> bench = [thatsYou];

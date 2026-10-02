@@ -16,9 +16,9 @@ void main() {
   TouchInputSource controls({double scale = 1}) =>
       TouchInputSource(scale: () => scale)..onGameResize(Vector2(900, 420));
 
-  // The pad's middle on a 900x420 screen: margin 26 + radius 54 in from the
-  // bottom left.
-  final pad = Vector2(80, 340);
+  // The pad's middle on a 900x420 screen: margin 26 + inset 34 + radius 54
+  // in from the left, margin 26 + radius 54 up from the bottom.
+  final pad = Vector2(114, 340);
 
   test('the pad walks the way the thumb is from its middle', () {
     final touch = controls();
