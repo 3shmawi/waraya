@@ -50,5 +50,12 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- The update card opens the release page in the browser
+             (lib/update/). Android 11 and later only let an app see a
+             browser it has declared it wants to open. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
     </queries>
 </manifest>

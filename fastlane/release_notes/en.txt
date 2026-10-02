@@ -1,1 +1,6 @@
-First release: sixteen levels, each with your shadow repeating what you did.
+This version is about understanding the game sooner and playing it comfortably on a phone:
+• Landscape on phones, a fixed walk pad, bigger jump and crouch buttons
+• A crouched past gets a lit top edge — that is the one you can stand on
+• Every level's line rewritten, and the whole game in English too
+• Pause and settings: sound, vibration, language, shadow strength, statistics
+• Dust when you land hard or die; level names arrive big

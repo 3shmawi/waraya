@@ -482,10 +482,29 @@ jobs:
     needs: [version, android, linux, windows, macos]
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            pubspec.yaml
+            fastlane/release_notes
       - uses: actions/download-artifact@v7
         with:
           path: out
           merge-multiple: true
+      # The installed games' update card reads this from the newest release
+      # (releases/latest/download/latest.json), so it only ever names a
+      # version that has finished building and can be downloaded.
+      - name: latest.json
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          jq -n \
+            --arg version "$VERSION" \
+            --rawfile ar fastlane/release_notes/ar.txt \
+            --rawfile en fastlane/release_notes/en.txt \
+            '{version: $version, build: "", notes: {ar: $ar, en: $en}}' \
+            > out/latest.json
+          jq -e '.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' out/latest.json
       - uses: softprops/action-gh-release@v3
         with:
           name: ورايا ${{ needs.version.outputs.version }}

@@ -82,12 +82,16 @@ jobs:
       # the files from either. (The game routes with the URL's #, so a
       # relative base costs nothing.) Tried: the build starts from a nested
       # folder in Chromium, with no file missing.
+      # WARAYA_BUILD stamps the game with the commit it is built from, and
+      # latest.json below says which commit is live — the game compares the
+      # two and offers a reload when they differ (lib/update/).
       - run: >
           flutter build web
           -t lib/main_levels.dart
           --release
           --wasm
           --no-web-resources-cdn
+          --dart-define=WARAYA_BUILD=${{ github.sha }}
 
       - run: >
           flutter build web
@@ -109,6 +113,18 @@ jobs:
             sed -i 's|<base href="/">|<base href="./">|' "$page"
             grep -q '<base href="./">' "$page"
           done
+          # What is live, for the game's update card: the version and the
+          # stores' notes for it, and the commit the game under play/ was
+          # built from. Not play/version.json — that one is Flutter's own.
+          version=$(sed -nE 's/^version: *([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' pubspec.yaml)
+          jq -n \
+            --arg version "$version" \
+            --arg build "${{ github.sha }}" \
+            --rawfile ar fastlane/release_notes/ar.txt \
+            --rawfile en fastlane/release_notes/en.txt \
+            '{version: $version, build: $build, notes: {ar: $ar, en: $en}}' \
+            > _site/latest.json
+          jq -e '.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' _site/latest.json
           # Unlinked is not hidden; this at least keeps it out of search.
           sed -i 's|<head>|<head>\n  <meta name="robots" content="noindex">|' _site/lab/index.html
           grep -q 'name="robots"' _site/lab/index.html

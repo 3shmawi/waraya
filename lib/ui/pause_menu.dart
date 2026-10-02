@@ -18,7 +18,12 @@ class PauseMenu extends StatelessWidget {
     required this.onRetry,
     required this.onLevels,
     required this.onSettings,
+    this.onUpdate,
   });
+
+  /// Take the update that is waiting, when there is one. Here as well as on
+  /// the card, because a card waved away is otherwise gone until next time.
+  final VoidCallback? onUpdate;
 
   final Lang lang;
   final VoidCallback onResume;
@@ -63,6 +68,12 @@ class PauseMenu extends StatelessWidget {
                     _Button(label: w.retry, onTap: onRetry),
                     _Button(label: w.levels, onTap: onLevels),
                     _Button(label: w.settings, onTap: onSettings),
+                    if (onUpdate != null)
+                      _Button(
+                        label: w.updateAvailable,
+                        onTap: onUpdate!,
+                        loud: true,
+                      ),
                   ],
                 ),
               ),

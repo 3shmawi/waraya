@@ -73,6 +73,10 @@ jobs:
           # Only the X.Y.Z before the "+"; the build number stays as it is.
           sed -i -E "s/^version: *$current/version: $next/" pubspec.yaml
           grep -q "^version: $next" pubspec.yaml
+          # The game's own idea of its version (the update check compares
+          # against it). test/app/version_test.dart holds the two together.
+          sed -i -E "s/^const String appVersion = '$current';/const String appVersion = '$next';/" lib/version.dart
+          grep -q "^const String appVersion = '$next';" lib/version.dart
           echo "current=$current" >> "$GITHUB_OUTPUT"
           echo "next=$next" >> "$GITHUB_OUTPUT"
           echo "### $current → $next" >> "$GITHUB_STEP_SUMMARY"

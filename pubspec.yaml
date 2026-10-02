@@ -42,6 +42,7 @@ dependencies:
   # The editor saves and opens level files in the browser with it.
   web: ^1.1.1
   supabase_flutter: ^2.17.2
+  url_launcher: ^6.3.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -79,6 +80,10 @@ flutter:
     # Levels being written. Read by the bench on the web, which has no disk
     # (lib/level/bundled_levels.dart); a few kilobytes of JSON.
     - levels/
+    # What is new in this version — the stores' text, shown once in the game
+    # after an update (lib/update/whats_new.dart). Written once, read by both.
+    - fastlane/release_notes/ar.txt
+    - fastlane/release_notes/en.txt
 
   fonts:
     - family: LiberationMono

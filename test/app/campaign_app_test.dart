@@ -10,6 +10,7 @@ import 'package:waraya/progress/progress.dart';
 import 'package:waraya/settings/game_settings.dart';
 import 'package:waraya/ui/campaign_end.dart';
 import 'package:waraya/ui/level_select.dart';
+import 'package:waraya/update/update_check.dart';
 
 /// The campaign app, pumped.
 ///
@@ -137,6 +138,62 @@ void main() {
     await tester.pump();
     expect(game.settings.shadowOpacity, 0.9);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('what came with this version is shown once, and goes', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      WarayaLevels(
+        levels: Levels.campaign,
+        progress: MemoryProgress(),
+        beaten: const {},
+        settings: SettingsKeeper(const GameSettings(language: Lang.en)),
+        whatsNew: const Published(
+          version: '1.1.0',
+          notesAr: 'جديد',
+          notesEn: 'A fixed walk pad.',
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text("What's new in 1.1.0"), findsOneWidget);
+    expect(find.text('A fixed walk pad.'), findsOneWidget);
+
+    await tester.tap(find.text('Got it'));
+    await tester.pump();
+    expect(find.text("What's new in 1.1.0"), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a newer game is offered, and can be put off', (tester) async {
+    await tester.pumpWidget(
+      WarayaLevels(
+        levels: Levels.campaign,
+        progress: MemoryProgress(),
+        beaten: const {},
+        settings: SettingsKeeper(const GameSettings(language: Lang.en)),
+        updates: UpdateChecker(
+          source: Uri.parse('https://example.com/latest.json'),
+          route: UpdateRoute.reload,
+          running: '1.0.0',
+          fetch: (_) async =>
+              '{"version": "1.1.0", "notes": {"en": "Dust when you die."}}',
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('A new version · 1.1.0'), findsOneWidget);
+    expect(find.text('Dust when you die.'), findsOneWidget);
+    expect(find.text('Refresh'), findsOneWidget);
+
+    await tester.tap(find.text('Later'));
+    await tester.pump();
+    expect(find.text('A new version · 1.1.0'), findsNothing);
+    expect(tester.takeException(), isNull);
+    // The half-hourly check is a timer; the test owns the clock.
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('speaks English when asked to', (tester) async {

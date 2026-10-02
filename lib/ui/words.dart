@@ -57,6 +57,19 @@ class Words {
       ? 'For a phone that will not turn. The level shows less ahead of you.'
       : 'لو الموبايل مش بيلف. المرحلة بتبان أضيق قدّامك.';
 
+  // Updates.
+  String get newVersion => _en ? 'A new version' : 'فيه نسخة جديدة';
+  String get refresh => _en ? 'Refresh' : 'حدّث';
+  String get download => _en ? 'Download' : 'نزّلها';
+  String get later => _en ? 'Later' : 'بعدين';
+  String get gotIt => _en ? 'Got it' : 'تمام';
+  String whatsNewIn(String version) =>
+      _en ? "What's new in $version" : 'الجديد في نسخة $version';
+  String get smallChanges => _en
+      ? 'Small fixes since this page was opened.'
+      : 'تصليحات صغيرة من ساعة ما فتحت الصفحة.';
+  String get updateAvailable => _en ? 'Update available' : 'فيه تحديث';
+
   // The settings page.
   String get shadowStrength => _en ? 'Your shadow' : 'وضوح ظلك';
   String get shadowStrengthWhy => _en

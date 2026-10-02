@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'audio/flame_audio_out.dart';
@@ -21,6 +24,10 @@ import 'ui/level_select.dart';
 import 'ui/pause_menu.dart';
 import 'ui/settings_page.dart';
 import 'ui/top_bar.dart';
+import 'ui/update_card.dart';
+import 'update/apply_update.dart';
+import 'update/update_check.dart';
+import 'update/whats_new.dart';
 import 'ui/ready/game_ready.dart';
 import 'ui/turn/turn_screen.dart';
 import 'ui/words.dart';
@@ -46,13 +53,16 @@ Future<void> main() async {
   final levels = await const BuiltInLevels().load();
   final progress = await StoredProgress.open();
   final settings = await SettingsKeeper.open();
+  final beaten = await progress.beaten();
 
   runApp(
     WarayaLevels(
       levels: levels,
       progress: progress,
-      beaten: await progress.beaten(),
+      beaten: beaten,
       settings: settings,
+      updates: _updateChecker(),
+      whatsNew: await WhatsNew.takeOnce(playedBefore: beaten.isNotEmpty),
       // Asked on every row, not once: switching statistics off on the
       // settings page stops the very next one (site/privacy.html).
       attempts: AttemptLog(
@@ -69,6 +79,27 @@ Future<void> main() async {
   );
 }
 
+/// Where this copy hears about a newer one (lib/update/).
+///
+/// The web reads the file next to the game and offers a reload. An Android
+/// or desktop build reads the newest release's and offers the download. An
+/// iPhone build asks nothing: the App Store and TestFlight update it.
+UpdateChecker? _updateChecker() {
+  if (kIsWeb) {
+    return UpdateChecker(
+      source: UpdateChecker.webSource(Uri.base),
+      route: UpdateRoute.reload,
+    );
+  }
+  return switch (defaultTargetPlatform) {
+    TargetPlatform.iOS => null,
+    _ => UpdateChecker(
+      source: UpdateChecker.releaseSource,
+      route: UpdateRoute.download,
+    ),
+  };
+}
+
 class WarayaLevels extends StatefulWidget {
   const WarayaLevels({
     super.key,
@@ -78,7 +109,16 @@ class WarayaLevels extends StatefulWidget {
     this.extras,
     this.attempts,
     this.settings,
+    this.updates,
+    this.whatsNew,
   });
+
+  /// Asks for a newer game, at start and now and then. Null asks nothing —
+  /// tests, and an iPhone.
+  final UpdateChecker? updates;
+
+  /// What came with this version, to show once. Null shows nothing.
+  final Published? whatsNew;
 
   final List<Level> levels;
 
@@ -119,6 +159,13 @@ class _WarayaLevelsState extends State<WarayaLevels>
   /// empty: closing the settings page over the pause menu must not set the
   /// level going behind the menu that is still open.
   final Set<String> _holds = {};
+
+  /// A newer game, once one is heard of; and whether its card was waved
+  /// away (the pause menu still offers it).
+  Update? _update;
+  bool _updateWaved = false;
+  late Published? _whatsNew = widget.whatsNew;
+  Timer? _updatePoll;
 
   /// Whether the phone is held upright and the game is waiting for it to be
   /// turned (`TurnPhone`).
@@ -169,11 +216,22 @@ class _WarayaLevelsState extends State<WarayaLevels>
     _settings.addListener(_settingsChanged);
     WidgetsBinding.instance.addObserver(this);
     _announceWhenReady();
+    final updates = widget.updates;
+    if (updates != null) {
+      _checkForUpdate(updates);
+      // A web page can be left open for a day. Twice an hour is plenty to
+      // hear about a version, and nothing to the server.
+      _updatePoll = Timer.periodic(
+        const Duration(minutes: 30),
+        (_) => _checkForUpdate(updates),
+      );
+    }
     _addExtras();
   }
 
   @override
   void dispose() {
+    _updatePoll?.cancel();
     _settings.removeListener(_settingsChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -185,6 +243,25 @@ class _WarayaLevelsState extends State<WarayaLevels>
     await _game.loaded;
     await WidgetsBinding.instance.endOfFrame;
     announceGameReady();
+  }
+
+  Future<void> _checkForUpdate(UpdateChecker updates) async {
+    final found = await updates.check();
+    if (!mounted || found == null) return;
+    final same =
+        _update?.published.version == found.published.version &&
+        _update?.published.build == found.published.build;
+    if (same) return;
+    // Something newer than the one waved away is worth a card again.
+    setState(() {
+      _update = found;
+      _updateWaved = false;
+    });
+  }
+
+  void _takeUpdate() {
+    final update = _update;
+    if (update != null) applyUpdate(update);
   }
 
   void _settingsChanged() {
@@ -301,6 +378,32 @@ class _WarayaLevelsState extends State<WarayaLevels>
     });
   }
 
+  /// At most one card at a time: what just arrived first, then what is next.
+  List<Widget> _cards(Lang lang) {
+    final whatsNew = _whatsNew;
+    if (whatsNew != null) {
+      return [
+        UpdateCard.whatsNew(
+          lang: lang,
+          published: whatsNew,
+          onDismiss: () => setState(() => _whatsNew = null),
+        ),
+      ];
+    }
+    final update = _update;
+    if (update != null && !_updateWaved) {
+      return [
+        UpdateCard.update(
+          lang: lang,
+          update: update,
+          onTake: _takeUpdate,
+          onLater: () => setState(() => _updateWaved = true),
+        ),
+      ];
+    }
+    return const [];
+  }
+
   @override
   Widget build(BuildContext context) {
     final lang = _lang;
@@ -350,6 +453,7 @@ class _WarayaLevelsState extends State<WarayaLevels>
                 onRetry: _retry,
                 onLevels: _openMenu,
                 onSettings: () => _show(_settingsPage),
+                onUpdate: _update == null ? null : _takeUpdate,
               ),
               _settingsPage: (context, game) => SettingsPage(
                 settings: _settings,
@@ -374,6 +478,9 @@ class _WarayaLevelsState extends State<WarayaLevels>
               onPause: () => _show(_pause),
               labels: (words.retry, words.levels, words.pause),
             ),
+          // Over the game, under any menu: the bar's rule, for the same
+          // reason — a card left over a menu covers its buttons.
+          if (!_overlaid && !_upright) ..._cards(lang),
           if (_upright)
             Positioned.fill(
               child: TurnPhone(

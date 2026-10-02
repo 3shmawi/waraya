@@ -14,3 +14,8 @@
 /lab/*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: credentialless
+
+# What is live, read by the game's update card. Never from a cache: a stale
+# copy is an update nobody hears about.
+/latest.json
+  Cache-Control: no-cache
