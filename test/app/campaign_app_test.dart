@@ -1,5 +1,7 @@
+import 'package:flame/game.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 import 'package:waraya/main_levels.dart';
 import 'package:waraya/progress/progress.dart';
@@ -31,6 +33,24 @@ void main() {
     // one.
     expect(find.text('المراحل'), findsOneWidget);
     expect(find.text('من الأول'), findsOneWidget);
+  });
+
+  testWidgets('players see the delay, not the bench\'s instruments', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      WarayaLevels(
+        levels: Levels.campaign,
+        progress: MemoryProgress(),
+        beaten: const {},
+      ),
+    );
+    await tester.pump();
+
+    final game = tester
+        .widget<GameWidget<LevelGame>>(find.byType(GameWidget<LevelGame>))
+        .game!;
+    expect(game.readoutDetail, isFalse);
   });
 
   testWidgets('a returning player resumes rather than starting over', (
@@ -132,20 +152,18 @@ void main() {
   // different heading — a menu handed to somebody who had just earned a
   // sentence.
   group('the ending', () {
-    Widget endWith({
-      VoidCallback? onLevels,
-      VoidCallback? onRestart,
-    }) => Directionality(
-      textDirection: TextDirection.rtl,
-      child: MediaQuery(
-        data: const MediaQueryData(size: Size(400, 800)),
-        child: CampaignEnd(
-          levels: Levels.campaign,
-          onLevels: onLevels ?? () {},
-          onRestart: onRestart ?? () {},
-        ),
-      ),
-    );
+    Widget endWith({VoidCallback? onLevels, VoidCallback? onRestart}) =>
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: MediaQuery(
+            data: const MediaQueryData(size: Size(400, 800)),
+            child: CampaignEnd(
+              levels: Levels.campaign,
+              onLevels: onLevels ?? () {},
+              onRestart: onRestart ?? () {},
+            ),
+          ),
+        );
 
     testWidgets('says it is over, and says what the game was', (tester) async {
       await tester.pumpWidget(endWith());
@@ -161,10 +179,7 @@ void main() {
     double wordAt(WidgetTester tester) => tester
         .widget<Opacity>(
           find
-              .ancestor(
-                of: find.text('خلصت'),
-                matching: find.byType(Opacity),
-              )
+              .ancestor(of: find.text('خلصت'), matching: find.byType(Opacity))
               .first,
         )
         .opacity;

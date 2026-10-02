@@ -399,6 +399,39 @@ Chromium من غير ولا ملف ضايع.
 4. الـnotarization بيستخدم مفتاح App Store Connect اللي موجود أصلاً — مفيش
    حاجة تانية.
 
+#### الويب أسرع: WebAssembly وCloudflare Pages
+
+**اتقاس، مش متخمّن** (بيلد اللعبة في Chromium، كل ملف لحد أول فريم):
+
+| البيلد | خام | مضغوط (gzip) |
+|---|---|---|
+| dart2js + CanvasKit (اللي كان) | ٨٫٤ ميجا | ≈ ٣٫٠ ميجا |
+| **dart2wasm + skwasm** (`--wasm`) | ٥٫٨ ميجا | **≈ ٢٫٤ ميجا** |
+
+أغلب الوزن هو الـrenderer بتاع Flutter مش اللعبة. `pages.yml` والـitch.io
+والـCI بقوا `--wasm`؛ المتصفح اللي مبيعرفش WasmGC (Safari قديم) بياخد
+الـdart2js من نفس الفولدر لوحده. والصوت **محدش سمعه في البيلد ده لسه** —
+Chromium من غير شاشة مالوش صوت؛ أول حاجة تتجرّب على متصفح حقيقي.
+
+**Cloudflare Pages** (`pages.yml`، خطوة لوحدها): نفس الموقع بالظبط، بـbrotli،
+وسيرفر في القاهرة، و`site/_headers` بيدي `/play/` و`/lab/` عزل cross-origin
+(COOP/COEP) — وده اللي بيخلّي skwasm يرسم على أكتر من thread: **٦٠ فريم
+مقابل ١٥** على نفس الجهاز. GitHub Pages بيفضل يتنشر زي ما هو. والاتنين بيخدموا
+نفس الملفات لأن `<base href>` بقى `./`.
+
+1. dash.cloudflare.com ← حساب مجاني.
+2. My Profile ← **API Tokens** ← Create Token ← Custom ← Permission:
+   **Account → Cloudflare Pages → Edit** ← GitHub secret
+   **`CLOUDFLARE_API_TOKEN`**.
+3. الـ**Account ID** (في الصفحة الرئيسية للحساب، على اليمين) ← secret
+   **`CLOUDFLARE_ACCOUNT_ID`**.
+4. أول push على `main` بيعمل المشروع `waraya` لوحده، والموقع على
+   `https://waraya.pages.dev`. (اسم تاني؟ Variable `CLOUDFLARE_PAGES_PROJECT`.)
+
+**وشاشة اللاعب بقت بتقول التأخير بس.** `readoutDetail: false` في
+`main_levels.dart`: الـticks والـfps وsolid on/off أدوات الورشة، وللاعب كانت
+لوحة debug فوق السما. `test/app/campaign_app_test.dart` بيمسكها.
+
 #### أول مرة، بالترتيب
 
 1. أسرار أندرويد (٣.١) + `PLAY_SERVICE_ACCOUNT_JSON`، وأول AAB بإيدك.
