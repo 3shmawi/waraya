@@ -69,6 +69,10 @@ const devices = <Device>[
   // App Store, 6.9" iPhone. Taller than 9:16, so the strip is too: the same
   // share of the width, which keeps the level framed as on Play.
   Device('iphone', 1290, 2796, 1290 * stripHeight / clipWidth),
+  // App Store, 6.5" iPhone — the slot App Store Connect shows first on some
+  // accounts, and it refuses the 6.9" size. 1284x2778 is one of the two it
+  // takes; the other (1242x2688) is the same shape.
+  Device('iphone-6.5', 1284, 2778, 1284 * stripHeight / clipWidth),
   // App Store, 13" iPad — nearly square, and the game is wide enough here
   // that it needs most of the height to show a level rather than a sliver.
   Device('ipad', 2064, 2752, 2064),

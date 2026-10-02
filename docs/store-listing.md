@@ -162,7 +162,9 @@ en: You do not control your shadow. You control what it does next. Sixteen level
 **Description:** the same full descriptions as Google Play.
 
 **Screenshots:** `ar/iphone/` and `en/iphone/` are 6.9" iPhone at
-**1290×2796**; `ar/ipad/` and `en/ipad/` are 13" iPad at **2064×2752**, which
+**1290×2796**, and `ar/iphone-6.5/` and `en/iphone-6.5/` are 6.5" iPhone at
+**1284×2778** — App Store Connect shows the 6.5" slot first on some accounts
+and refuses the 6.9" size in it; `ar/ipad/` and `en/ipad/` are 13" iPad at **2064×2752**, which
 Apple requires while the app still runs on iPad. Same six moments, same
 captions, framed for each shape.
 
@@ -171,7 +173,7 @@ captions, framed for each shape.
 ## Making the images again
 
 ```sh
-flutter test tool/store.dart                          # to /tmp/waraya-store/{ar,en}/{play,iphone,ipad}
+flutter test tool/store.dart                          # to /tmp/waraya-store/{ar,en}/{play,iphone,iphone-6.5,ipad}
 WARAYA_STORE_OUT=~/Desktop/store flutter test tool/store.dart
 WARAYA_FEATURE=go-in-low@5.25 flutter test tool/store.dart   # another banner moment
 ```
