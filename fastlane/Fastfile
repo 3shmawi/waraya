@@ -21,6 +21,23 @@ opt_out_usage
 
 PACKAGE = "com.mohager.waraya"
 
+require "tmpdir"
+
+# "What's new", one file per language in fastlane/release_notes/, read on
+# every upload. Edit them before a release (before Actions -> bump); they
+# go to Play with the internal-testing build and travel with it when it is
+# promoted, and to the App Store with the submission. Each store names the
+# languages its own way, hence the two maps.
+NOTES_DIR = File.join(__dir__, "release_notes")
+
+def release_notes(locales)
+  locales.to_h do |file, locale|
+    text = File.read(File.join(NOTES_DIR, "#{file}.txt"), encoding: "UTF-8").strip
+    UI.user_error!("fastlane/release_notes/#{file}.txt is empty") if text.empty?
+    [locale, text]
+  end
+end
+
 # Uploads only: the listing text and images are kept in the consoles by hand
 # for now (docs/store-listing.md), so a lane never overwrites what is there.
 SKIP_LISTING = {
@@ -29,6 +46,12 @@ SKIP_LISTING = {
   skip_upload_images: true,
   skip_upload_screenshots: true,
 }.freeze
+
+# Play's language codes for the two notes files.
+PLAY_NOTES = { "ar" => "ar", "en" => "en-US" }.freeze
+
+# App Store Connect's.
+APP_STORE_NOTES = { "ar" => "ar-SA", "en" => "en-US" }.freeze
 
 platform :android do
   def play_key
@@ -47,8 +70,23 @@ platform :android do
       # PLAY_RELEASE_STATUS to "draft" until the first release is out, then
       # remove it.
       release_status: ENV.fetch("PLAY_RELEASE_STATUS", "completed"),
+      # The release notes, laid out the way supply reads them —
+      # <language>/changelogs/default.txt — in a folder made for this upload,
+      # so nothing else of the listing is read or touched.
+      metadata_path: play_notes_folder,
       **SKIP_LISTING,
+      skip_upload_changelogs: false,
     )
+  end
+
+  def play_notes_folder
+    dir = Dir.mktmpdir("play-notes")
+    release_notes(PLAY_NOTES).each do |locale, text|
+      UI.user_error!("Play allows 500 characters of release notes; #{locale} has #{text.length}") if text.length > 500
+      FileUtils.mkdir_p(File.join(dir, locale, "changelogs"))
+      File.write(File.join(dir, locale, "changelogs", "default.txt"), text)
+    end
+    dir
   end
 
   desc "Promote a build from internal testing to production"
@@ -230,14 +268,42 @@ platform :ios do
 
   desc "Submit a TestFlight build for App Store review"
   lane :release do |options|
+    key = api_key
+
+    # Apple refuses "What's New" on an app's first version — there is
+    # nothing it is new against — so it is sent only once a version is live.
+    app = Spaceship::ConnectAPI::App.find(PACKAGE)
+    UI.user_error!("no app with bundle id #{PACKAGE} in App Store Connect") if app.nil?
+    first = app.get_live_app_store_version.nil?
+    notes = first ? {} : release_notes(APP_STORE_NOTES)
+
+    # Only languages the version already has. Notes in a language it does not
+    # have would create that localization with nothing else in it, and Apple
+    # refuses to review a version with a half-filled language.
+    unless notes.empty?
+      version = app.get_app_store_versions(
+        filter: { platform: "IOS", versionString: options.fetch(:version) },
+      ).first
+      have = version ? version.get_app_store_version_localizations.map(&:locale) : []
+      skipped = notes.keys - have
+      UI.important("No #{skipped.join(", ")} on this version: its notes are not sent") unless skipped.empty?
+      notes = notes.slice(*have)
+    end
+    UI.message(first ? "First version: no \"What's New\" to send" : "What's New: #{notes.keys.join(", ")}")
+
     deliver(
-      api_key: api_key,
+      api_key: key,
       app_identifier: PACKAGE,
       app_version: options.fetch(:version),
       # Empty means the newest build uploaded for that version.
       build_number: options[:build].to_s.empty? ? nil : options[:build].to_s,
       skip_binary_upload: true,
-      skip_metadata: true,
+      # Metadata on only to carry the release notes. The folder it would read
+      # the rest of the listing from is empty, so nothing else is changed —
+      # the listing is kept in App Store Connect (docs/store-listing.md).
+      skip_metadata: first,
+      metadata_path: Dir.mktmpdir("app-store-metadata"),
+      release_notes: notes,
       skip_screenshots: true,
       submit_for_review: true,
       # Released the moment Apple approves it.
