@@ -21,6 +21,7 @@ import 'ui/level_select.dart';
 import 'ui/pause_menu.dart';
 import 'ui/settings_page.dart';
 import 'ui/top_bar.dart';
+import 'ui/ready/game_ready.dart';
 import 'ui/turn/turn_screen.dart';
 import 'ui/words.dart';
 
@@ -164,8 +165,10 @@ class _WarayaLevelsState extends State<WarayaLevels>
       onMenuRequested: _openMenu,
       attempts: widget.attempts,
     )..lang = _lang;
+    _game.settings.shadowOpacity = _settings.value.shadowOpacity;
     _settings.addListener(_settingsChanged);
     WidgetsBinding.instance.addObserver(this);
+    _announceWhenReady();
     _addExtras();
   }
 
@@ -176,8 +179,17 @@ class _WarayaLevelsState extends State<WarayaLevels>
     super.dispose();
   }
 
+  /// Lifts the web splash once the level is loaded and drawn — not on the
+  /// first frame, which is an empty sky while the scenery is still coming.
+  Future<void> _announceWhenReady() async {
+    await _game.loaded;
+    await WidgetsBinding.instance.endOfFrame;
+    announceGameReady();
+  }
+
   void _settingsChanged() {
     _game.lang = _lang;
+    _game.settings.shadowOpacity = _settings.value.shadowOpacity;
     setState(() {});
   }
 

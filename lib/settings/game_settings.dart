@@ -36,7 +36,11 @@ class GameSettings {
     this.language,
     this.sendStats = true,
     this.allowUpright = false,
+    this.shadowOpacity = defaultShadowOpacity,
   });
+
+  /// What the shadow has always been drawn at (`LabSettings.shadowOpacity`).
+  static const double defaultShadowOpacity = 0.5;
 
   final bool sound;
 
@@ -67,6 +71,14 @@ class GameSettings {
   /// screen with nothing to press.
   final bool allowUpright;
 
+  /// How strongly your past is drawn, 0.2 to 1.
+  ///
+  /// Paint only: the same number the bench's opacity slider moves, and every
+  /// state the game draws a past in — lit, standing, ducked — is a fraction
+  /// of it, so the difference between them survives any choice here. Asked
+  /// for by the first player on a phone, who wanted it stronger, or fainter.
+  final double shadowOpacity;
+
   /// What [volume] actually comes to, with [sound] folded in.
   double get loudness => sound ? volume : 0;
 
@@ -83,6 +95,7 @@ class GameSettings {
     Lang? Function()? language,
     bool? sendStats,
     bool? allowUpright,
+    double? shadowOpacity,
   }) => GameSettings(
     sound: sound ?? this.sound,
     volume: volume ?? this.volume,
@@ -92,6 +105,7 @@ class GameSettings {
     language: language == null ? this.language : language(),
     sendStats: sendStats ?? this.sendStats,
     allowUpright: allowUpright ?? this.allowUpright,
+    shadowOpacity: shadowOpacity ?? this.shadowOpacity,
   );
 
   Map<String, Object?> toJson() => {
@@ -103,6 +117,7 @@ class GameSettings {
     'language': language?.name,
     'sendStats': sendStats,
     'allowUpright': allowUpright,
+    'shadowOpacity': shadowOpacity,
   };
 
   /// Reads what [toJson] wrote. Anything missing or mistyped falls back to
@@ -136,6 +151,7 @@ class GameSettings {
       language: named(Lang.values, json['language']),
       sendStats: pick('sendStats', d.sendStats),
       allowUpright: pick('allowUpright', d.allowUpright),
+      shadowOpacity: unit('shadowOpacity', d.shadowOpacity, min: 0.2),
     );
   }
 
@@ -149,7 +165,8 @@ class GameSettings {
       other.buttonOpacity == buttonOpacity &&
       other.language == language &&
       other.sendStats == sendStats &&
-      other.allowUpright == allowUpright;
+      other.allowUpright == allowUpright &&
+      other.shadowOpacity == shadowOpacity;
 
   @override
   int get hashCode => Object.hash(
@@ -161,6 +178,7 @@ class GameSettings {
     language,
     sendStats,
     allowUpright,
+    shadowOpacity,
   );
 }
 

@@ -109,6 +109,20 @@ class SettingsPage extends StatelessWidget {
                             onPick: (v) => set(now.copyWith(buttonOpacity: v)),
                           ),
                         ],
+                        // Every player, not only touch: it is how the
+                        // game looks, not how it is held.
+                        _Choice<double>(
+                          label: w.shadowStrength,
+                          note: w.shadowStrengthWhy,
+                          value: now.shadowOpacity,
+                          options: [
+                            (0.3, w.faint),
+                            (GameSettings.defaultShadowOpacity, w.normal),
+                            (0.7, w.stronger),
+                            (0.9, w.strong),
+                          ],
+                          onPick: (v) => set(now.copyWith(shadowOpacity: v)),
+                        ),
                         _Choice<Lang?>(
                           label: w.language,
                           value: now.language,

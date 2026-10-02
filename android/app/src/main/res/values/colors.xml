@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The game's sky (lib/game/sky_backdrop.dart), the same colour as the
+         web splash and the landing page. The app used to open on a plain
+         white screen before the first frame. -->
+    <color name="splash_sky">#E59D00</color>
+    <!-- Behind the game, if a frame is ever late: the dark the levels stand
+         in, not a white flash. -->
+    <color name="night">#0E0A10</color>
+</resources>

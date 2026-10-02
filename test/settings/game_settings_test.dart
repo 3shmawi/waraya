@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/audio/sfx.dart';
+import 'package:waraya/lab/lab_settings.dart';
 import 'package:waraya/level/attempts.dart';
 import 'package:waraya/level/lang.dart';
 import 'package:waraya/settings/game_settings.dart';
@@ -31,6 +32,12 @@ void main() {
     expect(settings.buttonOpacity, 1);
     expect(settings.sendStats, isTrue);
     expect(settings.language, isNull);
+    expect(settings.allowUpright, isFalse);
+    expect(
+      settings.shadowOpacity,
+      LabSettings().shadowOpacity,
+      reason: 'the shadow as it has always been drawn',
+    );
   });
 
   test('the language follows the device until it is chosen', () {
@@ -40,10 +47,7 @@ void main() {
     // Anything that is not Arabic reads English: it is the second language
     // far more people share than any third one.
     expect(settings.langFor('fr'), Lang.en);
-    expect(
-      settings.copyWith(language: () => Lang.ar).langFor('en'),
-      Lang.ar,
-    );
+    expect(settings.copyWith(language: () => Lang.ar).langFor('en'), Lang.ar);
     expect(
       settings
           .copyWith(language: () => Lang.ar)
@@ -63,6 +67,8 @@ void main() {
       buttonOpacity: 0.4,
       language: () => Lang.en,
       sendStats: false,
+      allowUpright: true,
+      shadowOpacity: 0.9,
     );
     expect(GameSettings.fromJson(chosen.toJson()), chosen);
   });

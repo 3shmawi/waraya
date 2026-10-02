@@ -125,7 +125,63 @@
       0%   { transform: translateX(-110%); }
       100% { transform: translateX(260%); }
     }
+    /* A phone on its side is how the game is played, and it is short: the
+       column above is taller than the screen, and the bar — the one thing
+       saying the page is alive — fell off the bottom. Short and wide, the
+       mark and the name go on one side and the words on the other. */
+    @media (orientation: landscape) and (max-height: 560px) {
+      #splash {
+        display: grid;
+        grid-template-columns: auto minmax(0, 34ch);
+        grid-template-areas:
+          "mark pitch"
+          "name keys"
+          "bar  bar";
+        align-items: center;
+        justify-content: center;
+        gap: 10px clamp(20px, 6vw, 64px);
+        padding: max(16px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+                 max(16px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+      }
+      #splash svg {
+        grid-area: mark; justify-self: center; align-self: end;
+        width: clamp(56px, 22vh, 92px); height: clamp(56px, 22vh, 92px);
+      }
+      #splash h1 { grid-area: name; align-self: start; font-size: clamp(30px, 12vh, 48px); }
+      #splash .pitch { grid-area: pitch; align-self: end; margin: 0; font-size: clamp(14px, 4.6vh, 18px); }
+      #splash .keys { grid-area: keys; align-self: start; font-size: 13px; }
+      #splash .bar { grid-area: bar; justify-self: center; margin-top: 6px; }
+    }
+
+    /* The mark, alive: you walk, and your past arrives behind you — the near
+       one first, then the far one — exactly as the game does it. One loop is
+       one walk across. Pure CSS on the SVG: no GIF to download, sharp at any
+       size, and nothing at all for anyone who asked for less motion. */
+    #splash .walk { animation: walk 2.6s linear infinite; }
+    #splash .you { animation: step .33s ease-in-out infinite alternate; }
+    #splash .near { animation: arrive-near 2.6s linear infinite; }
+    #splash .far { animation: arrive-far 2.6s linear infinite; }
+    @keyframes walk {
+      from { transform: translateX(16px); }
+      to   { transform: translateX(-12px); }
+    }
+    @keyframes step {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-1.6px); }
+    }
+    @keyframes arrive-near {
+      0%, 22%  { opacity: 0; }
+      34%, 84% { opacity: .55; }
+      100%     { opacity: 0; }
+    }
+    @keyframes arrive-far {
+      0%, 44%  { opacity: 0; }
+      56%, 84% { opacity: .30; }
+      100%     { opacity: 0; }
+    }
+
     @media (prefers-reduced-motion: reduce) {
+      #splash .walk, #splash .you, #splash .near, #splash .far { animation: none; }
       #splash .bar i { animation: none; width: 100%; opacity: .5; }
       #splash { transition: none; }
     }
@@ -134,6 +190,9 @@
 <body>
   <div id="splash">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
+      <!-- In defs: drawn only where it is used. Outside them it was also
+           drawn once at x=0, a stray limb on the mark's left edge. -->
+      <defs>
       <g id="body" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
         <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
         <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/>
@@ -143,9 +202,12 @@
         <path d="M-4.6 34.3 L-10.5 43 L-13.5 50.5" fill="none" stroke-width="3.2"/>
         <path d="M-4.6 34.3 L2 43.5 L6 50.5" fill="none" stroke-width="3.2"/>
       </g>
-      <use href="#body" x="70" color="#DCE4EE" opacity="0.30"/>
-      <use href="#body" x="58" color="#DCE4EE" opacity="0.55"/>
-      <use href="#body" x="44" color="#07050A"/>
+      </defs>
+      <g class="walk">
+        <use class="past far" href="#body" x="70" color="#DCE4EE" opacity="0.30"/>
+        <use class="past near" href="#body" x="58" color="#DCE4EE" opacity="0.55"/>
+        <use class="you" href="#body" x="44" color="#07050A"/>
+      </g>
       <rect x="0" y="78" width="100" height="22" fill="#0E0A10"/>
       <rect x="0" y="78" width="100" height="1.6" fill="#D9A25C"/>
     </svg>
@@ -163,18 +225,20 @@
       <span>R لإعادة المرحلة</span>
     </div>
     <div class="keys touch">
-      <span>المس تحت يمين أو شمال عشان تمشي</span>
-      <span>المس فوق عشان تنط</span>
-      <span>النص عشان توطي</span>
+      <span>الدايرة تحت شمال للمشي</span>
+      <span>تحت يمين: نطة وقعدة</span>
+      <span>الموبايل بالعرض</span>
     </div>
 
     <div class="bar"><i></i></div>
   </div>
 
   <script>
-    // The engine fires this once it has actually painted, which is the only
-    // moment that means "there is a game behind this". Hiding the splash when
-    // the script loads instead would uncover a blank canvas for a second or two.
+    // The game fires `waraya-ready` once the level is loaded and drawn
+    // (lib/ui/ready/game_ready.dart). Not `flutter-first-frame`: that is the
+    // engine's first paint, which is an empty dark-blue sky while the scenery
+    // and sounds are still loading — reported from playing as a blank screen
+    // between the splash and the game.
     (function () {
       var splash = document.getElementById('splash');
       var hidden = false;
@@ -184,7 +248,7 @@
         splash.classList.add('done');
         setTimeout(function () { splash.remove(); }, 600);
       }
-      window.addEventListener('flutter-first-frame', hide);
+      window.addEventListener('waraya-ready', hide);
       // If that event ever stops firing, a splash that never lifts is a game
       // nobody can play. Twenty-five seconds is well past the slowest load
       // measured here, so this only ever runs when something is wrong.

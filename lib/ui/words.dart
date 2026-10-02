@@ -58,6 +58,11 @@ class Words {
       : 'لو الموبايل مش بيلف. المرحلة بتبان أضيق قدّامك.';
 
   // The settings page.
+  String get shadowStrength => _en ? 'Your shadow' : 'وضوح ظلك';
+  String get shadowStrengthWhy => _en
+      ? 'How strongly your past is drawn. It changes nothing it does.'
+      : 'قد إيه ماضيك باين. مبيغيّرش أي حاجة بيعملها.';
+  String get stronger => _en ? 'Stronger' : 'أوضح';
   String get sound => _en ? 'Sound' : 'الصوت';
   String get volume => _en ? 'Volume' : 'العلو';
   String get haptics => _en ? 'Vibration' : 'الاهتزاز';

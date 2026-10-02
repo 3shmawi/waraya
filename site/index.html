@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ورايا · waraya</title>
 <meta name="description" content="ورايا — لعبة ظل بيعيد اللي عملته بعد تأخير ثابت. ستاشر مرحلة في المتصفح، من غير تحميل.">
 <meta name="theme-color" content="#E59D00">
@@ -182,11 +182,40 @@
   .note { font-size: 13.5px; color: #8A7C6C; }
   .en { direction: ltr; text-align: left; }
   .en p { font-family: system-ui, -apple-system, sans-serif; font-size: 15.5px; }
+
+  /* A phone on its side — the way the game is played — is wide and short,
+     and every size above is measured off the width. The hero came out two
+     screens tall with the play button below the fold. Short and wide, it
+     goes side by side instead: the name on one half, the pitch and the
+     button on the other, the whole of it on one screen. */
+  @media (orientation: landscape) and (max-height: 560px) {
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr;
+      align-items: center;
+      gap: 0 clamp(16px, 4vw, 48px);
+      padding: clamp(18px, 6vh, 36px) max(20px, env(safe-area-inset-right)) clamp(20px, 7vh, 40px) max(20px, env(safe-area-inset-left));
+      min-height: min(100svh, 560px);
+    }
+    .mark { width: clamp(56px, 20vh, 96px); }
+    h1 { margin-top: 8px; font-size: clamp(34px, 17vh, 64px); line-height: 1.3; }
+    .pitch { margin-top: 0; font-size: clamp(16px, 5.4vh, 23px); max-width: 30ch; }
+    .play { margin-top: clamp(12px, 4vh, 24px); padding: 12px 40px; font-size: 18px; }
+    .free { margin-top: 8px; font-size: 13px; }
+    section { padding-top: clamp(28px, 9vh, 56px); padding-bottom: clamp(28px, 9vh, 56px); }
+  }
+
+  /* Notches: a phone on its side puts the camera cut-out at a side edge. */
+  section, footer {
+    padding-left: max(22px, env(safe-area-inset-left));
+    padding-right: max(22px, env(safe-area-inset-right));
+  }
 </style>
 </head>
 <body>
 
 <header class="hero">
+  <div class="hero-id">
   <svg class="mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="waraya">
     <defs>
       <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
@@ -217,7 +246,9 @@
 
   <h1>ورايا</h1>
   <p class="latin">waraya</p>
+  </div>
 
+  <div class="hero-go">
   <p class="pitch">
     <span class="a">انت مش بتتحكم في ظلك.</span>
     <span class="b">بتتحكم في اللي هيعمله بعد شوية.</span>
@@ -226,6 +257,7 @@
   <a class="play" href="play/">إلعب دلوقتي</a>
   <p class="free">في المتصفح · من غير تحميل · موبايل وكمبيوتر</p>
   <p class="free"><a href="#get" style="color:inherit">أو نزّلها على أندرويد وآيفون والكمبيوتر</a></p>
+  </div>
 </header>
 
 <main>

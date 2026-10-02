@@ -115,6 +115,30 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
+  testWidgets('the shadow is drawn as strongly as the player chose', (
+    tester,
+  ) async {
+    final settings = arabic();
+    await tester.pumpWidget(
+      WarayaLevels(
+        levels: Levels.campaign,
+        progress: MemoryProgress(),
+        beaten: const {},
+        settings: settings,
+      ),
+    );
+    await tester.pump();
+    final game = tester
+        .widget<GameWidget<LevelGame>>(find.byType(GameWidget<LevelGame>))
+        .game!;
+    expect(game.settings.shadowOpacity, settings.value.shadowOpacity);
+
+    settings.value = settings.value.copyWith(shadowOpacity: 0.9);
+    await tester.pump();
+    expect(game.settings.shadowOpacity, 0.9);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('speaks English when asked to', (tester) async {
     await tester.pumpWidget(
       WarayaLevels(
