@@ -356,6 +356,46 @@ testing وبيمشوا معاه لما يتعمله promote لـproduction، و�
 وبيتبعتوا بس للغات اللي النسخة فيها أصلاً (لغة ناقصة بتوقّف المراجعة). وحد
 Play ٥٠٠ حرف — `test/app/release_notes_test.dart` بيقع قبلها.
 
+#### الديسكتوب: itch.io، وماك من غير تحذير
+
+**itch.io** (`itch` job): كل نسخة بتترفع لصفحة اللعبة هناك — ويندوز وماك
+ولينكس (نفس ملفات الـGitHub Release) **ونسخة الويب تتلعب في المتصفح**، كل
+واحدة على channel لوحدها. butler (أداة itch.io) بيبعت اللي اتغيّر بس، والصفحة
+بتكتب «1.0.1 (42)». بتشتغل على التاج أو ✅ upload، زي الستورات.
+
+1. itch.io ← حساب ← **Dashboard ← Create new project**: Title «ورايا»، Kind of
+   project: **HTML** (عشان الويب يتلعب في الصفحة؛ الديسكتوب بيتنزّل عادي)،
+   والـURL (مثلاً `waraya`). احفظه **Draft** — butler مبيقدرش يرفع لصفحة مش
+   موجودة.
+2. itch.io ← Settings ← **API keys** ← Generate ← GitHub secret
+   **`BUTLER_API_KEY`**.
+3. GitHub ← **Variables** ← **`ITCH_PROJECT`** = `<اسمك على itch>/<الـURL>`
+   (من لينك الصفحة: `https://اسمك.itch.io/waraya` ← `اسمك/waraya`).
+4. **بعد أول رفع، مرة واحدة:** صفحة اللعبة ← Edit ← Uploads ← اللي اسمه
+   `html5` ← ✅ **This file will be played in the browser**، وViewport
+   1280×720، و✅ Fullscreen button، و✅ Mobile friendly. وبعدين Pricing (مثلاً
+   **No payments** أو «$0 or donate») وVisibility ← **Public**.
+
+`<base href="/">` في بيلد الويب بيبقى `./` قبل الرفع: itch.io بيشغّل اللعبة
+من فولدر هو اللي بيختاره جوه iframe. اتجرّب: البيلد شغال من فولدر متداخل في
+Chromium من غير ولا ملف ضايع.
+
+**ماك من غير تحذير** (`tools/notarize_macos.sh`): البيلد بيتمضي بشهادة
+**Developer ID** وApple بتعمله **notarize** وبيتدبس فيه الـticket — فبيفتح
+بدبل‌كليك عادي، حتى من غير نت. من غيرها بيتعمل زي الأول (كليك يمين ← Open).
+بيشتغل في كل run فيها الأسرار، حتى التجارب: مش رفع لحتة، تحسين للملف بس.
+
+1. **Developer ID Application** — شهادة تانية غير «Apple Distribution» (دي
+   للستور). Xcode ← Settings ← Accounts ← Manage Certificates ← **+** ←
+   **Developer ID Application**. **صاحب الحساب (Account Holder) بس اللي
+   يقدر يعملها.**
+2. Keychain Access ← My Certificates ← «Developer ID Application: …» ← Export
+   ← `.p12` بباسورد.
+3. GitHub secrets: **`MACOS_DEVELOPER_ID_P12_BASE64`** (`base64 -i
+   devid.p12 | pbcopy`) و**`MACOS_DEVELOPER_ID_P12_PASSWORD`**.
+4. الـnotarization بيستخدم مفتاح App Store Connect اللي موجود أصلاً — مفيش
+   حاجة تانية.
+
 #### أول مرة، بالترتيب
 
 1. أسرار أندرويد (٣.١) + `PLAY_SERVICE_ACCOUNT_JSON`، وأول AAB بإيدك.

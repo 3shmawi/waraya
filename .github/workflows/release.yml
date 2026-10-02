@@ -71,6 +71,8 @@ jobs:
       build: ${{ steps.read.outputs.build }}
       play: ${{ steps.stores.outputs.play }}
       apple: ${{ steps.stores.outputs.apple }}
+      notarize: ${{ steps.stores.outputs.notarize }}
+      itch: ${{ steps.stores.outputs.itch }}
     steps:
       - uses: actions/checkout@v5
       - id: read
@@ -96,14 +98,30 @@ jobs:
             && secrets.IOS_CERTIFICATE_P12_BASE64 != ''
             && secrets.IOS_CERTIFICATE_PASSWORD != ''
             && (vars.APPLE_TEAM_ID != '' || secrets.APPLE_TEAM_ID != '') }}
+          NOTARIZE: >-
+            ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 != ''
+            && secrets.MACOS_DEVELOPER_ID_P12_PASSWORD != ''
+            && secrets.ASC_KEY_ID != '' && secrets.ASC_ISSUER_ID != ''
+            && secrets.ASC_KEY_P8_BASE64 != '' }}
+          ITCH: ${{ secrets.BUTLER_API_KEY != '' && vars.ITCH_PROJECT != '' }}
         run: |
+          # Notarizing is not uploading anywhere — it only makes the macOS
+          # build open without a warning — so it happens on every run that
+          # can, dry runs included.
+          notarize=$NOTARIZE
+          [ "$notarize" = true ] || echo "::notice::no Developer ID certificate: the macOS build is not notarized"
+          echo "notarize=$notarize" >> "$GITHUB_OUTPUT"
+          itch=false
           play=false; apple=false
           if [ "$WANT" = true ]; then
             if [ "$PLAY" = true ]; then play=true; else
               echo "::notice::no PLAY_SERVICE_ACCOUNT_JSON secret: not uploading to Play"; fi
             if [ "$APPLE" = true ]; then apple=true; else
               echo "::notice::App Store secrets or APPLE_TEAM_ID missing: not uploading to TestFlight"; fi
+            if [ "$ITCH" = true ]; then itch=true; else
+              echo "::notice::no BUTLER_API_KEY secret or ITCH_PROJECT variable: not uploading to itch.io"; fi
           fi
+          echo "itch=$itch" >> "$GITHUB_OUTPUT"
           echo "play=$play" >> "$GITHUB_OUTPUT"
           echo "apple=$apple" >> "$GITHUB_OUTPUT"
 
@@ -237,10 +255,28 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build macos --release
-      # ditto, not zip: it keeps the bundle's symlinks and extended
-      # attributes, and a .app zipped without them does not open.
-      - run: |
+      - run: flutter build macos --release --build-number=${{ needs.version.outputs.build }}
+      # Signed with the Developer ID certificate and notarized by Apple when
+      # the secrets are there (tools/notarize_macos.sh), so it opens on a
+      # double click; unsigned otherwise, and it still opens, after
+      # right-click -> Open. ditto, not zip, either way: it keeps the
+      # bundle's symlinks and extended attributes, and a .app zipped without
+      # them does not open.
+      - name: Notarize
+        if: needs.version.outputs.notarize == 'true'
+        env:
+          MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
+          MACOS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: >
+          tools/notarize_macos.sh
+          build/macos/Build/Products/Release/waraya.app
+          "out/waraya-${{ needs.version.outputs.version }}-macos.zip"
+      - name: Zip, unsigned
+        if: needs.version.outputs.notarize != 'true'
+        run: |
           mkdir -p out
           ditto -c -k --keepParent build/macos/Build/Products/Release/waraya.app \
             "out/waraya-${{ needs.version.outputs.version }}-macos.zip"
@@ -355,6 +391,78 @@ jobs:
           version:"${{ needs.version.outputs.version }}"
           build:"${{ needs.version.outputs.build }}"
 
+  # Every platform to itch.io, each on its own channel: the three desktop
+  # builds this run made (the very files on the GitHub Release), and the web
+  # version, built here, to play in the browser on the itch.io page. butler,
+  # itch.io's uploader, sends only what changed since the last push, and the
+  # page shows each channel's version as "1.0.1 (42)".
+  #
+  # Needs the BUTLER_API_KEY secret and the ITCH_PROJECT variable, which is
+  # "<itch.io user>/<game page>" from the page's address. Channel names say
+  # the platform — windows, mac, linux — so itch.io tags each download by
+  # itself. The web one ("html5") has to be marked "played in the browser"
+  # once, by hand, on the page's edit screen.
+  itch:
+    needs: [version, linux, windows, macos]
+    if: needs.version.outputs.itch == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      # The campaign (lib/main.dart). itch.io serves the game from a folder of
+      # its own choosing inside an iframe, so the one absolute path Flutter
+      # writes — <base href="/"> — is made relative: "./" finds the files
+      # wherever the folder is. --no-web-resources-cdn keeps CanvasKit in the
+      # upload, so nothing is fetched from anywhere but itch.io.
+      - run: flutter build web --release --no-web-resources-cdn
+      - run: |
+          sed -i 's|<base href="/">|<base href="./">|' build/web/index.html
+          grep -q '<base href="./">' build/web/index.html
+
+      # The three desktop builds; not the 70 MB Android one.
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: '{windows,macos,linux}'
+          path: dl
+          merge-multiple: true
+      # Unpacked, so butler can send only the files that changed. unzip, not
+      # a library: it restores the symlinks inside the macOS app's
+      # frameworks, which the app does not open without.
+      - name: Unpack
+        env:
+          V: ${{ needs.version.outputs.version }}
+        run: |
+          mkdir -p itch/windows itch/mac itch/linux
+          unzip -q "dl/waraya-$V-windows-x64.zip" -d itch/windows
+          unzip -q "dl/waraya-$V-macos.zip" -d itch/mac
+          tar -xzf "dl/waraya-$V-linux-x64.tar.gz" -C itch/linux
+          cp -R build/web itch/html5
+          find itch -maxdepth 2
+
+      # The latest butler, not a pinned one: itch.io's API moves with it, and
+      # it says which version it is in the log.
+      - name: butler
+        run: |
+          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler
+          chmod +x butler/butler
+          butler/butler -V
+
+      - name: Push
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          PROJECT: ${{ vars.ITCH_PROJECT }}
+          USERVERSION: ${{ needs.version.outputs.version }} (${{ needs.version.outputs.build }})
+        run: |
+          for channel in windows mac linux html5; do
+            butler/butler push "itch/$channel" "$PROJECT:$channel" --userversion "$USERVERSION"
+          done
+
   release:
     if: github.ref_type == 'tag'
     needs: [version, android, linux, windows, macos]
@@ -374,7 +482,7 @@ jobs:
 
             - **Android:** the `.apk` installs directly (allow installs from this source when asked). The `.aab` is for Google Play.
             - **Windows:** unzip and run `waraya.exe`. SmartScreen warns on first run: the build is not signed.
-            - **macOS:** unzip, then right-click `waraya.app` → Open the first time. The build is not notarised.
+            - **macOS:** unzip and open `waraya.app`. If macOS says it cannot check the developer, right-click → Open once.
             - **Linux:** untar and run `./waraya`.
 
             What the game sends, and does not: https://3shmawi.github.io/waraya/privacy.html
