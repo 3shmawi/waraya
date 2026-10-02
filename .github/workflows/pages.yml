@@ -47,7 +47,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -60,7 +60,7 @@ jobs:
 
       # `enablement` turns Pages on the first time this runs, so the repository
       # settings never have to be touched by hand.
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
         with:
           enablement: true
 
@@ -101,16 +101,16 @@ jobs:
           sed -i 's|<head>|<head>\n  <meta name="robots" content="noindex">|' _site/lab/index.html
           grep -q 'name="robots"' _site/lab/index.html
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

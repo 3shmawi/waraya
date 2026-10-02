@@ -65,7 +65,7 @@ env:
 
 jobs:
   version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.read.outputs.version }}
       build: ${{ steps.read.outputs.build }}
@@ -110,7 +110,7 @@ jobs:
   # The tests run before anything is built. A tag is a promise that the
   # recorded solutions still solve and the wrong ideas still fail.
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
@@ -124,7 +124,7 @@ jobs:
 
   android:
     needs: [version, checks]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -173,9 +173,11 @@ jobs:
 
   linux:
     needs: [version, checks]
-    # Pinned rather than ubuntu-latest: the toolchain below names package
-    # versions (libstdc++-12-dev), and ubuntu-latest moves to a new release
-    # on its own — the next one from 19 October 2026.
+    # Every Linux job in these workflows is pinned to ubuntu-24.04 rather
+    # than ubuntu-latest, which moves to a new release on its own (the next
+    # one from 19 October 2026) — and this one most of all: the toolchain
+    # below names package versions (libstdc++-12-dev). Moving to a newer
+    # Ubuntu is a one-line change, made when someone chooses to.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -250,7 +252,7 @@ jobs:
   play-internal:
     needs: [version, android]
     if: needs.version.outputs.play == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       # The AAB the android job built and the tests ran before — not a
@@ -274,7 +276,7 @@ jobs:
   app-store-version:
     needs: [version]
     if: needs.version.outputs.apple == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: ruby/setup-ruby@v1
@@ -335,7 +337,7 @@ jobs:
   testflight-external:
     needs: [version, testflight]
     if: needs.version.outputs.apple == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 100
     steps:
       - uses: actions/checkout@v5
@@ -356,13 +358,13 @@ jobs:
   release:
     if: github.ref_type == 'tag'
     needs: [version, android, linux, windows, macos]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v7
         with:
           path: out
           merge-multiple: true
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           name: ورايا ${{ needs.version.outputs.version }}
           generate_release_notes: true
