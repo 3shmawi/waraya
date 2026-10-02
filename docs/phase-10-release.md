@@ -349,6 +349,13 @@ External** — job على لينكس (`testflight-external`) بيستنى Apple 
    عدّله قبل نسخة فيها حاجة تستاهل يتبصّلها. ولو غيّرت اسم الجروب، Variable
    اسمها `TESTFLIGHT_EXTERNAL_GROUP`.
 
+**و«الجديد في النسخة دي» (What's new):** في `fastlane/release_notes/ar.txt`
+و`en.txt` — **عدّلهم قبل الـbump**. بيروحوا لـPlay مع بيلد الـinternal
+testing وبيمشوا معاه لما يتعمله promote لـproduction، وللـApp Store مع
+التقديم للمراجعة. Apple مبتقبلش «What's New» لأول نسخة، فبيتبعتوا من تاني نسخة؛
+وبيتبعتوا بس للغات اللي النسخة فيها أصلاً (لغة ناقصة بتوقّف المراجعة). وحد
+Play ٥٠٠ حرف — `test/app/release_notes_test.dart` بيقع قبلها.
+
 #### أول مرة، بالترتيب
 
 1. أسرار أندرويد (٣.١) + `PLAY_SERVICE_ACCOUNT_JSON`، وأول AAB بإيدك.
