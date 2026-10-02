@@ -94,7 +94,7 @@ jobs:
             && secrets.ASC_KEY_P8_BASE64 != ''
             && secrets.IOS_CERTIFICATE_P12_BASE64 != ''
             && secrets.IOS_CERTIFICATE_PASSWORD != ''
-            && vars.APPLE_TEAM_ID != '' }}
+            && (vars.APPLE_TEAM_ID != '' || secrets.APPLE_TEAM_ID != '') }}
         run: |
           play=false; apple=false
           if [ "$WANT" = true ]; then
@@ -296,7 +296,8 @@ jobs:
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
           IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
           IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          # A variable or a secret: it is not secret, but either works.
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID || secrets.APPLE_TEAM_ID }}
         run: |
           export IOS_CERTIFICATE_PATH="$RUNNER_TEMP/distribution.p12"
           echo "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$IOS_CERTIFICATE_PATH"
