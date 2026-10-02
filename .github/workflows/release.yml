@@ -16,7 +16,9 @@
 # - Windows, Linux: the release bundle, zipped. Unsigned — Windows SmartScreen
 #   warns on first run.
 # - macOS: the .app, zipped. Unsigned and not notarised — Gatekeeper blocks a
-#   double-click; right-click → Open once gets past it.
+#   double-click — unless it is notarized (below); otherwise System Settings
+#   → Privacy & Security → Open Anyway, once (right-click → Open stopped
+#   being a way past it in macOS 15).
 # - iOS: not on the release page — an .ipa nobody can install is not a
 #   release. It goes to TestFlight instead (below).
 # - Web: not built here. pages.yml publishes it on every push to main.
@@ -259,7 +261,7 @@ jobs:
       # Signed with the Developer ID certificate and notarized by Apple when
       # the secrets are there (tools/notarize_macos.sh), so it opens on a
       # double click; unsigned otherwise, and it still opens, after
-      # right-click -> Open. ditto, not zip, either way: it keeps the
+      # Privacy & Security -> Open Anyway. ditto, not zip, either way: it keeps the
       # bundle's symlinks and extended attributes, and a .app zipped without
       # them does not open.
       - name: Notarize
@@ -493,7 +495,8 @@ jobs:
 
             - **Android:** the `.apk` installs directly (allow installs from this source when asked). The `.aab` is for Google Play.
             - **Windows:** unzip and run `waraya.exe`. SmartScreen warns on first run: the build is not signed.
-            - **macOS:** unzip and open `waraya.app`. If macOS says it cannot check the developer, right-click → Open once.
+            - **macOS:** unzip and open `waraya.app`. If macOS says it cannot verify the developer: System Settings → Privacy & Security → Open Anyway, once. (Right-click → Open no longer works for this since macOS 15.)
+            - **All desktops, with automatic updates:** https://3shmawiii.itch.io/waraya through the itch app.
             - **Linux:** untar and run `./waraya`.
 
             What the game sends, and does not: https://3shmawi.github.io/waraya/privacy.html
