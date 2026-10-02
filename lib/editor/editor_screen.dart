@@ -883,6 +883,26 @@ class _Inspector extends StatelessWidget {
             ? null
             : editor.edit((doc) => doc.teaches = t, group: 'teaches'),
       ),
+      // English, for a player whose device does not ask for Arabic. Empty
+      // means none, and the Arabic is shown to everyone.
+      _Field(
+        label: 'name (en)',
+        value: doc.nameEn ?? '',
+        id: 'nameEn',
+        onChanged: (t) => editor.edit(
+          (doc) => doc.nameEn = t.trim().isEmpty ? null : t,
+          group: 'nameEn',
+        ),
+      ),
+      _Field(
+        label: 'teaches (en)',
+        value: doc.teachesEn ?? '',
+        id: 'teachesEn',
+        onChanged: (t) => editor.edit(
+          (doc) => doc.teachesEn = t.trim().isEmpty ? null : t,
+          group: 'teachesEn',
+        ),
+      ),
       _Row(
         children: [
           for (final (i, delay) in doc.delays.indexed)

@@ -2,7 +2,11 @@ import 'package:flame/game.dart';
 import 'package:flutter/widgets.dart';
 
 import 'audio/flame_audio_out.dart';
+import 'audio/haptics.dart';
+import 'audio/sfx.dart';
+import 'input/touch_input_source.dart';
 import 'level/attempts.dart';
+import 'level/lang.dart';
 import 'level/level.dart';
 import 'level/level_game.dart';
 import 'level/level_source.dart';
@@ -11,8 +15,13 @@ import 'level/supabase_levels.dart';
 import 'licenses.dart';
 import 'progress/progress.dart';
 import 'progress/stored_progress.dart';
+import 'settings/game_settings.dart';
 import 'ui/campaign_end.dart';
 import 'ui/level_select.dart';
+import 'ui/pause_menu.dart';
+import 'ui/settings_page.dart';
+import 'ui/top_bar.dart';
+import 'ui/words.dart';
 
 /// The puzzles, in teaching order.
 ///
@@ -34,13 +43,22 @@ Future<void> main() async {
   // answers, or never. See docs/phase-8-server.md.
   final levels = await const BuiltInLevels().load();
   final progress = await StoredProgress.open();
+  final settings = await SettingsKeeper.open();
 
   runApp(
     WarayaLevels(
       levels: levels,
       progress: progress,
       beaten: await progress.beaten(),
-      attempts: AttemptLog(await SupabaseAttempts.open()),
+      settings: settings,
+      // Asked on every row, not once: switching statistics off on the
+      // settings page stops the very next one (site/privacy.html).
+      attempts: AttemptLog(
+        ConsentedSink(
+          await SupabaseAttempts.open(),
+          allowed: () => settings.value.sendStats,
+        ),
+      ),
       extras: SupabaseLevels(
         cache: const StoredLevelCache(),
         onRefused: (verdict) => debugPrint('refused from server: $verdict'),
@@ -57,6 +75,7 @@ class WarayaLevels extends StatefulWidget {
     required this.beaten,
     this.extras,
     this.attempts,
+    this.settings,
   });
 
   final List<Level> levels;
@@ -68,6 +87,10 @@ class WarayaLevels extends StatefulWidget {
   /// Where each go at each level is reported, or null for none.
   final AttemptLog? attempts;
   final Progress progress;
+
+  /// The settings page's choices. Null keeps them in memory for this run —
+  /// tests, and nothing else.
+  final SettingsKeeper? settings;
 
   /// What was already finished when the app started. Read once here rather
   /// than awaited inside `build`, so the first frame is the game and not a
@@ -82,17 +105,44 @@ class _WarayaLevelsState extends State<WarayaLevels>
     with WidgetsBindingObserver {
   static const String _menu = 'levels';
   static const String _end = 'campaign-end';
+  static const String _pause = 'pause';
+  static const String _settingsPage = 'settings';
 
   late final Set<String> _beaten = {...widget.beaten};
+  late final SettingsKeeper _settings = widget.settings ?? SettingsKeeper();
   late final LevelGame _game;
   late List<Level> _levels = widget.levels;
+
+  /// Why the game is stopped, if it is. The engine runs only while this is
+  /// empty: closing the settings page over the pause menu must not set the
+  /// level going behind the menu that is still open.
+  final Set<String> _holds = {};
+
+  /// Whether the phone is held upright and the game is waiting for it to be
+  /// turned (`TurnPhone`).
+  bool _upright = false;
+
+  Lang get _deviceLang => Lang.forDevice(
+    WidgetsBinding.instance.platformDispatcher.locale.languageCode,
+  );
+
+  Lang get _lang => _settings.value.langFor(_deviceLang.name);
+
+  Words get _words => Words(_lang);
 
   @override
   void initState() {
     super.initState();
     _game = LevelGame(
       levels: _levels,
-      audio: FlameAudioOut(),
+      // Through the settings page's volume, read on every sound.
+      audio: ScaledAudio(
+        FlameAudioOut(),
+        loudness: () => _settings.value.loudness,
+      ),
+      haptics: PlatformHaptics(enabled: () => _settings.value.haptics),
+      buttonScale: () => _settings.value.buttons.scale,
+      buttonOpacity: () => _settings.value.buttonOpacity,
       // The puzzles are played in the scene from Phase 1, not on the bench's
       // grey boxes. Same class, same geometry, same numbers — only the paint
       // differs. `main_lab.dart` keeps the grey deliberately: art flatters a
@@ -112,16 +162,27 @@ class _WarayaLevelsState extends State<WarayaLevels>
       onCampaignFinished: _showEnd,
       onMenuRequested: _openMenu,
       attempts: widget.attempts,
-    );
+    )..lang = _lang;
+    _settings.addListener(_settingsChanged);
     WidgetsBinding.instance.addObserver(this);
     _addExtras();
   }
 
   @override
   void dispose() {
+    _settings.removeListener(_settingsChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
+
+  void _settingsChanged() {
+    _game.lang = _lang;
+    setState(() {});
+  }
+
+  /// The device's language changed under a game following it.
+  @override
+  void didChangeLocales(List<Locale>? locales) => _settingsChanged();
 
   /// A game put away mid-level may never be opened again, so the go so far is
   /// sent now. `hidden` is the one state every platform passes through on the
@@ -153,34 +214,51 @@ class _WarayaLevelsState extends State<WarayaLevels>
     if (_beaten.add(level.id)) setState(() {});
   }
 
-  void _openMenu() {
-    if (_game.overlays.isActive(_menu)) return;
-    // Paused, or your shadow keeps walking while you read — and in the level
-    // where it kills you, reading the menu would be fatal.
+  void _hold(String why) {
+    _holds.add(why);
     _game.pauseEngine();
-    _game.overlays.add(_menu);
   }
 
-  void _closeMenu() {
-    _game.overlays.remove(_menu);
-    _game.resumeEngine();
+  void _release(String why) {
+    _holds.remove(why);
+    if (_holds.isEmpty) _game.resumeEngine();
   }
+
+  void _show(String overlay) {
+    if (_game.overlays.isActive(overlay)) return;
+    // Paused, or your shadow keeps walking while you read — and in the level
+    // where it kills you, reading the menu would be fatal.
+    _hold(overlay);
+    _game.overlays.add(overlay);
+  }
+
+  void _hide(String overlay) {
+    _game.overlays.remove(overlay);
+    _release(overlay);
+  }
+
+  void _openMenu() {
+    _hide(_pause);
+    _show(_menu);
+  }
+
+  void _closeMenu() => _hide(_menu);
 
   void _pick(int index) {
     _closeMenu();
     _game.goTo(index);
   }
 
-  void _showEnd() {
-    if (_game.overlays.isActive(_end)) return;
-    _game.pauseEngine();
-    _game.overlays.add(_end);
+  void _retry() {
+    _hide(_pause);
+    _game.reload();
   }
+
+  void _showEnd() => _show(_end);
 
   /// Leaves the ending and puts the game back where the button says.
   void _leaveEnd({required int? goTo}) {
-    _game.overlays.remove(_end);
-    _game.resumeEngine();
+    _hide(_end);
     if (goTo != null) {
       _game.goTo(goTo);
     } else {
@@ -188,8 +266,33 @@ class _WarayaLevelsState extends State<WarayaLevels>
     }
   }
 
+  /// Stops the game for a phone held upright, and starts it again once it is
+  /// turned — after the frame, since this is learned while building one.
+  void _noticeUpright(bool upright) {
+    if (upright == _upright) return;
+    _upright = upright;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_upright) {
+        _hold('upright');
+      } else {
+        _release('upright');
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final lang = _lang;
+    final words = _words;
+    final media = MediaQuery.maybeOf(context);
+    final size = media?.size ?? Size.zero;
+    final inset = media?.padding ?? EdgeInsets.zero;
+    _noticeUpright(TouchInputSource.isTouchPlatform && TurnPhone.applies(size));
+    _game.reservedTopRight = Size(
+      TopBar.footprint.width + inset.right,
+      TopBar.footprint.height + inset.top,
+    );
     // No MaterialApp: the game owns the whole surface, and skipping Material
     // keeps the web bundle a little smaller. What Material would have provided
     // and is needed anyway is `Directionality` — `Stack` resolves its
@@ -197,7 +300,7 @@ class _WarayaLevelsState extends State<WarayaLevels>
     // out threw, and a release build renders a thrown widget as a plain grey
     // rectangle, which is why this is easy to ship without noticing.
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: lang.isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Stack(
         children: [
           GameWidget<LevelGame>(
@@ -209,86 +312,42 @@ class _WarayaLevelsState extends State<WarayaLevels>
                 current: game.levelIndex,
                 onPick: _pick,
                 onClose: _closeMenu,
+                lang: _lang,
               ),
               _end: (context, game) => CampaignEnd(
                 levels: _levels,
                 onLevels: () => _leaveEnd(goTo: null),
                 onRestart: () => _leaveEnd(goTo: 0),
+                lang: _lang,
+              ),
+              _pause: (context, game) => PauseMenu(
+                lang: _lang,
+                onResume: () => _hide(_pause),
+                onRetry: _retry,
+                onLevels: _openMenu,
+                onSettings: () => _show(_settingsPage),
+              ),
+              _settingsPage: (context, game) => SettingsPage(
+                settings: _settings,
+                deviceLang: _deviceLang,
+                showTouch: TouchInputSource.isTouchPlatform,
+                onClose: () => _hide(_settingsPage),
               ),
             },
           ),
-          // The only way to retry or reach the menu on a touch screen, and on
-          // a keyboard a reminder that R and escape do something.
+          // The only way to retry, pause or reach the menu on a touch screen,
+          // and on a keyboard a reminder that R and escape do something.
           //
-          // Top centre, not down with the thumbs: the readout owns the left
-          // corner and the level's name owns the right, and more to the point
-          // an accidental retry is a level thrown away. Both of these are
-          // deliberate acts and are worth reaching for.
-          _TopBar(onRetry: _game.reload, onMenu: _openMenu),
+          // Top right, out of the thumbs' way: an accidental retry is a level
+          // thrown away. All three are deliberate acts and worth reaching for.
+          TopBar(
+            onRetry: _game.reload,
+            onMenu: _openMenu,
+            onPause: () => _show(_pause),
+            labels: (words.retry, words.levels, words.pause),
+          ),
+          if (_upright) Positioned.fill(child: TurnPhone(lang: lang)),
         ],
-      ),
-    );
-  }
-}
-
-/// Retry and the level list, hung above the game.
-///
-/// `reload` had exactly one route for a player — the **R key** — which meant
-/// a phone had no retry at all. Level four is *designed* around failing into a
-/// hole you get out of with R, so on a phone it was a hole you stayed in.
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onRetry, required this.onMenu});
-
-  final VoidCallback onRetry;
-  final VoidCallback onMenu;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _Pill(label: 'من الأول', onTap: onRetry),
-              const SizedBox(width: 8),
-              _Pill(label: 'المراحل', onTap: onMenu),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: const Color(0x33140E08),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0x40FFE7B0)),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontFamily: arabicFontFamily,
-            fontSize: 13,
-            color: Color(0xE6FFE7B0),
-          ),
-        ),
       ),
     );
   }

@@ -74,3 +74,27 @@ class SilentAudio implements AudioOut {
   @override
   void play(Sfx sfx, {double volume = 1}) {}
 }
+
+/// Turns every sound through a dial: muted, or scaled by a volume.
+///
+/// The settings page's volume, applied in one place rather than at the
+/// forty-odd places that pick a sound's level. Read on every sound, so moving
+/// the slider is heard on the next footstep.
+class ScaledAudio implements AudioOut {
+  ScaledAudio(this.inner, {required this.loudness});
+
+  final AudioOut inner;
+
+  /// 0 to 1. Zero plays nothing at all.
+  final double Function() loudness;
+
+  @override
+  Future<void> preload() => inner.preload();
+
+  @override
+  void play(Sfx sfx, {double volume = 1}) {
+    final scale = loudness();
+    if (scale <= 0) return;
+    inner.play(sfx, volume: volume * scale);
+  }
+}

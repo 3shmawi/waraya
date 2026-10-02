@@ -303,6 +303,8 @@ Future<LevelGame> playTo(
       startAt: index,
       inputs: [scripted],
       readoutDetail: false,
+      // Framed around the title in its corner; the entrance is for players.
+      titleIntro: false,
     ),
   );
   game.onGameResize(Vector2(width, height));

@@ -1,10 +1,12 @@
 import 'package:flame/game.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waraya/level/lang.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 import 'package:waraya/main_levels.dart';
 import 'package:waraya/progress/progress.dart';
+import 'package:waraya/settings/game_settings.dart';
 import 'package:waraya/ui/campaign_end.dart';
 import 'package:waraya/ui/level_select.dart';
 
@@ -17,22 +19,53 @@ import 'package:waraya/ui/level_select.dart';
 /// nothing in a unit test to notice, and it was only caught by looking at a
 /// screenshot. One pump would have caught it.
 void main() {
+  // Arabic outright: a test machine's locale is English, and a game that
+  // follows the device would be speaking it.
+  SettingsKeeper arabic() =>
+      SettingsKeeper(const GameSettings(language: Lang.ar));
+
+  Finder labelled(String label) => find.byWidgetPredicate(
+    (widget) => widget is Semantics && widget.properties.label == label,
+  );
+
   testWidgets('builds a first frame without throwing', (tester) async {
     await tester.pumpWidget(
       WarayaLevels(
         levels: Levels.campaign,
         progress: MemoryProgress(),
         beaten: const {},
+        settings: arabic(),
       ),
     );
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    // Both are the only routes there are on a touch screen. Retry especially:
-    // it had none at all until now, and level four is designed around needing
-    // one.
-    expect(find.text('المراحل'), findsOneWidget);
-    expect(find.text('من الأول'), findsOneWidget);
+    // All three are the only routes there are on a touch screen. Retry
+    // especially: it had none at all until the bar existed, and level four is
+    // designed around needing one. Icons now, so they are found by what they
+    // say to a screen reader.
+    for (final label in const ['من الأول', 'المراحل', 'وقفة']) {
+      expect(labelled(label), findsOneWidget, reason: label);
+    }
+  });
+
+  testWidgets('speaks English when asked to', (tester) async {
+    await tester.pumpWidget(
+      WarayaLevels(
+        levels: Levels.campaign,
+        progress: MemoryProgress(),
+        beaten: const {},
+        settings: SettingsKeeper(const GameSettings(language: Lang.en)),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(labelled('Start over'), findsOneWidget);
+    final game = tester
+        .widget<GameWidget<LevelGame>>(find.byType(GameWidget<LevelGame>))
+        .game!;
+    expect(game.lang, Lang.en);
   });
 
   testWidgets('players see the delay, not the bench\'s instruments', (

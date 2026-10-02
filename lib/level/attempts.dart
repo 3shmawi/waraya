@@ -140,3 +140,19 @@ String uuid4(Random random) {
   return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
       '${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
 }
+
+/// Passes attempts on only while the player allows it.
+///
+/// Checked per row, not once: switching statistics off on the settings page
+/// stops the very next row, including the one for the level being played.
+class ConsentedSink implements AttemptSink {
+  ConsentedSink(this.inner, {required this.allowed});
+
+  final AttemptSink inner;
+  final bool Function() allowed;
+
+  @override
+  void record(Attempt attempt) {
+    if (allowed()) inner.record(attempt);
+  }
+}

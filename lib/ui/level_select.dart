@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 
+import '../level/lang.dart';
 import '../level/level.dart';
 import '../licenses.dart';
+import 'words.dart';
 
 /// The list of levels, and the only menu in the game.
 ///
@@ -23,9 +25,13 @@ class LevelSelect extends StatelessWidget {
     required this.current,
     required this.onPick,
     required this.onClose,
+    this.lang = Lang.ar,
   });
 
   final List<Level> levels;
+
+  /// The language the list speaks, and the levels' names in it.
+  final Lang lang;
 
   /// How many are playable. The rest are shown but not offered: seeing that
   /// there is more is the point of showing them at all.
@@ -44,7 +50,7 @@ class LevelSelect extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: lang.isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: ColoredBox(
         // Not opaque: the level carries on behind it, which keeps the menu
         // feeling like part of the game rather than a different program.
@@ -52,7 +58,7 @@ class LevelSelect extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              _Header(onClose: onClose),
+              _Header(onClose: onClose, words: Words(lang)),
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
@@ -63,6 +69,7 @@ class LevelSelect extends StatelessWidget {
                     locked: i >= unlocked,
                     playing: i == current,
                     onTap: i >= unlocked ? null : () => onPick(i),
+                    lang: lang,
                   ),
                 ),
               ),
@@ -75,9 +82,10 @@ class LevelSelect extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onClose});
+  const _Header({required this.onClose, required this.words});
 
   final VoidCallback onClose;
+  final Words words;
 
   @override
   Widget build(BuildContext context) {
@@ -89,18 +97,18 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'المراحل',
-                  style: TextStyle(
+                Text(
+                  words.levels,
+                  style: const TextStyle(
                     fontFamily: arabicFontFamily,
                     fontSize: 26,
                     color: LevelSelect._ink,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'اختار واحدة، أو كمّل اللي انت فيها.',
-                  style: TextStyle(
+                Text(
+                  words.levelsHint,
+                  style: const TextStyle(
                     fontFamily: arabicFontFamily,
                     fontSize: 14,
                     color: LevelSelect._dim,
@@ -151,9 +159,11 @@ class _Row extends StatelessWidget {
     required this.locked,
     required this.playing,
     required this.onTap,
+    required this.lang,
   });
 
   final int number;
+  final Lang lang;
   final Level level;
   final bool locked;
   final bool playing;
@@ -195,7 +205,7 @@ class _Row extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    level.name,
+                    level.nameIn(lang),
                     style: TextStyle(
                       fontFamily: arabicFontFamily,
                       fontSize: 18,
@@ -206,7 +216,7 @@ class _Row extends StatelessWidget {
                   Text(
                     // A locked level's hint would give away a puzzle nobody
                     // has reached yet, so it keeps its mouth shut.
-                    locked ? 'لسه' : level.teaches,
+                    locked ? Words(lang).locked : level.teachesIn(lang),
                     style: const TextStyle(
                       fontFamily: arabicFontFamily,
                       fontSize: 13,

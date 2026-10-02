@@ -6,27 +6,42 @@ import 'package:flutter/foundation.dart';
 
 import 'input.dart';
 
-/// Which on-screen button a finger is on.
-enum _Pad { left, right, jump, crouch }
+/// Which right-hand button a finger is on.
+enum _Pad { jump, crouch }
 
-/// The on-screen controls: two arrows bottom left, jump and crouch bottom
-/// right.
+/// The on-screen controls (`docs/phase-11-feel.md` §2).
 ///
-/// It used to be invisible zones — halves of the screen to walk, a band across
-/// the top to jump. Nobody can be expected to guess that, and the first person
-/// handed the link on a phone did not. Drawn buttons say what they do.
+/// **The left side is a stick, not two arrows.** Put a thumb down anywhere on
+/// the left part of the screen and drag: sideways walks, down crouches. The
+/// stick is drawn where the thumb landed, so there is nothing to aim for —
+/// the old two arrows were 36 across, and a game that asks you to stand a
+/// third of a body onto a plate cannot also ask you to hit a 36-pixel circle
+/// without looking.
 ///
-/// **Every finger is tracked separately.** The old version kept one pointer's
-/// worth of state, so a thumb holding *right* was overwritten the moment the
-/// other thumb asked for a jump — which is most of what a platformer is. Held
-/// buttons live in a map keyed by pointer id and the intent is derived from
-/// the set of them.
+/// **Down on the same thumb is crouch**, because in this game crouching is
+/// the decision (it is how you leave a step) and it is usually made while
+/// walking. Holding a separate button with the hand that jumps was the hard
+/// way round. The crouch button stays on the right for whoever prefers it.
+///
+/// **Every finger is tracked separately**, as before: a thumb walking and a
+/// thumb jumping are most of a platformer, and one pointer's worth of state
+/// lost the walk the moment the other thumb jumped.
+///
+/// Whatever is drawn, the output is an [InputIntent] and nothing else. The
+/// recorded solutions cannot tell this from a keyboard, which is the whole
+/// reason it is safe to change.
 ///
 /// It lives in the camera's viewport, so its coordinates are screen-space and
 /// independent of where the camera happens to be looking.
 class TouchInputSource extends PositionComponent
     with DragCallbacks, TapCallbacks
     implements InputSource {
+  TouchInputSource({double Function()? scale, double Function()? opacity})
+    : _scale = scale ?? _one,
+      _opacity = opacity ?? _one;
+
+  static double _one() => 1;
+
   /// Only drawn, and only live, where there are fingers.
   ///
   /// A mouse has a keyboard next to it, and buttons this size across a desktop
@@ -37,12 +52,35 @@ class TouchInputSource extends PositionComponent
       defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS;
 
-  /// Button radius and the gap to the screen edge, in screen pixels.
-  static const double _radius = 36;
-  static const double _margin = 22;
-  static const double _gap = 14;
+  /// The settings page's button size, read every frame.
+  final double Function() _scale;
+
+  /// The settings page's button strength, read every frame.
+  final double Function() _opacity;
+
+  /// Where the stick may start: this fraction of the width, from the left.
+  static const double stickZone = 0.45;
+
+  /// Base sizes in screen pixels, before the setting scales them.
+  static const double _jumpRadius = 46;
+  static const double _crouchRadius = 36;
+  static const double _stickRadius = 54;
+  static const double _margin = 26;
+  static const double _gap = 18;
+
+  /// How far a thumb has to move before it means anything. Sideways for a
+  /// walk; down, further, for a crouch — so a walk that drifts a little
+  /// downwards does not duck by accident.
+  static const double _walkDead = 12;
+  static const double _crouchDead = 30;
 
   final Map<int, _Pad> _held = {};
+
+  /// The stick's finger, where it landed and where it is now.
+  int? _stickPointer;
+  Vector2 _stickOrigin = Vector2.zero();
+  Vector2 _stickNow = Vector2.zero();
+
   bool _jumpQueued = false;
   bool _hasBeenUsed = false;
 
@@ -52,32 +90,60 @@ class TouchInputSource extends PositionComponent
   @override
   bool get hasBeenUsed => _hasBeenUsed;
 
+  double get _k => _scale().clamp(0.5, 2.0);
+
+  /// Sideways and downwards travel of the stick's thumb, or zero without one.
+  Vector2 get _drag =>
+      _stickPointer == null ? Vector2.zero() : _stickNow - _stickOrigin;
+
+  /// The walk the stick is asking for: -1, 0 or 1.
+  ///
+  /// Digital on purpose. A keyboard can only say full speed, the recorded
+  /// solutions are written in full-speed moves, and a half-pressed stick that
+  /// creeps at 40% would be a way to play this game that no level was ever
+  /// measured against.
+  double get stickAxis {
+    final dx = _drag.x;
+    if (dx.abs() < _walkDead * _k) return 0;
+    return dx.sign;
+  }
+
+  /// Whether the stick is pulled down far enough to crouch.
+  bool get stickCrouch => _drag.y >= _crouchDead * _k;
+
   @override
   InputIntent poll() {
     final pads = _held.values.toSet();
-    final left = pads.contains(_Pad.left);
-    final right = pads.contains(_Pad.right);
     final intent = InputIntent(
-      moveAxis: (right ? 1.0 : 0.0) - (left ? 1.0 : 0.0),
+      moveAxis: stickAxis,
       jump: _jumpQueued,
       // Keeping a finger on the jump button is how you ask for a high jump.
       jumpHeld: pads.contains(_Pad.jump),
-      crouch: pads.contains(_Pad.crouch),
+      crouch: pads.contains(_Pad.crouch) || stickCrouch,
     );
     _jumpQueued = false;
     return intent;
   }
 
   Offset _centreOf(_Pad pad) {
-    final bottom = size.y - _margin - _radius;
-    final step = _radius * 2 + _gap;
+    final k = _k;
+    final jump = Offset(
+      size.x - (_margin + _jumpRadius) * k,
+      size.y - (_margin + _jumpRadius) * k,
+    );
     return switch (pad) {
-      _Pad.left => Offset(_margin + _radius, bottom),
-      _Pad.right => Offset(_margin + _radius + step, bottom),
-      _Pad.crouch => Offset(size.x - _margin - _radius - step, bottom),
-      _Pad.jump => Offset(size.x - _margin - _radius, bottom),
+      _Pad.jump => jump,
+      // Up and to the left of jump, where a thumb rolls to rather than
+      // reaches for.
+      _Pad.crouch => jump.translate(
+        -(_jumpRadius + _gap + _crouchRadius) * k,
+        (_jumpRadius - _crouchRadius) * k,
+      ),
     };
   }
+
+  double _radiusOf(_Pad pad) =>
+      (pad == _Pad.jump ? _jumpRadius : _crouchRadius) * _k;
 
   /// Which button [local] is on, or null for a touch that missed them all.
   ///
@@ -87,19 +153,55 @@ class TouchInputSource extends PositionComponent
   _Pad? _padAt(Vector2 local) {
     final point = Offset(local.x, local.y);
     for (final pad in _Pad.values) {
-      if ((_centreOf(pad) - point).distance <= _radius * 1.35) return pad;
+      if ((_centreOf(pad) - point).distance <= _radiusOf(pad) * 1.35) {
+        return pad;
+      }
     }
     return null;
   }
 
-  void _press(int pointerId, Vector2 local) {
+  /// A finger came down.
+  void _down(int pointerId, Vector2 local) {
     if (!isTouchPlatform) return;
+    final pad = _padAt(local);
+    if (pad != null) {
+      _hasBeenUsed = true;
+      _hold(pointerId, pad);
+      return;
+    }
+    if (local.x <= size.x * stickZone && _stickPointer == null) {
+      _hasBeenUsed = true;
+      _stickPointer = pointerId;
+      _stickOrigin = local.clone();
+      _stickNow = local.clone();
+    }
+  }
+
+  /// A finger already down moved.
+  void _move(int pointerId, Vector2 local) {
+    if (!isTouchPlatform) return;
+    if (pointerId == _stickPointer) {
+      _stickNow = local.clone();
+      // A thumb dragged far past the ring pulls the ring along behind it, so
+      // reversing does not need the whole distance back first.
+      final reach = _stickRadius * _k;
+      final drag = _stickNow - _stickOrigin;
+      if (drag.length > reach) {
+        _stickOrigin = _stickNow - drag.normalized() * reach;
+      }
+      return;
+    }
+    // A button finger slides: onto another button is that button, off all of
+    // them is nothing.
     final pad = _padAt(local);
     if (pad == null) {
       _held.remove(pointerId);
-      return;
+    } else {
+      _hold(pointerId, pad);
     }
-    _hasBeenUsed = true;
+  }
+
+  void _hold(int pointerId, _Pad pad) {
     // Only the first frame of a press is a jump request; holding it after that
     // is the variable height, which `Locomotion` reads from jumpHeld.
     if (pad == _Pad.jump && !_held.values.contains(_Pad.jump)) {
@@ -108,7 +210,14 @@ class TouchInputSource extends PositionComponent
     _held[pointerId] = pad;
   }
 
-  void _lift(int pointerId) => _held.remove(pointerId);
+  void _lift(int pointerId) {
+    _held.remove(pointerId);
+    if (pointerId == _stickPointer) _stickPointer = null;
+  }
+
+  /// Whether a finger is on the stick, for tests and for the HUD.
+  @visibleForTesting
+  bool get stickHeld => _stickPointer != null;
 
   @override
   void onGameResize(Vector2 size) {
@@ -118,76 +227,159 @@ class TouchInputSource extends PositionComponent
     this.size = size;
   }
 
+  /// Fingers Flame is reporting as drags, and fingers whose tap was
+  /// cancelled with what they were holding at the time.
+  ///
+  /// A finger that lands and then moves is reported twice: a tap-down, then
+  /// — after a few pixels — a cancelled tap and a drag start, in an order
+  /// this does not rely on. The cancel would otherwise drop the stick the
+  /// moment the thumb started to walk.
+  final Set<int> _dragging = {};
+  final Map<int, (_Pad?, Vector2?)> _cancelled = {};
+
   @override
   void onDragStart(DragStartEvent event) {
     super.onDragStart(event);
-    _press(event.pointerId, event.localPosition);
+    final id = event.pointerId;
+    _dragging.add(id);
+    if (_held.containsKey(id) || id == _stickPointer) return;
+    final was = _cancelled.remove(id);
+    if (was != null && isTouchPlatform) {
+      final (pad, origin) = was;
+      if (pad != null) {
+        _held[id] = pad;
+      } else if (origin != null && _stickPointer == null) {
+        _stickPointer = id;
+        _stickOrigin = origin;
+        _stickNow = event.localPosition.clone();
+      }
+      return;
+    }
+    _down(id, event.localPosition);
   }
 
   @override
   void onDragUpdate(DragUpdateEvent event) {
     super.onDragUpdate(event);
-    _press(event.pointerId, event.localEndPosition);
+    _move(event.pointerId, event.localEndPosition);
   }
 
   @override
   void onDragEnd(DragEndEvent event) {
     super.onDragEnd(event);
-    _lift(event.pointerId);
+    _end(event.pointerId);
   }
 
   @override
   void onDragCancel(DragCancelEvent event) {
     super.onDragCancel(event);
-    _lift(event.pointerId);
+    _end(event.pointerId);
   }
 
   @override
-  void onTapDown(TapDownEvent event) =>
-      _press(event.pointerId, event.localPosition);
+  void onTapDown(TapDownEvent event) {
+    _cancelled.remove(event.pointerId);
+    _down(event.pointerId, event.localPosition);
+  }
 
   @override
-  void onTapUp(TapUpEvent event) => _lift(event.pointerId);
+  void onTapUp(TapUpEvent event) => _end(event.pointerId);
 
   @override
-  void onTapCancel(TapCancelEvent event) => _lift(event.pointerId);
+  void onTapCancel(TapCancelEvent event) {
+    final id = event.pointerId;
+    if (_dragging.contains(id)) return;
+    _cancelled[id] = (
+      _held[id],
+      id == _stickPointer ? _stickOrigin.clone() : null,
+    );
+    _lift(id);
+  }
 
-  final Paint _face = Paint()..color = const Color(0x2E140E08);
-  final Paint _facePressed = Paint()..color = const Color(0x66140E08);
-  final Paint _rim = Paint()
-    ..color = const Color(0x59FFE7B0)
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.6;
-  final Paint _glyph = Paint()..color = const Color(0xE6FFE7B0);
+  void _end(int pointerId) {
+    _dragging.remove(pointerId);
+    _cancelled.remove(pointerId);
+    _lift(pointerId);
+  }
+
+  static const Color _faceColor = Color(0x2E140E08);
+  static const Color _pressedColor = Color(0x66140E08);
+  static const Color _litColor = Color(0x33FFE7B0);
+  static const Color _rimColor = Color(0x59FFE7B0);
+  static const Color _glyphColor = Color(0xE6FFE7B0);
+
+  Paint _fill(Color color, double strength) =>
+      Paint()..color = color.withValues(alpha: color.a * strength);
 
   @override
   void render(Canvas canvas) {
     if (!isTouchPlatform) return;
+    final strength = _opacity().clamp(0.0, 1.0);
+    final k = _k;
+    final rim = _fill(_rimColor, strength)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+    final glyph = _fill(_glyphColor, strength);
+
+    // The stick: where the thumb landed, or — with no thumb on it — a faint
+    // ring where a thumb usually goes, so the left side is not an invisible
+    // control. Invisible zones were the first version, and the first person
+    // handed the link on a phone did not guess them.
+    final ring = _stickRadius * k;
+    final origin = _stickPointer == null
+        ? Offset(_margin * k + ring, size.y - _margin * k - ring)
+        : Offset(_stickOrigin.x, _stickOrigin.y);
+    final idle = _stickPointer == null;
+    canvas.drawCircle(
+      origin,
+      ring,
+      _fill(_faceColor, strength * (idle ? 0.6 : 1)),
+    );
+    canvas.drawCircle(origin, ring, rim);
+    final drag = _drag;
+    final knob = drag.length > ring ? drag.normalized() * ring : drag;
+    canvas.drawCircle(
+      origin + Offset(knob.x, knob.y),
+      ring * 0.42,
+      _fill(idle ? _faceColor : _litColor, strength),
+    );
+    // Arrows on the ring for left, right and down — what it does, drawn.
+    for (final (dx, dy) in const [(-1.0, 0.0), (1.0, 0.0), (0.0, 1.0)]) {
+      final lit =
+          (dx != 0 && stickAxis == dx) || (dy != 0 && stickCrouch && !idle);
+      canvas.drawPath(
+        _arrow(origin + Offset(dx, dy) * ring * 0.72, dx, dy, k * 0.7),
+        lit ? glyph : _fill(_glyphColor, strength * 0.55),
+      );
+    }
+
     final pads = _held.values.toSet();
     for (final pad in _Pad.values) {
       final centre = _centreOf(pad);
+      final radius = _radiusOf(pad);
+      final pressed = pads.contains(pad) || (pad == _Pad.crouch && stickCrouch);
       canvas.drawCircle(
         centre,
-        _radius,
-        pads.contains(pad) ? _facePressed : _face,
+        radius,
+        _fill(pressed ? _pressedColor : _faceColor, strength),
       );
-      canvas.drawCircle(centre, _radius, _rim);
-      canvas.drawPath(_arrow(pad, centre), _glyph);
+      // Lit while held: a button that does not change when it is pressed
+      // leaves the thumb wondering whether it landed.
+      if (pressed) {
+        canvas.drawCircle(centre, radius, _fill(_litColor, strength));
+      }
+      canvas.drawCircle(centre, radius, rim);
+      final dy = pad == _Pad.jump ? -1.0 : 1.0;
+      canvas.drawPath(_arrow(centre, 0, dy, k), glyph);
     }
   }
 
-  /// A solid triangle pointing the way the button goes. Drawn rather than set
+  /// A solid triangle pointing the way [dx], [dy] go. Drawn rather than set
   /// in type: the bundled fonts have no arrow glyphs, and a shape this simple
   /// is not worth a font.
-  Path _arrow(_Pad pad, Offset centre) {
-    const reach = 13.0;
-    const half = 11.0;
-    final (dx, dy) = switch (pad) {
-      _Pad.left => (-1.0, 0.0),
-      _Pad.right => (1.0, 0.0),
-      _Pad.jump => (0.0, -1.0),
-      _Pad.crouch => (0.0, 1.0),
-    };
+  Path _arrow(Offset centre, double dx, double dy, double k) {
+    final reach = 13.0 * k;
+    final half = 11.0 * k;
     // Along the direction for the tip, across it for the base.
     final tip = centre + Offset(dx, dy) * reach;
     final base = centre - Offset(dx, dy) * (reach * 0.45);

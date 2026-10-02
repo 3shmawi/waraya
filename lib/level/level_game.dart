@@ -6,6 +6,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../audio/haptics.dart';
 import '../audio/sfx.dart';
 import '../audio/step_detector.dart';
 import '../game/config.dart';
@@ -24,6 +25,7 @@ import '../ui/level_hud.dart';
 import '../ui/level_title.dart';
 import '../ui/reset_flash.dart';
 import 'attempts.dart';
+import 'lang.dart';
 import 'level.dart';
 import 'player.dart';
 import 'props.dart';
@@ -55,6 +57,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     this.onMenuRequested,
     this.readoutDetail = true,
     this.attempts,
+    this.haptics = const NoHaptics(),
+    this.buttonScale,
+    this.buttonOpacity,
+    this.titleIntro = true,
   }) : settings = settings ?? LabSettings(),
        _index = startAt.clamp(0, levels.length - 1),
        assert(levels.isNotEmpty, 'a game needs at least one level');
@@ -105,6 +111,33 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
 
   /// Whether the corner readout prints its developer lines. See [LevelHud].
   final bool readoutDetail;
+
+  /// Where a buzz goes. Nothing, unless an entry point hands it a phone.
+  final HapticsOut haptics;
+
+  /// The settings page's touch-button size and strength, read every frame.
+  /// Null draws them as they always were.
+  final double Function()? buttonScale;
+  final double Function()? buttonOpacity;
+
+  /// Whether a level's name arrives big in the middle of the screen before it
+  /// settles in the corner (`LevelTitle`). Off for anything that renders
+  /// frames for somebody else — clips and store pictures were framed around
+  /// the corner title, and re-rendering them is a choice, not a side effect.
+  final bool titleIntro;
+
+  /// The language the level's name and line are shown in. Set by the entry
+  /// point from the settings page; a bench and a test read Arabic.
+  Lang lang = Lang.ar;
+
+  /// Room at the top right that something above the game is using — the
+  /// campaign's buttons. The title keeps out of it.
+  Size reservedTopRight = Size.zero;
+
+  /// Bumped every time a level is put up (not on a reload), so the title knows
+  /// when to make its entrance.
+  int get levelEpoch => _levelEpoch;
+  int _levelEpoch = 0;
 
   /// One per delay, nearest first, all fed the same snapshot every tick.
   ///
@@ -244,7 +277,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       await add(input);
     } else {
       final keyboard = KeyboardInputSource();
-      final touch = TouchInputSource();
+      final touch = TouchInputSource(
+        scale: buttonScale,
+        opacity: buttonOpacity,
+      );
       input = InputController([keyboard, touch]);
       await addAll([input, keyboard]);
       await camera.viewport.add(touch);
@@ -284,6 +320,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     _completed = false;
     _advanceIn = 0;
     resetFlash.clear();
+    _levelEpoch++;
     attempts?.started(level);
 
     // One delay line and one figure per delay, nearest first. Rebuilt rather
@@ -731,7 +768,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       // Quieter the lower the body is: a crouched body is sneaking.
       audio.play(footfall, volume: 0.35 - 0.15 * player.crouch);
     }
-    if (player.locomotion.jumped) audio.play(Sfx.jump, volume: 0.45);
+    if (player.locomotion.jumped) {
+      audio.play(Sfx.jump, volume: 0.45);
+      haptics.buzz(Buzz.light);
+    }
   }
 
   /// Knocks the camera in proportion to how hard the player hit the ground,
@@ -750,6 +790,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       // The same number drives both, so what you hear and what you feel are
       // the same landing.
       audio.play(Sfx.land, volume: 0.35 + 0.5 * weight);
+      // Only a landing worth a shake is worth a buzz; every hop buzzing is a
+      // phone that buzzes all the time, which is a phone that says nothing.
+      haptics.buzz(Buzz.medium);
     }
     shake.advance(dt);
     if (shake.isShaking) camera.viewfinder.position += shake.offset;
@@ -774,7 +817,18 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// fall is part of a recorded run and replays with it, and a key pressed
   /// halfway through a recording is not something a recording can hold.
   @protected
-  void retry() => reload();
+  void retry() {
+    _asked = true;
+    try {
+      reload();
+    } finally {
+      _asked = false;
+    }
+  }
+
+  /// True only inside [retry]: being put back because you asked is not
+  /// something to feel in your hand.
+  bool _asked = false;
 
   /// The whole death-and-retry system for this phase: put everything back.
   ///
@@ -815,6 +869,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     // dying.
     resetFlash.show();
     audio.play(Sfx.reset, volume: 0.45);
+    if (!_asked) haptics.buzz(Buzz.heavy);
   }
 }
 

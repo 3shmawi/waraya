@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'lang.dart';
 import 'playthrough.dart';
 
 /// A puzzle, as data.
@@ -17,6 +18,8 @@ class Level {
     required this.id,
     required this.name,
     required this.teaches,
+    this.nameEn,
+    this.teachesEn,
     double? delaySeconds,
     List<double>? delays,
     required this.spawnX,
@@ -53,6 +56,27 @@ class Level {
   /// is that the player works the mechanic out. This is the nudge that stops
   /// a first-time player thinking the game is broken.
   final String teaches;
+
+  /// [name] and [teaches] in English, for a player whose device does not ask
+  /// for Arabic. Null shows the Arabic — every level written before these
+  /// existed, and any level whose author wrote one language.
+  ///
+  /// Words, not play: neither is in [requires], because a build that drops
+  /// them puts up the same level with the other language's line over it.
+  final String? nameEn;
+  final String? teachesEn;
+
+  /// The name to show to somebody reading [lang].
+  String nameIn(Lang lang) => lang == Lang.en ? nameEn ?? name : name;
+
+  /// The line to show to somebody reading [lang].
+  String teachesIn(Lang lang) =>
+      lang == Lang.en ? teachesEn ?? teaches : teaches;
+
+  /// Whether what [nameIn] gives for [lang] is actually in [lang] — false for
+  /// an English reader of a level with no English, whose Arabic has to be
+  /// laid out right to left all the same.
+  bool speaks(Lang lang) => lang == Lang.ar || nameEn != null;
 
   /// How far behind each shadow runs, nearest first. One entry is one shadow.
   ///
@@ -419,6 +443,9 @@ extension LevelJson on Level {
     'name': name,
     'requires': requires.toList()..sort(),
     'teaches': teaches,
+    // Only when written, so a level with none reads back exactly as it was.
+    if (nameEn != null) 'nameEn': nameEn,
+    if (teachesEn != null) 'teachesEn': teachesEn,
     // Both, always. `delaySeconds` is what a build older than two shadows
     // reads, and it gets the nearest one — which is the right answer for a
     // level with one and the wrong level entirely for a level with two, which
@@ -521,9 +548,10 @@ Level levelFromJson(Object? source) {
   // Before anything else is read. A level that needs a mechanic this build
   // has never heard of cannot be parsed into a *smaller* level and played
   // anyway — that is the whole failure this guards.
-  final missing = _stringList(json['requires'], 'requires')
-      .toSet()
-      .difference(Level.knownMechanics);
+  final missing = _stringList(
+    json['requires'],
+    'requires',
+  ).toSet().difference(Level.knownMechanics);
   if (missing.isNotEmpty) throw LevelUnsupportedException(id, missing);
 
   try {
@@ -531,6 +559,8 @@ Level levelFromJson(Object? source) {
       id: id,
       name: _asString(json['name'], 'name'),
       teaches: _asString(json['teaches'], 'teaches'),
+      nameEn: _optionalString(json['nameEn'], 'nameEn'),
+      teachesEn: _optionalString(json['teachesEn'], 'teachesEn'),
       delays: json['delays'] == null
           ? [_asDouble(json['delaySeconds'], 'delaySeconds')]
           : _doubleList(json['delays'], 'delays'),
@@ -542,8 +572,10 @@ Level levelFromJson(Object? source) {
       goal: _rectFromJson(json['goal'], 'goal'),
       solution: _moveList(json['solution'], 'solution'),
       wrongIdeas: [
-        for (final (i, idea) in _asList(json['wrongIdeas'], 'wrongIdeas')
-            .indexed)
+        for (final (i, idea) in _asList(
+          json['wrongIdeas'],
+          'wrongIdeas',
+        ).indexed)
           _moveList(idea, 'wrongIdeas[$i]'),
       ],
       blocks: _rectList(json['blocks'], 'blocks'),
@@ -641,6 +673,9 @@ String _asString(Object? value, String field) =>
     value is String && value.isNotEmpty
     ? value
     : throw LevelFormatException('$field is missing or not text');
+
+String? _optionalString(Object? value, String field) =>
+    value == null ? null : _asString(value, field);
 
 double _asDouble(Object? value, String field) => value is num
     ? value.toDouble()

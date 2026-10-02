@@ -6,7 +6,7 @@
     "background_color": "#E59D00",
     "theme_color": "#E59D00",
     "description": "Waraya - an atmospheric Egyptian side-scroller built with Flutter + Flame",
-    "orientation": "portrait-primary",
+    "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [
         {

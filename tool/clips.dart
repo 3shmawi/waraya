@@ -176,6 +176,8 @@ Future<({int frames, bool finished})> render(Clip clip) async {
       startAt: clip.levelIndex,
       inputs: [scripted],
       readoutDetail: false,
+      // Framed around the title in its corner; the entrance is for players.
+      titleIntro: false,
     ),
   );
   game.onGameResize(Vector2(clipWidth, stripHeight));

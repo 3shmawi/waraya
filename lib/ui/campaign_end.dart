@@ -1,9 +1,11 @@
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import '../level/lang.dart';
 import '../level/level.dart';
 import '../licenses.dart';
 import 'game_mark.dart';
+import 'words.dart';
 
 const Color _ink = Color(0xFFF3E2C6);
 const Color _dim = Color(0xFF9A8B7A);
@@ -34,9 +36,13 @@ class CampaignEnd extends StatefulWidget {
     required this.levels,
     required this.onLevels,
     required this.onRestart,
+    this.lang = Lang.ar,
   });
 
   final List<Level> levels;
+
+  /// The language the ending speaks.
+  final Lang lang;
 
   /// Open the level list, to go back for one in particular.
   final VoidCallback onLevels;
@@ -99,8 +105,9 @@ class _CampaignEndState extends State<CampaignEnd>
 
   @override
   Widget build(BuildContext context) {
+    final en = widget.lang == Lang.en;
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: en ? TextDirection.ltr : TextDirection.rtl,
       child: GestureDetector(
         onTap: _skip,
         behavior: HitTestBehavior.translucent,
@@ -130,9 +137,9 @@ class _CampaignEndState extends State<CampaignEnd>
                     const SizedBox(height: 28),
                     _Rise(
                       at: _fade(1.15),
-                      child: const Text(
-                        'خلصت',
-                        style: TextStyle(
+                      child: Text(
+                        en ? 'Done' : 'خلصت',
+                        style: const TextStyle(
                           fontFamily: arabicFontFamily,
                           fontSize: 40,
                           height: 1.2,
@@ -143,11 +150,14 @@ class _CampaignEndState extends State<CampaignEnd>
                     const SizedBox(height: 18),
                     _Rise(
                       at: _fade(1.55),
-                      child: const Text(
+                      child: Text(
                         // The thesis, said out loud exactly once.
-                        'كل باب عدّيت منه،\nانت اللي فتحته من قبل ما تحتاجه.',
+                        en
+                            ? 'Every door you walked through,\n'
+                                  'you opened before you needed it.'
+                            : 'كل باب عدّيت منه،\nانت اللي فتحته من قبل ما تحتاجه.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontFamily: arabicFontFamily,
                           fontSize: 17,
                           height: 1.9,
@@ -159,7 +169,10 @@ class _CampaignEndState extends State<CampaignEnd>
                     _Rise(
                       at: _fade(1.95),
                       child: Text(
-                        '${_count(widget.levels.length)}. وفيه كمان جاي.',
+                        en
+                            ? '${_countEn(widget.levels.length)}. '
+                                  'And more on the way.'
+                            : '${_count(widget.levels.length)}. وفيه كمان جاي.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontFamily: arabicFontFamily,
@@ -177,9 +190,12 @@ class _CampaignEndState extends State<CampaignEnd>
                         runSpacing: 12,
                         alignment: WrapAlignment.center,
                         children: [
-                          _Button(label: 'المراحل', onTap: widget.onLevels),
                           _Button(
-                            label: 'من أول مرحلة',
+                            label: Words(widget.lang).levels,
+                            onTap: widget.onLevels,
+                          ),
+                          _Button(
+                            label: en ? 'From level one' : 'من أول مرحلة',
                             onTap: widget.onRestart,
                             quiet: true,
                           ),
@@ -234,6 +250,9 @@ String _count(int levels) => switch (levels) {
   <= 10 => '${_arabicDigits(levels)} مراحل',
   _ => '${_arabicDigits(levels)} مرحلة',
 };
+
+String _countEn(int levels) =>
+    levels == 1 ? 'One level' : '$levels levels';
 
 /// Western digits read as a foreign object in the middle of an Arabic
 /// sentence set in an Arabic face. The readout in the corner keeps its Latin

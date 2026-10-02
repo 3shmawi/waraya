@@ -3,19 +3,28 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
+import '../level/lang.dart';
 import '../level/level_game.dart';
 import '../licenses.dart';
 import 'level_hud.dart';
+import 'words.dart';
 
-/// The level's name and its one line of teaching, top right.
+/// The level's name and its one line, arriving in the middle of the screen and
+/// then settling top right.
 ///
 /// Its own component rather than part of the debug readout, for two reasons:
 /// this is the only text in the game meant for the player rather than for the
-/// developer, and it is in Arabic, which belongs on the right.
+/// developer, and in Arabic it belongs on the right.
 ///
-/// The hint is deliberately one line and deliberately not instructions. The
-/// plan's whole point is that the player works the mechanic out; this is the
-/// nudge that stops a first-time player deciding the game is broken.
+/// **It arrives big and then gets out of the way** (`docs/phase-11-feel.md`
+/// §3). The first player review said the name and the line under it were not
+/// understood — and a line in the corner that is there for the whole level is
+/// a line that is easy never to read at all. Big in the middle for a moment,
+/// as the level fades up, it is read once; after that the screen is the level.
+///
+/// The line is deliberately one line and deliberately not instructions. The
+/// whole point is that the player works the mechanic out; this is the nudge
+/// that stops a first-time player deciding the game is broken.
 class LevelTitle extends PositionComponent {
   LevelTitle({required this.game, required this.hud}) : super(priority: 1000);
 
@@ -25,39 +34,56 @@ class LevelTitle extends PositionComponent {
   /// know where it ends to know whether it fits beside it.
   final LevelHud hud;
 
+  /// Seconds the title holds in the middle, then seconds it takes to settle.
+  static const double holdSeconds = 2.2;
+  static const double settleSeconds = 0.6;
+
+  /// How much bigger it is in the middle than in the corner.
+  static const double introScale = 1.6;
+
   Vector2 _viewport = Vector2.zero();
+  int _epoch = -1;
+  double _age = 0;
 
-  static final _name = TextPaint(
-    style: const TextStyle(
-      fontSize: 24,
-      height: 1.3,
-      color: Color(0xFF1A1A1A),
-      fontFamily: arabicFontFamily,
-    ),
-    // Right to left because the text is. With the default direction a
-    // pure-Arabic line still shapes correctly but sits against the wrong edge
-    // of its own box, so a right-anchored component lands in the wrong place.
-    textDirection: TextDirection.rtl,
-  );
+  static TextPaint _paint(double size, Color color, double height, Lang lang) =>
+      TextPaint(
+        style: TextStyle(
+          fontSize: size,
+          height: height,
+          color: color,
+          fontFamily: arabicFontFamily,
+        ),
+        // Right to left for Arabic. With the default direction a pure-Arabic
+        // line still shapes correctly but sits against the wrong edge of its
+        // own box, so a right-anchored component lands in the wrong place.
+        textDirection: lang.isRtl ? TextDirection.rtl : TextDirection.ltr,
+      );
 
-  static final _teaches = TextPaint(
-    style: const TextStyle(
-      fontSize: 14,
-      height: 1.5,
-      color: Color(0xFF454545),
-      fontFamily: arabicFontFamily,
-    ),
-    textDirection: TextDirection.rtl,
-  );
+  static final Map<Lang, TextPaint> _names = {
+    for (final lang in Lang.values)
+      lang: _paint(24, const Color(0xFF1A1A1A), 1.3, lang),
+  };
+  static final Map<Lang, TextPaint> _lines = {
+    for (final lang in Lang.values)
+      lang: _paint(14, const Color(0xFF454545), 1.5, lang),
+  };
 
   late final TextComponent _nameText;
   late final TextComponent _teachesText;
 
+  /// How far through its entrance the title is: 0 big in the middle, 1 in
+  /// its corner.
+  double get settled {
+    if (!game.titleIntro) return 1;
+    if (_age <= holdSeconds) return 0;
+    final t = ((_age - holdSeconds) / settleSeconds).clamp(0.0, 1.0);
+    return Curves.easeInOut.transform(t);
+  }
+
   @override
   Future<void> onLoad() async {
-    _nameText = TextComponent(textRenderer: _name, anchor: Anchor.topRight);
+    _nameText = TextComponent(anchor: Anchor.topRight);
     _teachesText = TextComponent(
-      textRenderer: _teaches,
       anchor: Anchor.topRight,
       position: Vector2(0, 32),
     );
@@ -68,35 +94,76 @@ class LevelTitle extends PositionComponent {
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
     _viewport = size;
-    // Same shrink as the readout, so the two stay in proportion.
-    scale.setAll(LevelHud.readoutScale(size));
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    _nameText.text = game.level.name;
-    _teachesText.text = game.completed ? 'خلصت.' : game.level.teaches;
+    if (_epoch != game.levelEpoch) {
+      _epoch = game.levelEpoch;
+      _age = 0;
+    }
+    _age += dt;
+
+    final level = game.level;
+    // A level with no English is shown in Arabic to everyone, and laid out as
+    // Arabic: the language of the words decides the direction, not the
+    // language that was asked for.
+    final shown = level.speaks(game.lang) ? game.lang : Lang.ar;
+    _nameText
+      ..textRenderer = _names[shown]!
+      ..text = level.nameIn(game.lang);
+    _teachesText
+      ..textRenderer = _lines[shown]!
+      ..text = game.completed
+          ? Words(game.lang).done
+          : level.teachesIn(game.lang);
     _place();
   }
 
-  /// Top right, unless the readout is already using that room.
-  ///
-  /// On a phone held upright the two of them landed on top of each other —
-  /// the level's name printed straight through "delay 3.5s". Rather than pick
-  /// a breakpoint, it measures: if what is left of the width after the readout
-  /// cannot hold the title, the title drops below the readout instead, still
-  /// against the right edge.
+  /// Between the middle and the corner, by [settled].
   void _place() {
     if (_viewport.x == 0) return;
-    final widest = max(_nameText.size.x, _teachesText.size.x) * scale.x;
+    final small = LevelHud.readoutScale(_viewport);
+    final corner = _corner(small);
+    final t = settled;
+    if (t >= 1) {
+      scale.setAll(small);
+      position = corner;
+      return;
+    }
+    final big = small * introScale;
+    final width = _widest * big;
+    // Centred across, a little above the middle: the player is standing on
+    // the ground line, and the title should not sit on top of them.
+    final middle = Vector2(_viewport.x / 2 + width / 2, _viewport.y * 0.26);
+    scale.setAll(big + (small - big) * t);
+    position = middle + (corner - middle) * t;
+  }
+
+  double get _widest => max(_nameText.size.x, _teachesText.size.x);
+
+  /// Top right, unless the readout or the buttons are already using that
+  /// room.
+  ///
+  /// On a phone held upright the readout and the title landed on top of each
+  /// other — the level's name printed straight through "delay 3.5s" — and
+  /// later the retry and menu buttons did the same to the line under it,
+  /// because this only knew about the readout. Rather than pick a breakpoint,
+  /// it measures: if what is left of the width beside the readout and the
+  /// buttons cannot hold the title, the title drops below both, still
+  /// against the right edge.
+  Vector2 _corner(double small) {
+    final widest = _widest * small;
+    final reserved = game.reservedTopRight;
     final hudRight = hud.position.x + hud.size.x * hud.scale.x;
-    final fitsBeside = _viewport.x - hudRight - 24 >= widest;
-    position = fitsBeside
-        ? Vector2(_viewport.x - 16, 14)
-        : Vector2(
-            _viewport.x - 16,
-            hud.position.y + hud.size.y * hud.scale.y + 12,
-          );
+    final right = _viewport.x - 16 - reserved.width;
+    final fitsBeside = right - hudRight - 24 >= widest;
+    if (fitsBeside) return Vector2(right, 14);
+    final below = max(
+      hud.position.y + hud.size.y * hud.scale.y,
+      reserved.height,
+    );
+    return Vector2(_viewport.x - 16, below + 12);
   }
 }

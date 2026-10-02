@@ -87,6 +87,8 @@ class EditorDoc {
     required this.id,
     required this.name,
     required this.teaches,
+    this.nameEn,
+    this.teachesEn,
     required this.delays,
     required this.spawnX,
     required this.floorTop,
@@ -102,6 +104,8 @@ class EditorDoc {
     id: level.id,
     name: level.name,
     teaches: level.teaches,
+    nameEn: level.nameEn,
+    teachesEn: level.teachesEn,
     delays: [...level.delays],
     spawnX: level.spawnX,
     floorTop: level.floorTop,
@@ -152,6 +156,10 @@ class EditorDoc {
   String name;
   String teaches;
 
+  /// The same two in English, or null for none (`Level.nameEn`).
+  String? nameEn;
+  String? teachesEn;
+
   /// Nearest first. One or two.
   List<double> delays;
 
@@ -173,6 +181,8 @@ class EditorDoc {
       id: id,
       name: name,
       teaches: teaches,
+      nameEn: nameEn,
+      teachesEn: teachesEn,
       delays: [...delays],
       spawnX: spawnX,
       floorTop: floorTop,
@@ -205,6 +215,8 @@ class EditorDoc {
     id: id,
     name: name,
     teaches: teaches,
+    nameEn: nameEn,
+    teachesEn: teachesEn,
     delays: [...delays],
     spawnX: spawnX,
     floorTop: floorTop,
