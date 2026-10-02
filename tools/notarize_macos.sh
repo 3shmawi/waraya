@@ -13,7 +13,9 @@
 #
 # Without this a downloaded waraya.app is refused by Gatekeeper on a double
 # click ("cannot be opened because the developer cannot be verified"), and
-# the only way in is right-click -> Open, which most people never try.
+# the only way in is System Settings -> Privacy & Security -> Open Anyway
+# (right-click -> Open stopped working for this in macOS 15), which most
+# people never find.
 # Notarized and stapled, it opens like any other app, offline included —
 # the stapled ticket is what Gatekeeper checks when it cannot reach Apple.
 set -euo pipefail

@@ -98,7 +98,7 @@ git tag v1.0.1 && git push origin v1.0.1
 - **الويب** — `pages.yml` بينشره مع كل push أصلاً.
 
 **وكله مش ممضي** غير أندرويد (لو فيه مفتاح): ويندوز SmartScreen بيحذّر أول
-مرة، وماك Gatekeeper بيمنع الدبل‌كليك (كليك يمين ← Open مرة واحدة). ده مكتوب
+مرة، وماك Gatekeeper بيمنع الدبل‌كليك (System Settings ← Privacy & Security ← Open Anyway مرة واحدة؛ كليك يمين ← Open بطّل ينفع من macOS 15). ده مكتوب
 في نص الـrelease نفسه، عشان اللي نزّلها ميفتكرهاش مكسورة.
 
 ---
@@ -385,7 +385,7 @@ Chromium من غير ولا ملف ضايع.
 
 **ماك من غير تحذير** (`tools/notarize_macos.sh`): البيلد بيتمضي بشهادة
 **Developer ID** وApple بتعمله **notarize** وبيتدبس فيه الـticket — فبيفتح
-بدبل‌كليك عادي، حتى من غير نت. من غيرها بيتعمل زي الأول (كليك يمين ← Open).
+بدبل‌كليك عادي، حتى من غير نت. من غيرها بيتعمل زي الأول (System Settings ← Privacy & Security ← Open Anyway).
 بيشتغل في كل run فيها الأسرار، حتى التجارب: مش رفع لحتة، تحسين للملف بس.
 
 1. **Developer ID Application** — شهادة تانية غير «Apple Distribution» (دي
