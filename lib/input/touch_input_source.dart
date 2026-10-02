@@ -11,17 +11,24 @@ enum _Pad { jump, crouch }
 
 /// The on-screen controls (`docs/phase-11-feel.md` §2).
 ///
-/// **The left side is a stick, not two arrows.** Put a thumb down anywhere on
-/// the left part of the screen and drag: sideways walks, down crouches. The
-/// stick is drawn where the thumb landed, so there is nothing to aim for —
-/// the old two arrows were 36 across, and a game that asks you to stand a
-/// third of a body onto a plate cannot also ask you to hit a 36-pixel circle
-/// without looking.
+/// **The left side is one big pad that walks.** A fixed circle, bottom left:
+/// press left of its middle to walk left, right of it to walk right, slide
+/// across to turn. The old two arrows were 36 across, and a game that asks
+/// you to stand a third of a body onto a plate cannot also ask you to hit a
+/// 36-pixel circle without looking; this one is 108 across and hears a thumb
+/// well outside its rim.
 ///
-/// **Down on the same thumb is crouch**, because in this game crouching is
-/// the decision (it is how you leave a step) and it is usually made while
-/// walking. Holding a separate button with the hand that jumps was the hard
-/// way round. The crouch button stays on the right for whoever prefers it.
+/// **It stays where it is drawn.** The first version put the pad wherever
+/// the thumb landed and dragged it along behind the thumb — reported from
+/// playing as the control wandering off. A thumb learns a place; a place
+/// that moves cannot be learned.
+///
+/// **Crouch is the button on the right, and only there.** The first version
+/// also crouched on a drag down the pad, which made two ways to do one thing
+/// and one of them easy to do by accident — and an accidental crouch is an
+/// accidental step left for your past, the one thing in this game that
+/// should always be a decision. A crouched body cannot jump, so the right
+/// thumb never needs both at once.
 ///
 /// **Every finger is tracked separately**, as before: a thumb walking and a
 /// thumb jumping are most of a platformer, and one pointer's worth of state
@@ -58,8 +65,9 @@ class TouchInputSource extends PositionComponent
   /// The settings page's button strength, read every frame.
   final double Function() _opacity;
 
-  /// Where the stick may start: this fraction of the width, from the left.
-  static const double stickZone = 0.45;
+  /// How far outside the pad's rim a thumb still counts as on it, as a
+  /// multiple of its radius. Generous: a thumb lands low and wide.
+  static const double stickReach = 1.6;
 
   /// Base sizes in screen pixels, before the setting scales them.
   static const double _jumpRadius = 46;
@@ -72,13 +80,11 @@ class TouchInputSource extends PositionComponent
   /// walk; down, further, for a crouch — so a walk that drifts a little
   /// downwards does not duck by accident.
   static const double _walkDead = 12;
-  static const double _crouchDead = 30;
 
   final Map<int, _Pad> _held = {};
 
   /// The stick's finger, where it landed and where it is now.
   int? _stickPointer;
-  Vector2 _stickOrigin = Vector2.zero();
   Vector2 _stickNow = Vector2.zero();
 
   bool _jumpQueued = false;
@@ -92,9 +98,15 @@ class TouchInputSource extends PositionComponent
 
   double get _k => _scale().clamp(0.5, 2.0);
 
-  /// Sideways and downwards travel of the stick's thumb, or zero without one.
+  /// Where the pad is drawn, always.
+  Vector2 get stickCentre {
+    final ring = _stickRadius * _k;
+    return Vector2(_margin * _k + ring, size.y - _margin * _k - ring);
+  }
+
+  /// Where the stick's thumb is from the pad's middle, or zero without one.
   Vector2 get _drag =>
-      _stickPointer == null ? Vector2.zero() : _stickNow - _stickOrigin;
+      _stickPointer == null ? Vector2.zero() : _stickNow - stickCentre;
 
   /// The walk the stick is asking for: -1, 0 or 1.
   ///
@@ -108,8 +120,6 @@ class TouchInputSource extends PositionComponent
     return dx.sign;
   }
 
-  /// Whether the stick is pulled down far enough to crouch.
-  bool get stickCrouch => _drag.y >= _crouchDead * _k;
 
   @override
   InputIntent poll() {
@@ -119,7 +129,7 @@ class TouchInputSource extends PositionComponent
       jump: _jumpQueued,
       // Keeping a finger on the jump button is how you ask for a high jump.
       jumpHeld: pads.contains(_Pad.jump),
-      crouch: pads.contains(_Pad.crouch) || stickCrouch,
+      crouch: pads.contains(_Pad.crouch),
     );
     _jumpQueued = false;
     return intent;
@@ -169,10 +179,11 @@ class TouchInputSource extends PositionComponent
       _hold(pointerId, pad);
       return;
     }
-    if (local.x <= size.x * stickZone && _stickPointer == null) {
+    final onPad =
+        (local - stickCentre).length <= _stickRadius * _k * stickReach;
+    if (onPad && _stickPointer == null) {
       _hasBeenUsed = true;
       _stickPointer = pointerId;
-      _stickOrigin = local.clone();
       _stickNow = local.clone();
     }
   }
@@ -181,14 +192,9 @@ class TouchInputSource extends PositionComponent
   void _move(int pointerId, Vector2 local) {
     if (!isTouchPlatform) return;
     if (pointerId == _stickPointer) {
+      // The pad stays put; only where the thumb is on it changes. A thumb
+      // that slides off it keeps walking the way it went until it lifts.
       _stickNow = local.clone();
-      // A thumb dragged far past the ring pulls the ring along behind it, so
-      // reversing does not need the whole distance back first.
-      final reach = _stickRadius * _k;
-      final drag = _stickNow - _stickOrigin;
-      if (drag.length > reach) {
-        _stickOrigin = _stickNow - drag.normalized() * reach;
-      }
       return;
     }
     // A button finger slides: onto another button is that button, off all of
@@ -261,7 +267,6 @@ class TouchInputSource extends PositionComponent
         _held[id] = pad;
       } else if (origin != null && _stickPointer == null) {
         _stickPointer = id;
-        _stickOrigin = origin;
         _stickNow = event.localPosition.clone();
       }
       return;
@@ -302,7 +307,7 @@ class TouchInputSource extends PositionComponent
     if (_dragging.contains(id)) return;
     _cancelled[id] = (
       _held[id],
-      id == _stickPointer ? _stickOrigin.clone() : null,
+      id == _stickPointer ? stickCentre : null,
     );
     _lift(id);
   }
@@ -345,14 +350,10 @@ class TouchInputSource extends PositionComponent
     );
     final glyph = _fill(_glyphColor, strength);
 
-    // The stick: where the thumb landed, or — with no thumb on it — a faint
-    // ring where a thumb usually goes, so the left side is not an invisible
-    // control. Invisible zones were the first version, and the first person
-    // handed the link on a phone did not guess them.
+    // The pad, always in the same place, fainter while nobody is on it.
     final ring = _stickRadius * k;
-    final origin = _stickPointer == null
-        ? Offset(_margin * k + ring, size.y - _margin * k - ring)
-        : Offset(_stickOrigin.x, _stickOrigin.y);
+    final centre = stickCentre;
+    final origin = Offset(centre.x, centre.y);
     final idle = _stickPointer == null;
     canvas.drawCircle(
       origin,
@@ -360,17 +361,17 @@ class TouchInputSource extends PositionComponent
       _fill(_faceColor, strength * (idle ? 0.6 : 1)),
     );
     canvas.drawCircle(origin, ring, rim);
-    final drag = _drag;
-    final knob = drag.length > ring ? drag.normalized() * ring : drag;
+    // The knob follows the thumb sideways only, inside the rim: that is all
+    // the pad does.
+    final knob = Vector2(_drag.x.clamp(-ring * 0.55, ring * 0.55), 0);
     canvas.drawCircle(
       origin + Offset(knob.x, knob.y),
       ring * 0.42,
       _fill(idle ? _faceColor : _litColor, strength),
     );
-    // Arrows on the ring for left, right and down — what it does, drawn.
-    for (final (dx, dy) in const [(-1.0, 0.0), (1.0, 0.0), (0.0, 1.0)]) {
-      final lit =
-          (dx != 0 && stickAxis == dx) || (dy != 0 && stickCrouch && !idle);
+    // Arrows on the ring for left and right — what it does, drawn.
+    for (final (dx, dy) in const [(-1.0, 0.0), (1.0, 0.0)]) {
+      final lit = stickAxis == dx;
       canvas.drawPath(
         _arrow(origin + Offset(dx, dy) * ring * 0.72, dx, dy, k * 0.7),
         lit ? glyph : _fill(_glyphColor, strength * 0.55),
@@ -381,7 +382,7 @@ class TouchInputSource extends PositionComponent
     for (final pad in _Pad.values) {
       final centre = _centreOf(pad);
       final radius = _radiusOf(pad);
-      final pressed = pads.contains(pad) || (pad == _Pad.crouch && stickCrouch);
+      final pressed = pads.contains(pad);
       canvas.drawCircle(
         centre,
         radius,

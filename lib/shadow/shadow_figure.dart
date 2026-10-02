@@ -17,6 +17,7 @@ class ShadowFigure extends PositionComponent {
     required this.color,
     this.opacity = 0.5,
     this.fade = 1,
+    this.stepColor,
     super.priority = 90,
   }) : super(size: Vector2(44, 96), anchor: Anchor.bottomCenter);
 
@@ -35,6 +36,23 @@ class ShadowFigure extends PositionComponent {
   /// are the mark's own — `site/logo.svg` is three figures at 0.45, 0.72 and
   /// 1 — so the game and the thing it is called by say the same thing.
   final double fade;
+
+  /// The colour of the lit edge drawn along the top of a past you can stand
+  /// on — the same edge every floor and block in the level has. Null draws
+  /// none.
+  final Color? stepColor;
+
+  /// Whether this one can be stood on right now. Set every frame by the
+  /// scene, which is the only thing that knows the level's rule; this only
+  /// draws it.
+  ///
+  /// The rule — your past is a floor **only where you ducked** — was the
+  /// least visible thing in the game: a ducked shadow was drawn darker, and
+  /// that was all. Reported from playing as "it needs to be clear which
+  /// shadow is a step". Every surface in the game you can stand on has a lit
+  /// top edge, so a past you can stand on gets one too, and a past you cannot
+  /// does not: the same mark meaning the same thing everywhere.
+  bool standable = false;
 
   /// True while this one is standing in a lit rectangle, where it is nothing
   /// at all. Set on the fixed tick by the scene.
@@ -138,5 +156,16 @@ class ShadowFigure extends PositionComponent {
       crouch: snapshot.crouch,
     );
     canvas.restore();
+
+    // Outside the translucent layer: the edge is the one part of a step that
+    // has to read at full strength.
+    final edge = stepColor;
+    if (standable && edge != null) {
+      final top = size.y - bounds.height;
+      canvas.drawRect(
+        Rect.fromLTWH(-4, top - 1, size.x + 8, 3),
+        Paint()..color = edge,
+      );
+    }
   }
 }

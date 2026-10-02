@@ -351,6 +351,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
             // in the same place, which is exactly when the player most needs
             // to be able to tell them apart.
             priority: 90 - i,
+            // The lit top every floor has, on a past you can stand on.
+            stepColor: _lit ? SilhouettePalette.blockTop : Palette.blockTop,
           ),
       ]);
 
@@ -550,6 +552,14 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     // Record and replay before the world moves, so the shadow's rect is
     // already in place when the player collides with it this frame.
     ticker.advance(step, _fixedTick);
+    // Drawn from exactly the list the player's feet are checked against, so
+    // the edge can never say something the collision does not.
+    final steps = settings.shadowIsSolid
+        ? standableShadows.toSet()
+        : const <ShadowFigure>{};
+    for (final ghost in shadows) {
+      ghost.standable = steps.contains(ghost);
+    }
     super.update(step);
     _resolveInteractions();
 
