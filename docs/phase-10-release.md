@@ -236,6 +236,100 @@ the debug key» ظهر، فيه secret ناقص.
 
 ---
 
+### ٣.٤ — الرفع الأوتوماتيك للستورات
+
+**الشكل كله:**
+
+```
+git tag v1.0.1 && git push origin v1.0.1
+        │
+        └─ release.yml ─ التستات ─┬─ GitHub Release (APK وديسكتوب)
+                                  ├─ Play: internal testing   (لو سرّ Play موجود)
+                                  └─ TestFlight               (لو أسرار Apple موجودة)
+
+        … التسترز بيلعبوا …
+
+Actions → store → Run workflow
+        └─ store.yml ─┬─ Play: internal → production (بنسبة تختارها)
+                      └─ App Store: submit for review (وبينزل لوحده أول ما يتوافق)
+```
+
+- **رقم البيلد أوتوماتيك:** رقم الـrun بتاع `release.yml`، لأندرويد وiOS. الاتنين
+  بيرفضوا رقم شافوه قبل كده، والرقم ده بيزيد لوحده — فمحدش محتاج يفتكر يزوّد
+  الـ`+N` في `pubspec.yaml`. الـ`version:` (‏`1.0.0`) لسه بإيدك، ولازم يطابق التاج.
+- **كل ستور بيشتغل لوحده:** لو أسرار Play موجودة وApple لأ، Play بس بيترفع،
+  والـrun بيقول كده في notice. يعني تقدر تجهّز واحد واحد.
+- **الـproduction بإيدك بس:** مفيش تاج بينزّل حاجة لكل الناس. والـworkflow ده
+  في environment اسمه `production` — Settings ← Environments ← production ←
+  **Required reviewers** ← حط نفسك، وGitHub هيسألك قبل ما يكمّل.
+- **السكة كلها في `fastlane/Fastfile`**، وتتشغّل من الماك بنفس الأسامي
+  (`fastlane ios beta`…).
+
+#### الأسرار — Google Play (سر واحد)
+
+1. **console.cloud.google.com** ← مشروع جديد (أي اسم) ← APIs & Services ←
+   Library ← **Google Play Android Developer API** ← Enable.
+2. IAM & Admin ← **Service Accounts** ← Create (اسم زي `waraya-upload`، من غير
+   roles) ← افتحه ← Keys ← Add key ← JSON. **ملف بيتنزل مرة واحدة.**
+3. **Play Console** ← Users and permissions ← Invite new users ← الإيميل بتاع
+   الـservice account (اللي آخره `iam.gserviceaccount.com`) ← App
+   permissions ← ورايا ← **Release apps to testing tracks** و**Release to
+   production…** و**Manage testing tracks**.
+4. GitHub secret **`PLAY_SERVICE_ACCOUNT_JSON`** = محتوى ملف الـJSON كله
+   (افتحه، انسخ، الصق).
+5. **وأول AAB لازم يترفع بإيدك** من الكونسول: جوجل مش بتسمح للـAPI يرفع
+   لأبلكيشن عمره ما اترفعله حاجة. نزّل الـAAB من أي run ممضي بالمفتاح
+   (القسم ٣.١ — مش الـdebug) وارفعه في Internal testing.
+6. **لو الـrun وقع بـ«Only releases with status draft may be created on draft
+   app»:** الأبلكيشن لسه ما اتنشرش ولا مرة. Settings ← Secrets and variables ←
+   Actions ← **Variables** ← `PLAY_RELEASE_STATUS` = `draft`. والريليس هيترفع
+   draft وتدوس Roll out من الكونسول. بعد أول نشر امسح الـvariable.
+
+#### الأسرار — App Store (خمسة أسرار ومتغيّر)
+
+**مفتاح الـAPI** (بيرفع ويسحب الـprofile ويقدّم للمراجعة):
+
+1. **appstoreconnect.apple.com** ← Users and Access ← **Integrations** ←
+   App Store Connect API ← Team Keys ← **+** ← اسم `waraya-ci`، Access:
+   **App Manager**.
+2. نزّل الـ`.p8` — **بيتنزل مرة واحدة بس.** وخُد من نفس الصفحة الـ**Key ID**
+   والـ**Issuer ID** (فوق الجدول).
+3. الأسرار:
+   - `ASC_KEY_ID` = الـKey ID
+   - `ASC_ISSUER_ID` = الـIssuer ID
+   - `ASC_KEY_P8_BASE64` = ناتج `base64 -i AuthKey_XXXX.p8 | pbcopy`
+
+**شهادة التوزيع** (اللي بتمضي الأبلكيشن — بتتعمل مرة على الماك):
+
+4. Xcode ← Settings ← Accounts ← حسابك ← Manage Certificates ← **+** ←
+   **Apple Distribution**.
+5. **Keychain Access** ← My Certificates ← «Apple Distribution: …» ← كليك يمين
+   ← Export ← `.p12` بباسورد.
+6. الأسرار:
+   - `IOS_CERTIFICATE_P12_BASE64` = ناتج `base64 -i distribution.p12 | pbcopy`
+   - `IOS_CERTIFICATE_PASSWORD` = الباسورد
+
+**الـTeam ID** (مش سر — Variable):
+
+7. developer.apple.com ← Membership details ← **Team ID** (عشر حروف وأرقام) ←
+   GitHub ← Variables ← **`APPLE_TEAM_ID`**.
+
+والـprovisioning profile **مش محتاج يتعمل**: الـlane بيجيبه (أو بيعمله أول مرة)
+بمفتاح الـAPI. والـBundle ID والأبلكيشن على App Store Connect لازم يكونوا
+موجودين (القسم ٣.٣، خطوة ١ و٢).
+
+**وTestFlight:** البيلد بيظهر بعد ١٠–٣٠ دقيقة معالجة من Apple (الـworkflow
+مبيستناش — بيوفّر دقايق ماك). ضيف نفسك في TestFlight ← Internal Testing ← group
+بـ«Automatic distribution»، وكل بيلد جديد بيوصلك لوحده.
+
+#### أول مرة، بالترتيب
+
+1. أسرار أندرويد (٣.١) + `PLAY_SERVICE_ACCOUNT_JSON`، وأول AAB بإيدك.
+2. أسرار Apple الخمسة + `APPLE_TEAM_ID`.
+3. Actions ← release ← Run workflow ← ✅ **upload** — تجربة كاملة من غير تاج.
+4. لو الاتنين نزلوا: `git tag v1.0.0 && git push origin v1.0.0`.
+5. بعد ما التسترز يلعبوا: Actions ← **store** ← Run workflow.
+
 ## ٤) الصقل اللي لسه — بالترتيب
 
 **٠. زرار يقفل الإرسال.** Play بيسأل «optional or required» وApple

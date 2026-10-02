@@ -1,0 +1,91 @@
+# Puts a tested build in front of everybody: Google Play production, and App
+# Store review. By hand only — Actions -> store -> Run workflow.
+#
+# Nothing is built here. A build reaches the stores' test channels from
+# release.yml (on a v* tag); this promotes what the testers already played:
+# - Android: the internal-testing build is promoted to production, at the
+#   share of users chosen below. Under 100% is a staged rollout, raised later
+#   from the Play Console.
+# - iOS: the TestFlight build is submitted for review, and released the
+#   moment Apple approves it.
+#
+# It runs in the `production` environment. Settings -> Environments ->
+# production -> Required reviewers makes GitHub ask before it goes — worth
+# turning on, since this is the one workflow whose mistake every player sees.
+#
+# The lanes are in fastlane/Fastfile; the secrets are the same ones
+# release.yml uses (docs/phase-10-release.md section 3).
+name: store
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which store
+        type: choice
+        options: [both, android, ios]
+        default: both
+      rollout:
+        description: 'Android: share of users, 0.01 to 1 (1 = everyone)'
+        type: string
+        default: '1'
+      version_code:
+        description: 'Android: build number to promote (empty = newest on internal testing)'
+        type: string
+        default: ''
+      ios_build:
+        description: 'iOS: build number to submit (empty = newest for this version)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  # fastlane refuses to run under a non-UTF-8 locale, which is what a fresh
+  # runner has; and it checks for its own updates on every start otherwise.
+  LC_ALL: en_US.UTF-8
+  LANG: en_US.UTF-8
+  FASTLANE_SKIP_UPDATE_CHECK: '1'
+
+# One production release at a time.
+concurrency:
+  group: store
+  cancel-in-progress: false
+
+jobs:
+  play-production:
+    if: inputs.platform != 'ios'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - run: gem install fastlane --no-document --version 2.240.1
+      - env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          ROLLOUT: ${{ inputs.rollout }}
+          VERSION_CODE: ${{ inputs.version_code }}
+        run: fastlane android production rollout:"$ROLLOUT" version_code:"$VERSION_CODE"
+
+  app-store-review:
+    if: inputs.platform != 'android'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - id: read
+        run: |
+          echo "version=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)" >> "$GITHUB_OUTPUT"
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - run: gem install fastlane --no-document --version 2.240.1
+      - env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          IOS_BUILD: ${{ inputs.ios_build }}
+        run: fastlane ios release version:"${{ steps.read.outputs.version }}" build:"$IOS_BUILD"

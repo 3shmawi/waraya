@@ -1,0 +1,168 @@
+# Uploads to the stores. Run by .github/workflows/release.yml (internal
+# testing and TestFlight, on every v* tag) and .github/workflows/store.yml
+# (production, by hand) — and runnable from a Mac the same way:
+#
+#   fastlane android internal aab:build/app/outputs/bundle/release/app-release.aab
+#   fastlane android production rollout:0.2
+#   fastlane ios beta
+#   fastlane ios release version:1.0.0
+#
+# Every credential comes from the environment, and every one of them is a
+# GitHub secret in CI. None of them is ever written into this repository.
+# docs/phase-10-release.md section 3 says how to make each one.
+#
+# Nothing here builds the Flutter app. The workflow builds it — with the
+# build number it chose — and these lanes only sign, upload and promote, so
+# the binary a store gets is the binary the tests ran against.
+
+# No usage reporting from the build tools either: the game has no analytics,
+# and neither does the thing that ships it.
+opt_out_usage
+
+PACKAGE = "com.mohager.waraya"
+
+# Uploads only: the listing text and images are kept in the consoles by hand
+# for now (docs/store-listing.md), so a lane never overwrites what is there.
+SKIP_LISTING = {
+  skip_upload_metadata: true,
+  skip_upload_changelogs: true,
+  skip_upload_images: true,
+  skip_upload_screenshots: true,
+}.freeze
+
+platform :android do
+  def play_key
+    ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON")
+  end
+
+  desc "Upload an AAB to the internal testing track"
+  lane :internal do |options|
+    upload_to_play_store(
+      package_name: PACKAGE,
+      json_key_data: play_key,
+      track: "internal",
+      aab: options.fetch(:aab),
+      # A Play app that has never been released is a "draft app", and Play
+      # only accepts draft releases into it. Set the repository variable
+      # PLAY_RELEASE_STATUS to "draft" until the first release is out, then
+      # remove it.
+      release_status: ENV.fetch("PLAY_RELEASE_STATUS", "completed"),
+      **SKIP_LISTING,
+    )
+  end
+
+  desc "Promote a build from internal testing to production"
+  lane :production do |options|
+    code = options[:version_code].to_s
+    if code.empty?
+      code = google_play_track_version_codes(
+        package_name: PACKAGE,
+        json_key_data: play_key,
+        track: "internal",
+      ).max.to_s
+    end
+    UI.user_error!("internal testing has no build to promote") if code.empty?
+
+    # A fraction under 1 is a staged rollout: that share of users get it now,
+    # and the rest when it is raised in the console.
+    rollout = (options[:rollout] || "1").to_f
+    UI.user_error!("rollout must be above 0 and at most 1") unless rollout > 0 && rollout <= 1
+    staged = rollout < 1
+
+    upload_to_play_store(
+      package_name: PACKAGE,
+      json_key_data: play_key,
+      track: "internal",
+      track_promote_to: "production",
+      version_code: code.to_i,
+      track_promote_release_status: staged ? "inProgress" : "completed",
+      rollout: staged ? rollout.to_s : nil,
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      **SKIP_LISTING,
+    )
+    UI.success("version code #{code} promoted to production at #{(rollout * 100).round}%")
+  end
+end
+
+platform :ios do
+  def api_key
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_P8_BASE64"),
+      is_key_content_base64: true,
+    )
+  end
+
+  desc "Sign the built app and upload it to TestFlight"
+  lane :beta do
+    key = api_key
+
+    # A throwaway keychain for this run, with the distribution certificate
+    # in it. The certificate is the one made once on the owner's Mac; making
+    # a new one per run would hit Apple's limit of a few at a time.
+    setup_ci
+    import_certificate(
+      certificate_path: ENV.fetch("IOS_CERTIFICATE_PATH"),
+      certificate_password: ENV.fetch("IOS_CERTIFICATE_PASSWORD"),
+      keychain_name: "fastlane_tmp_keychain",
+      keychain_password: "",
+    )
+
+    # The App Store profile is fetched — or made, the first time — through
+    # the API key, so it never has to be exported or kept as a secret.
+    get_provisioning_profile(api_key: key, app_identifier: PACKAGE)
+    profile = lane_context[SharedValues::SIGH_NAME]
+
+    # Manual signing for this run only, on the app target only: the project
+    # in the repository stays on automatic signing, which is what Xcode on
+    # the owner's Mac wants, and the plugin pods are not touched (giving them
+    # a profile fails the build).
+    update_code_signing_settings(
+      path: "ios/Runner.xcodeproj",
+      use_automatic_signing: false,
+      team_id: ENV.fetch("APPLE_TEAM_ID"),
+      targets: ["Runner"],
+      code_sign_identity: "Apple Distribution",
+      profile_name: profile,
+    )
+
+    build_app(
+      workspace: "ios/Runner.xcworkspace",
+      scheme: "Runner",
+      configuration: "Release",
+      export_method: "app-store",
+      export_options: { provisioningProfiles: { PACKAGE => profile } },
+      output_directory: "build/ios/fastlane",
+    )
+
+    # Not waiting for Apple to process it: that takes ten to thirty minutes
+    # of a macOS runner doing nothing. The build shows up in TestFlight on
+    # its own, and Apple emails when it is ready.
+    upload_to_testflight(api_key: key, skip_waiting_for_build_processing: true)
+  end
+
+  desc "Submit a TestFlight build for App Store review"
+  lane :release do |options|
+    deliver(
+      api_key: api_key,
+      app_identifier: PACKAGE,
+      app_version: options.fetch(:version),
+      # Empty means the newest build uploaded for that version.
+      build_number: options[:build].to_s.empty? ? nil : options[:build].to_s,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: true,
+      # Released the moment Apple approves it.
+      automatic_release: true,
+      force: true,
+      precheck_include_in_app_purchases: false,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+      },
+    )
+  end
+end

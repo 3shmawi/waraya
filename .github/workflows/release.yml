@@ -17,18 +17,38 @@
 #   warns on first run.
 # - macOS: the .app, zipped. Unsigned and not notarised — Gatekeeper blocks a
 #   double-click; right-click → Open once gets past it.
-# - iOS: not built here. An .ipa nobody can install without a signing
-#   identity and a provisioning profile is not a release.
+# - iOS: not on the release page — an .ipa nobody can install is not a
+#   release. It goes to TestFlight instead (below).
 # - Web: not built here. pages.yml publishes it on every push to main.
 #
 # Every build is `lib/main.dart`, which is the campaign;
 # test/app/entry_point_test.dart is what keeps that true.
+#
+# And the stores, on every tag (or a by-hand run with "upload" ticked):
+# - the AAB goes to Google Play's internal testing track;
+# - an iOS build goes to TestFlight.
+# Each one runs only when its secrets exist, so the workflow works before
+# the stores are set up and each store can be added on its own. Production
+# is never touched from here: that is .github/workflows/store.yml, by hand,
+# after the testers have played it. The lanes are in fastlane/Fastfile, and
+# docs/phase-10-release.md section 3 says how to make every secret.
+#
+# The build number is this workflow's run number, for Android and iOS
+# alike. Both stores refuse a number they have seen before and want a later
+# upload to have a bigger one, and a run number only grows — so nobody has
+# to remember to bump the "+N" in pubspec.yaml, and an upload cannot fail
+# for having forgotten.
 name: release
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      upload:
+        description: Also upload to Play internal testing and TestFlight
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -36,29 +56,62 @@ permissions:
 env:
   # Same pin as ci.yml, pages.yml and .fvmrc.
   FLUTTER_VERSION: 3.44.9
+  # fastlane refuses to run under a non-UTF-8 locale, which is what a fresh
+  # runner has; and it checks for its own updates on every start otherwise.
+  LC_ALL: en_US.UTF-8
+  LANG: en_US.UTF-8
+  FASTLANE_SKIP_UPDATE_CHECK: '1'
 
 jobs:
   version:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.read.outputs.version }}
+      build: ${{ steps.read.outputs.build }}
+      play: ${{ steps.stores.outputs.play }}
+      apple: ${{ steps.stores.outputs.apple }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: read
         run: |
           version=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "build=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
           if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
             echo "::error::tag $GITHUB_REF_NAME but pubspec.yaml says $version"
             exit 1
           fi
+
+      # Which stores to upload to: those whose secrets are all there, and
+      # only on a tag or when asked. A job's own `if` cannot see secrets,
+      # which is why this is worked out here and handed on.
+      - id: stores
+        env:
+          WANT: ${{ github.ref_type == 'tag' || inputs.upload }}
+          PLAY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+          APPLE: >-
+            ${{ secrets.ASC_KEY_ID != '' && secrets.ASC_ISSUER_ID != ''
+            && secrets.ASC_KEY_P8_BASE64 != ''
+            && secrets.IOS_CERTIFICATE_P12_BASE64 != ''
+            && secrets.IOS_CERTIFICATE_PASSWORD != ''
+            && vars.APPLE_TEAM_ID != '' }}
+        run: |
+          play=false; apple=false
+          if [ "$WANT" = true ]; then
+            if [ "$PLAY" = true ]; then play=true; else
+              echo "::notice::no PLAY_SERVICE_ACCOUNT_JSON secret: not uploading to Play"; fi
+            if [ "$APPLE" = true ]; then apple=true; else
+              echo "::notice::App Store secrets or APPLE_TEAM_ID missing: not uploading to TestFlight"; fi
+          fi
+          echo "play=$play" >> "$GITHUB_OUTPUT"
+          echo "apple=$apple" >> "$GITHUB_OUTPUT"
 
   # The tests run before anything is built. A tag is a promise that the
   # recorded solutions still solve and the wrong ideas still fail.
   checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -72,8 +125,8 @@ jobs:
     needs: [version, checks]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -106,8 +159,8 @@ jobs:
             echo "keyPassword=$KEY_PASSWORD"
           } > android/key.properties
 
-      - run: flutter build apk --release
-      - run: flutter build appbundle --release
+      - run: flutter build apk --release --build-number=${{ needs.version.outputs.build }}
+      - run: flutter build appbundle --release --build-number=${{ needs.version.outputs.build }}
       - run: |
           mkdir -p out
           cp build/app/outputs/flutter-apk/app-release.apk "out/waraya-${{ needs.version.outputs.version }}.apk"
@@ -119,9 +172,12 @@ jobs:
 
   linux:
     needs: [version, checks]
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest: the toolchain below names package
+    # versions (libstdc++-12-dev), and ubuntu-latest moves to a new release
+    # on its own — the next one from 19 October 2026.
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Toolchain
         # GTK for the window, GStreamer for audioplayers.
         run: |
@@ -149,7 +205,7 @@ jobs:
     needs: [version, checks]
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -171,7 +227,7 @@ jobs:
     needs: [version, checks]
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -189,6 +245,63 @@ jobs:
         with:
           name: macos
           path: out/
+
+  play-internal:
+    needs: [version, android]
+    if: needs.version.outputs.play == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # The AAB the android job built and the tests ran before — not a
+      # second build of the same commit.
+      - uses: actions/download-artifact@v4
+        with:
+          name: android
+          path: out
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - run: gem install fastlane --no-document --version 2.240.1
+      - env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PLAY_RELEASE_STATUS: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+        run: fastlane android internal aab:"out/waraya-${{ needs.version.outputs.version }}.aab"
+
+  testflight:
+    needs: [version, checks]
+    if: needs.version.outputs.apple == 'true'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      # Builds the app unsigned, with this run's build number, and writes
+      # the Podfile and the generated config the Xcode archive reads. The
+      # signing is fastlane's, next.
+      - run: >
+          flutter build ios --release --no-codesign
+          --build-name=${{ needs.version.outputs.version }}
+          --build-number=${{ needs.version.outputs.build }}
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - run: gem install fastlane --no-document --version 2.240.1
+      - env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          export IOS_CERTIFICATE_PATH="$RUNNER_TEMP/distribution.p12"
+          echo "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$IOS_CERTIFICATE_PATH"
+          fastlane ios beta
+          rm -f "$IOS_CERTIFICATE_PATH"
 
   release:
     if: github.ref_type == 'tag'
