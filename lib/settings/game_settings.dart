@@ -35,6 +35,7 @@ class GameSettings {
     this.buttonOpacity = 1,
     this.language,
     this.sendStats = true,
+    this.allowUpright = false,
   });
 
   final bool sound;
@@ -57,6 +58,15 @@ class GameSettings {
   /// forms call these statistics optional; this is what makes that true.
   final bool sendStats;
 
+  /// Play on a phone held upright instead of being asked to turn it.
+  ///
+  /// The way out of a phone that cannot turn: rotation locked, or the game
+  /// installed from the browser while its manifest still said portrait — a
+  /// home-screen install keeps the orientation it was installed with, and the
+  /// first player to install it that way was left on the "turn your phone"
+  /// screen with nothing to press.
+  final bool allowUpright;
+
   /// What [volume] actually comes to, with [sound] folded in.
   double get loudness => sound ? volume : 0;
 
@@ -72,6 +82,7 @@ class GameSettings {
     double? buttonOpacity,
     Lang? Function()? language,
     bool? sendStats,
+    bool? allowUpright,
   }) => GameSettings(
     sound: sound ?? this.sound,
     volume: volume ?? this.volume,
@@ -80,6 +91,7 @@ class GameSettings {
     buttonOpacity: buttonOpacity ?? this.buttonOpacity,
     language: language == null ? this.language : language(),
     sendStats: sendStats ?? this.sendStats,
+    allowUpright: allowUpright ?? this.allowUpright,
   );
 
   Map<String, Object?> toJson() => {
@@ -90,6 +102,7 @@ class GameSettings {
     'buttonOpacity': buttonOpacity,
     'language': language?.name,
     'sendStats': sendStats,
+    'allowUpright': allowUpright,
   };
 
   /// Reads what [toJson] wrote. Anything missing or mistyped falls back to
@@ -122,6 +135,7 @@ class GameSettings {
       buttonOpacity: unit('buttonOpacity', d.buttonOpacity, min: 0.3),
       language: named(Lang.values, json['language']),
       sendStats: pick('sendStats', d.sendStats),
+      allowUpright: pick('allowUpright', d.allowUpright),
     );
   }
 
@@ -134,7 +148,8 @@ class GameSettings {
       other.buttons == buttons &&
       other.buttonOpacity == buttonOpacity &&
       other.language == language &&
-      other.sendStats == sendStats;
+      other.sendStats == sendStats &&
+      other.allowUpright == allowUpright;
 
   @override
   int get hashCode => Object.hash(
@@ -145,6 +160,7 @@ class GameSettings {
     buttonOpacity,
     language,
     sendStats,
+    allowUpright,
   );
 }
 

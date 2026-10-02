@@ -21,6 +21,7 @@ import 'ui/level_select.dart';
 import 'ui/pause_menu.dart';
 import 'ui/settings_page.dart';
 import 'ui/top_bar.dart';
+import 'ui/turn/turn_screen.dart';
 import 'ui/words.dart';
 
 /// The puzzles, in teaching order.
@@ -295,7 +296,11 @@ class _WarayaLevelsState extends State<WarayaLevels>
     final media = MediaQuery.maybeOf(context);
     final size = media?.size ?? Size.zero;
     final inset = media?.padding ?? EdgeInsets.zero;
-    _noticeUpright(TouchInputSource.isTouchPlatform && TurnPhone.applies(size));
+    _noticeUpright(
+      TouchInputSource.isTouchPlatform &&
+          TurnPhone.applies(size) &&
+          !_settings.value.allowUpright,
+    );
     _game.reservedTopRight = Size(
       TopBar.footprint.width + inset.right,
       TopBar.footprint.height + inset.top,
@@ -357,7 +362,16 @@ class _WarayaLevelsState extends State<WarayaLevels>
               onPause: () => _show(_pause),
               labels: (words.retry, words.levels, words.pause),
             ),
-          if (_upright) Positioned.fill(child: TurnPhone(lang: lang)),
+          if (_upright)
+            Positioned.fill(
+              child: TurnPhone(
+                lang: lang,
+                onPlayUpright: () => _settings.value = _settings.value.copyWith(
+                  allowUpright: true,
+                ),
+                onTurn: canTurnScreen ? turnScreenSideways : null,
+              ),
+            ),
         ],
       ),
     );

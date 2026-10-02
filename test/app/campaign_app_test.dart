@@ -1,4 +1,5 @@
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/level/lang.dart';
@@ -73,6 +74,45 @@ void main() {
     expect(game.paused, isTrue);
     expect(labelled('Pause'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a phone that will not turn is never a dead end', (
+    tester,
+  ) async {
+    // Reported from the first install: the game put on a home screen while
+    // its manifest still said portrait stays upright for good, and the
+    // turn-your-phone screen had nothing to press.
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view
+      ..physicalSize = const Size(412, 860)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final settings = SettingsKeeper(const GameSettings(language: Lang.en));
+
+    await tester.pumpWidget(
+      WarayaLevels(
+        levels: Levels.campaign,
+        progress: MemoryProgress(),
+        beaten: const {},
+        settings: settings,
+      ),
+    );
+    await tester.pump();
+    final game = tester
+        .widget<GameWidget<LevelGame>>(find.byType(GameWidget<LevelGame>))
+        .game!;
+    expect(find.text('Turn your phone on its side'), findsOneWidget);
+    expect(game.paused, isTrue, reason: 'nothing plays behind the screen');
+
+    await tester.tap(find.text('Play upright anyway'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Turn your phone on its side'), findsNothing);
+    expect(game.paused, isFalse);
+    expect(settings.value.allowUpright, isTrue, reason: 'and it is remembered');
+    expect(tester.takeException(), isNull);
+    // Inside the body: the binding checks it is back before tear-downs run.
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('speaks English when asked to', (tester) async {

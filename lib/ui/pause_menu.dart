@@ -113,15 +113,35 @@ class _Button extends StatelessWidget {
   }
 }
 
-/// Over everything while a phone is held upright: turn it.
+/// Over everything while a phone is held upright: turn it — or, if it will
+/// not turn, play anyway.
 ///
 /// A phone build is locked to landscape by its manifest; a browser cannot be
 /// locked, so this is what a phone browser held upright gets instead
 /// (`docs/phase-11-feel.md` §1). The game is paused underneath it.
+///
+/// **It always has a way out.** The first version was only a picture and two
+/// lines, and the first player to meet it could not leave: the game had been
+/// put on their home screen while its manifest still said portrait, which
+/// locks an installed web app upright for good, and rotation was locked as
+/// well. So: a button that asks the browser to turn the screen (where the
+/// browser can be asked), and one that plays upright and remembers it —
+/// undone from the settings page.
 class TurnPhone extends StatelessWidget {
-  const TurnPhone({super.key, required this.lang});
+  const TurnPhone({
+    super.key,
+    required this.lang,
+    required this.onPlayUpright,
+    this.onTurn,
+  });
 
   final Lang lang;
+
+  /// Play as it is, and stop asking.
+  final VoidCallback onPlayUpright;
+
+  /// Ask the screen to turn. Null where nothing can be asked.
+  final VoidCallback? onTurn;
 
   /// Whether a screen of this size is a phone held upright. A tablet held
   /// upright is a fair view of the level and is left alone.
@@ -131,42 +151,63 @@ class TurnPhone extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final w = Words(lang);
+    final turn = onTurn;
     return Directionality(
       textDirection: lang.isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: ColoredBox(
         color: const Color(0xFF0E0A10),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(
-                  width: 96,
-                  height: 96,
-                  child: CustomPaint(painter: GlyphPainter(Glyph.rotate)),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  w.turnPhone,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: arabicFontFamily,
-                    fontSize: 22,
-                    color: Color(0xFFF3E2C6),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 96,
+                    height: 96,
+                    child: CustomPaint(painter: GlyphPainter(Glyph.rotate)),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  w.turnPhoneWhy,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: arabicFontFamily,
-                    fontSize: 14,
-                    color: Color(0xFF9A8B7A),
+                  const SizedBox(height: 18),
+                  Text(
+                    w.turnPhone,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: arabicFontFamily,
+                      fontSize: 22,
+                      color: Color(0xFFF3E2C6),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    w.turnPhoneWhy,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: arabicFontFamily,
+                      fontSize: 14,
+                      color: Color(0xFF9A8B7A),
+                    ),
+                  ),
+                  const SizedBox(height: 26),
+                  if (turn != null)
+                    _Button(label: w.turnForMe, onTap: turn, loud: true),
+                  _Button(
+                    label: w.playUpright,
+                    onTap: onPlayUpright,
+                    loud: turn == null,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    w.stuckUpright,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: arabicFontFamily,
+                      fontSize: 12.5,
+                      color: Color(0xFF9A8B7A),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

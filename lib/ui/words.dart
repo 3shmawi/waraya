@@ -47,6 +47,15 @@ class Words {
   String get turnPhoneWhy => _en
       ? 'The game needs room to see ahead.'
       : 'اللعبة محتاجة مكان تشوف فيه قدّامك.';
+  String get turnForMe => _en ? 'Turn it for me' : 'لفّها انت';
+  String get playUpright => _en ? 'Play upright anyway' : 'العب كده بالطول';
+  String get stuckUpright => _en
+      ? 'Screen will not turn? Check rotation lock — or just play.'
+      : 'الشاشة مش بتلف؟ شوف قفل اللف — أو العب كده.';
+  String get upright => _en ? 'Play upright' : 'اللعب بالطول';
+  String get uprightWhy => _en
+      ? 'For a phone that will not turn. The level shows less ahead of you.'
+      : 'لو الموبايل مش بيلف. المرحلة بتبان أضيق قدّامك.';
 
   // The settings page.
   String get sound => _en ? 'Sound' : 'الصوت';

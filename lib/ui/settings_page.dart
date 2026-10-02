@@ -81,6 +81,13 @@ class SettingsPage extends StatelessWidget {
                             options: [(true, w.on), (false, w.off)],
                             onPick: (v) => set(now.copyWith(haptics: v)),
                           ),
+                          _Choice<bool>(
+                            label: w.upright,
+                            note: w.uprightWhy,
+                            value: now.allowUpright,
+                            options: [(true, w.on), (false, w.off)],
+                            onPick: (v) => set(now.copyWith(allowUpright: v)),
+                          ),
                           _Choice<ButtonSize>(
                             label: w.buttonSize,
                             value: now.buttons,
@@ -270,9 +277,7 @@ class _Pill extends StatelessWidget {
           decoration: BoxDecoration(
             color: chosen ? const Color(0x33D9A25C) : const Color(0x14FFE7B0),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: chosen ? _warm : const Color(0x1AFFE7B0),
-            ),
+            border: Border.all(color: chosen ? _warm : const Color(0x1AFFE7B0)),
           ),
           child: Text(
             text,
