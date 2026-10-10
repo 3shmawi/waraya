@@ -30,7 +30,8 @@ import 'package:waraya/level/playthrough.dart';
 
 /// Where the frames land. Outside the repo: these are build output.
 final String outRoot =
-    Platform.environment['WARAYA_CLIP_OUT'] ?? '${Directory.systemTemp.path}/waraya-clips';
+    Platform.environment['WARAYA_CLIP_OUT'] ??
+    '${Directory.systemTemp.path}/waraya-clips';
 
 /// Portrait, phone-shaped, because that is where these get watched.
 const double clipWidth = 1080;
@@ -60,6 +61,27 @@ const int bleedRows = 150;
 
 const double fps = 60;
 const double dt = 1 / fps;
+
+/// A phone's own screen instead of the portrait strip, for footage shown
+/// inside a drawn phone (the launch video, `tool/promo/`):
+/// `WARAYA_CLIP_DEVICE=844x390@2` renders the game at a real landscape
+/// phone's size — so it is framed exactly as a player sees it, readout and
+/// title included — at twice the pixels.
+final ({double width, double height, double scale})? device = () {
+  final spec = Platform.environment['WARAYA_CLIP_DEVICE'];
+  if (spec == null) return null;
+  final match = RegExp(r'^(\d+)x(\d+)(?:@(\d+(?:\.\d+)?))?$').firstMatch(spec);
+  if (match == null) throw ArgumentError('WARAYA_CLIP_DEVICE=$spec');
+  return (
+    width: double.parse(match.group(1)!),
+    height: double.parse(match.group(2)!),
+    scale: double.parse(match.group(3) ?? '1'),
+  );
+}();
+
+/// Keep one frame in this many (`WARAYA_CLIP_EVERY=2` for 30 fps). The
+/// game still steps at [dt]: what is recorded is what the tests play.
+final int every = int.parse(Platform.environment['WARAYA_CLIP_EVERY'] ?? '1');
 
 /// One clip: a level, the moves to play in it, and what to do around them.
 class Clip {
@@ -133,8 +155,9 @@ void main() {
       'LiberationMono': 'assets/fonts/LiberationMono-Regular.ttf',
     }.entries) {
       final bytes = File(family.value).readAsBytesSync();
-      await (FontLoader(family.key)
-            ..addFont(Future.value(ByteData.view(Uint8List.fromList(bytes).buffer))))
+      await (FontLoader(family.key)..addFont(
+            Future.value(ByteData.view(Uint8List.fromList(bytes).buffer)),
+          ))
           .load();
     }
   });
@@ -156,7 +179,7 @@ void main() {
       // ignore: avoid_print
       print(
         '${clip.name}: ${shot.frames} frames '
-        '(${(shot.frames / fps).toStringAsFixed(1)}s) -> $outRoot/${clip.name}',
+        '(${(shot.frames * every / fps).toStringAsFixed(1)}s) -> $outRoot/${clip.name}',
       );
     }, timeout: const Timeout(Duration(minutes: 25)));
   }
@@ -180,15 +203,23 @@ Future<({int frames, bool finished})> render(Clip clip) async {
       titleIntro: false,
     ),
   );
-  game.onGameResize(Vector2(clipWidth, stripHeight));
+  final screen = device;
+  game.onGameResize(
+    screen == null
+        ? Vector2(clipWidth, stripHeight)
+        : Vector2(screen.width, screen.height),
+  );
   game.update(0);
 
   var frame = 0;
+  var ticks = 0;
   Future<void> step(InputIntent intent) async {
     scripted.next = intent;
     game.update(dt);
-    await shoot(game, '${dir.path}/${frame.toString().padLeft(5, '0')}.png');
-    frame++;
+    if (ticks++ % every == 0) {
+      await shoot(game, '${dir.path}/${frame.toString().padLeft(5, '0')}.png');
+      frame++;
+    }
   }
 
   // Nothing pressed, just standing there.
@@ -226,6 +257,25 @@ Future<({int frames, bool finished})> render(Clip clip) async {
 
 /// Paints one frame of [game] to [path].
 Future<void> shoot(LevelGame game, String path) async {
+  final screen = device;
+  if (screen != null) {
+    final image = await paint(
+      screen.width * screen.scale,
+      screen.height * screen.scale,
+      (canvas) {
+        canvas.scale(screen.scale);
+        canvas.drawRect(
+          ui.Rect.fromLTWH(0, 0, screen.width, screen.height),
+          ui.Paint()..color = game.backgroundColor(),
+        );
+        game.render(canvas);
+      },
+    );
+    final png = await image.toByteData(format: ui.ImageByteFormat.png);
+    File(path).writeAsBytesSync(png!.buffer.asUint8List());
+    image.dispose();
+    return;
+  }
   final strip = await paint(clipWidth, stripHeight, (canvas) {
     canvas.drawRect(
       const ui.Rect.fromLTWH(0, 0, clipWidth, stripHeight),
