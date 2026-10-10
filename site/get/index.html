@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>نزّل ورايا · Get waraya</title>
+<meta name="theme-color" content="#E59D00">
+<link rel="icon" href="../logo.svg" type="image/svg+xml">
+<!--
+  Where the QR code at the end of the launch video goes
+  (docs/marketing/launch-video.md). One code for every phone: an Android
+  goes straight to Google Play, an iPhone or iPad straight to the App Store,
+  and anything else — a computer, or a phone this cannot tell — stays here
+  and picks. Nothing is recorded; it reads the user agent and moves on.
+-->
+<script>
+  (function () {
+    var ua = navigator.userAgent || '';
+    var ios = /iPhone|iPad|iPod/.test(ua) ||
+      (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);   // iPadOS says Mac
+    if (/Android/i.test(ua)) {
+      location.replace('https://play.google.com/store/apps/details?id=com.mohager.waraya');
+    } else if (ios) {
+      location.replace('https://apps.apple.com/app/id6818521154');
+    }
+  })();
+</script>
+<style>
+  @font-face { font-family: 'Cairo'; src: url('../fonts/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: 'Cairo', system-ui, sans-serif; color: #14100A;
+         background: linear-gradient(#F7C032, #E59D00 62%, #D28C02); display: flex; align-items: center;
+         justify-content: center; padding: 32px 16px; text-align: center; }
+  main { max-width: 440px; width: 100%; }
+  img { width: 112px; height: 112px; border-radius: 24%; box-shadow: 0 14px 36px rgba(20,10,0,.3); }
+  h1 { font-weight: 400; font-size: 44px; margin: 8px 0 0; line-height: 1.2; }
+  p { margin: 4px 0 24px; color: #3A2408; }
+  a { display: block; margin: 12px 0; padding: 14px 20px; border-radius: 999px; text-decoration: none;
+      background: #0E0A10; color: #FFE7B0; font-size: 19px; }
+  a small { display: block; color: #D9A25C; font-size: 14px; direction: ltr; }
+</style>
+</head>
+<body>
+<main>
+  <img src="../media/icon.png" alt="">
+  <h1>ورايا</h1>
+  <p>لعبة مصرية · مجانية · من غير إعلانات</p>
+  <a href="https://play.google.com/store/apps/details?id=com.mohager.waraya">أندرويد<small>Google Play</small></a>
+  <a href="https://apps.apple.com/app/id6818521154">آيفون وآيباد<small>App Store</small></a>
+  <a href="../play/">العبها في المتصفح<small>Play in the browser</small></a>
+  <a href="https://3shmawiii.itch.io/waraya">ويندوز · ماك · لينكس<small>itch.io</small></a>
+</main>
+</body>
+</html>

@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<!--
+  The launch video, as one page drawn frame by frame (tool/promo/film.js).
+  Every frame is a pure function of its time — no CSS animations, nothing
+  left to the clock — so a render is the same twice and a frame can be
+  checked on its own: window.frame(t) draws the video at t seconds.
+
+  The gameplay is the game's own (tool/clips.dart at a phone's screen size,
+  extracted to JPEG frames); everything around it is drawn here: the phone,
+  the game's touch controls pressing themselves in step with the recorded
+  solution, the words, the marks on the footage, and the end card.
+  A browser draws the words because a browser is what joins Arabic letters.
+-->
+<style>
+  @font-face { font-family: 'Cairo'; src: url('../../assets/fonts/Cairo-Regular.ttf'); }
+  html, body { margin: 0; background: #0E0A10; overflow: hidden; }
+  body { font-family: 'Cairo', sans-serif; }
+  #stage { position: relative; overflow: hidden; }
+  .abs { position: absolute; }
+  .layer { position: absolute; inset: 0; }
+
+  /* Words that arrive one at a time. */
+  .line { position: absolute; left: 0; right: 0; text-align: center; padding: 0 56px; box-sizing: border-box; }
+  .w { display: inline-block; white-space: pre; will-change: transform, opacity; }
+  .big { font-weight: 700; color: #14100A; line-height: 1.15; }
+  .sub { color: #3A2408; line-height: 1.3; }
+  .cream { color: #FFE7B0; }
+  .chip { background: #14100A; color: #FFE7B0; border-radius: 0.22em; padding: 0 0.28em; }
+  .badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;
+           background: #14100A; color: #FFE7B0; font-weight: 700; vertical-align: middle; margin-inline-start: 0.25em; }
+
+  .phone { position: absolute; transform-origin: 50% 50%; }
+  .bezel { position: absolute; inset: 0; background: linear-gradient(160deg, #26232B, #0B0A0C 40%, #141218);
+           box-shadow: 0 40px 90px rgba(10,5,0,.6), inset 0 0 0 2px rgba(255,255,255,.07); }
+  .screen { position: absolute; overflow: hidden; background: #1B2A4A; }
+  .screen img.game { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .zoom { position: absolute; inset: 0; transform-origin: 0 0; }
+  .glare { position: absolute; inset: 0; pointer-events: none;
+           background: linear-gradient(115deg, rgba(255,255,255,.10), rgba(255,255,255,0) 32%); }
+
+  .ctl { position: absolute; border-radius: 50%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+  .mark { position: absolute; pointer-events: none; }
+  .tag { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; font-weight: 700;
+         background: #FFE7B0; color: #14100A; border-radius: 999px; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+  .tag::after { content: ''; position: absolute; left: 50%; bottom: -0.32em; transform: translateX(-50%);
+                border: 0.36em solid transparent; border-top-color: #FFE7B0; border-bottom: 0; }
+
+  .card { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px;
+          background: rgba(14,10,16,.72); border: 2px solid rgba(255,231,176,.45); border-radius: 26px;
+          box-shadow: 0 16px 40px rgba(0,0,0,.35); }
+  .card b { font-weight: 400; color: #FFE7B0; }
+  .card span { font-family: system-ui, sans-serif; color: #D9C2A0; direction: ltr; white-space: nowrap; }
+  .pill { font-family: system-ui, sans-serif; color: #0E0A10; background: #FFE7B0; border-radius: 999px;
+          display: inline-flex; align-items: center; gap: .4em; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+// ——— time helpers ———
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const easeOut = p => 1 - Math.pow(1 - p, 3);
+const easeIn = p => p * p * p;
+const easeInOut = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const easeBack = p => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); };
+const spring = p => 1 - Math.exp(-6 * p) * Math.cos(11 * p);
+const ar = n => String(n).replace(/[0-9]/g, d => String.fromCharCode(0x0660 + +d)).replace('.', '٫');
+function pts(points, t) {           // piecewise-linear [t, v] keys
+  if (t <= points[0][0]) return points[0][1];
+  for (let i = 1; i < points.length; i++) {
+    if (t <= points[i][0]) {
+      const [t0, v0] = points[i - 1], [t1, v1] = points[i];
+      return lerp(v0, v1, (t - t0) / (t1 - t0));
+    }
+  }
+  return points[points.length - 1][1];
+}
+// Deterministic noise, so dust is in the same place every render.
+const rnd = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+
+let C;     // config: layout, scenes, clips — set by setup()
+const stage = document.getElementById('stage');
+
+window.setup = (config) => {
+  C = config;
+  stage.style.width = C.L.W + 'px';
+  stage.style.height = C.L.H + 'px';
+};
+
+// ——— words ———
+// A line of words that pop in one by one: rise, overshoot, settle. `out` is
+// when the line leaves (it lifts and fades). Words in [brackets] get a chip.
+function wordSpans(text, { t, at, out, size, stagger = 0.07 }) {
+  const parts = text.split(' ');
+  let html = '';
+  parts.forEach((wd, i) => {
+    const p = prog(t, at + i * stagger, at + i * stagger + 0.42);
+    const o = out == null ? 0 : prog(t, out, out + 0.22);
+    const s = lerp(0.4, 1, easeBack(p)) * (1 - 0.08 * o);
+    const op = clamp(p * 2.2) * (1 - o);
+    const dy = (1 - easeOut(p)) * size * 0.5 - o * size * 0.35;
+    const rot = (1 - easeOut(p)) * (i % 2 ? 7 : -7);
+    let inner = wd;
+    if (wd.startsWith('[') && wd.endsWith(']')) inner = `<span class="chip">${wd.slice(1, -1)}</span>`;
+    html += `<span class="w" style="opacity:${op};transform:translateY(${dy}px) scale(${s}) rotate(${rot}deg)">${inner}</span>${i < parts.length - 1 ? ' ' : ''}`;
+  });
+  return html;
+}
+function words(text, o) {
+  const { y, size, cls = 'big', extra = '' } = o;
+  return `<div class="line ${cls}" style="top:${y}px;font-size:${size}px;${extra}">${wordSpans(text, o)}</div>`;
+}
+
+// A numbered step: the number spins into a badge, then the words pop.
+function step(n, text, sub, o) {
+  const { t, at, out, L } = o;
+  const p = prog(t, at, at + 0.4), q = out == null ? 0 : prog(t, out, out + 0.22);
+  const size = L.type.big, bs = size * 1.05;
+  const badge = `<span class="badge" style="width:${bs}px;height:${bs}px;font-size:${size * 0.7}px;margin-inline-end:.3em;
+      opacity:${clamp(p * 3) * (1 - q)};transform:scale(${easeBack(p) * (1 - q * .3)}) rotate(${(1 - easeOut(p)) * -200}deg)">${ar(n)}</span>`;
+  return `<div class="line big" style="top:${L.capY}px;font-size:${size}px">${badge}${wordSpans(text, { t, at: at + 0.12, out, size })}</div>`
+    + (sub ? words(sub, { t, at: at + 0.35, out, y: L.capY + size * 1.3, size: L.type.small, cls: 'sub' }) : '');
+}
+
+// ——— the background: sky, sun, dust, ground ———
+function sky(t) {
+  const L = C.L;
+  let dust = '';
+  for (let i = 0; i < 46; i++) {
+    const x = (rnd(i) * L.W + t * (10 + rnd(i + 9) * 22) * (rnd(i + 3) > .5 ? 1 : -1) + L.W * 2) % L.W;
+    const y = (rnd(i + 5) * L.horizon - t * (8 + rnd(i + 7) * 18) + L.horizon * 3) % L.horizon;
+    const r = 1.5 + rnd(i + 2) * 3.5;
+    const a = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.7 + i));
+    dust += `<div class="abs" style="left:${x}px;top:${y}px;width:${r * 2}px;height:${r * 2}px;border-radius:50%;background:rgba(255,240,200,${a})"></div>`;
+  }
+  const glow = 0.55 + 0.08 * Math.sin(t * 1.3);
+  return `<div class="layer" style="background:linear-gradient(#F7C032, #E59D00 ${L.horizon - 2}px, #D9A25C ${L.horizon}px, #0E0A10 ${L.horizon + 7}px)"></div>
+    <div class="abs" style="left:${L.W / 2 - 520}px;top:${L.sunY - 520}px;width:1040px;height:1040px;border-radius:50%;
+      background:radial-gradient(circle, rgba(255,246,214,${glow}) 0%, rgba(255,232,170,.25) 35%, rgba(255,220,140,0) 68%)"></div>
+    ${dust}`;
+}
+
+// ——— the phone ———
+// The game's touch controls in the phone screen's own logical pixels
+// (lib/input/touch_input_source.dart, lib/ui/top_bar.dart), lit by what the
+// recorded solution is pressing at that moment.
+function controls(k, intent) {
+  const W = 844, H = 390;
+  const c = (x, y, r, inner, lit) => `<div class="ctl" style="left:${(x - r) * k}px;top:${(y - r) * k}px;width:${2 * r * k}px;height:${2 * r * k}px;
+      background:${lit ? 'rgba(255,231,176,.28)' : 'rgba(20,14,8,.20)'};border:${1.6 * k}px solid rgba(255,231,176,${lit ? .8 : .35})">${inner || ''}</div>`;
+  const tri = (dx, dy, size, lit) => {
+    const s = size * k, a = Math.atan2(dy, dx) * 180 / Math.PI;
+    return `<div style="width:0;height:0;border-left:${s * 1.2}px solid rgba(255,231,176,${lit ? 1 : .6});border-top:${s * .85}px solid transparent;border-bottom:${s * .85}px solid transparent;transform:rotate(${a}deg)"></div>`;
+  };
+  const pad = 54, px = 26 + 34 + pad, py = H - 26 - pad;
+  const knob = intent.x * 22;
+  let html = c(px, py, pad, `<div style="position:relative;width:100%;height:100%">
+      <div class="abs" style="left:${8 * k}px;top:50%;transform:translateY(-50%)">${tri(-1, 0, 9, intent.x < 0)}</div>
+      <div class="abs" style="right:${8 * k}px;top:50%;transform:translateY(-50%)">${tri(1, 0, 9, intent.x > 0)}</div>
+      <div class="abs" style="left:50%;top:50%;width:${42 * k}px;height:${42 * k}px;border-radius:50%;
+        transform:translate(calc(-50% + ${knob * k}px), -50%);background:rgba(255,231,176,${intent.x ? .45 : .18})"></div></div>`, intent.x !== 0);
+  const jx = W - 26 - 46, jy = H - 26 - 46;
+  html += c(jx, jy, 46, tri(0, -1, 11, intent.j), intent.j);
+  html += c(jx - 100, jy + 10, 36, tri(0, 1, 9, intent.c), intent.c);
+  ['II', '☰', '⟲', 'EN'].forEach((g, i) => {
+    html += c(W - 30 - i * 48, 30, 20, `<span style="font-family:system-ui;font-size:${12 * k}px;color:rgba(255,231,176,.9)">${g}</span>`);
+  });
+  return html;
+}
+
+// What the recorded solution is asking for at time `ct` into a clip: the
+// clips stand still for leadIn, then play the moves, then stand.
+function intentAt(clip, ct) {
+  let t = ct - clip.leadIn;
+  if (t < 0 || t > clip.endsAt) return { x: 0, j: false, c: false };
+  for (const m of clip.moves) {
+    if (t < m.s) return { x: m.x || 0, j: !!m.j && t < m.s, c: !!m.c };
+    t -= m.s;
+  }
+  return { x: 0, j: false, c: false };
+}
+
+// The phone, and in a tall frame its reflection on the dark ground under
+// it: the same drawing mirrored about the phone's bottom edge, fading out.
+function phone(t, shot) {
+  const html = phoneBody(t, shot);
+  const L = C.L;
+  if (!L.reflect) return html;
+  const edge = L.screen.y + L.screen.h + L.bezel + 6;
+  return html + `<div class="layer" style="transform-origin:0 ${edge}px;transform:scaleY(-1);opacity:.2;
+      -webkit-mask-image:linear-gradient(to bottom, transparent ${edge - 220}px, black ${edge}px)">${html}</div>`;
+}
+
+function phoneBody(t, shot) {
+  const L = C.L, s = L.screen, b = L.bezel;
+  const k = s.w / 844;
+  const tr = shot.phone || {};
+  const zoom = shot.zoom || { s: 1, x: 0, y: 0 };
+  const intent = shot.clip ? intentAt(C.clips[shot.clip], shot.ct) : { x: 0, j: false, c: false };
+  const img = shot.frame ? `<img class="game" src="${shot.frame}">` : '';
+  const marks = (shot.marks || []).join('');
+  return `<div class="phone" style="left:${s.x - b}px;top:${s.y - b}px;width:${s.w + 2 * b}px;height:${s.h + 2 * b}px;
+      transform:translate(${tr.x || 0}px, ${tr.y || 0}px) rotate(${tr.r || 0}deg) scale(${tr.s == null ? 1 : tr.s});opacity:${tr.o == null ? 1 : tr.o}">
+    <div class="bezel" style="border-radius:${b + 28}px"></div>
+    <div class="abs" style="left:${b * .38}px;top:${b + s.h / 2 - 7}px;width:14px;height:14px;border-radius:50%;background:#2A2730"></div>
+    <div class="screen" style="left:${b}px;top:${b}px;width:${s.w}px;height:${s.h}px;border-radius:26px">
+      <div class="zoom" style="transform:translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.s})">${img}${marks}</div>
+      ${shot.fx || ''}
+      <div class="layer">${controls(k, intent)}</div>
+      <div class="glare"></div>
+    </div>
+  </div>`;
+}
+
+// Marks on the footage, in the game screen's own pixels (844 x 390).
+function ring(cx, cy, r, p, k, label, lp) {
+  const R = r * k, C2 = 2 * Math.PI * R;
+  const pulse = 1 + 0.06 * Math.sin(p * 18);
+  return `<svg class="mark" style="left:${cx * k - R - 12}px;top:${cy * k - R - 12}px;overflow:visible" width="${2 * R + 24}" height="${2 * R + 24}">
+      <circle cx="${R + 12}" cy="${R + 12}" r="${R * pulse}" fill="none" stroke="rgba(20,16,10,.55)" stroke-width="${14 * k}"
+        stroke-dasharray="${C2}" stroke-dashoffset="${C2 * (1 - easeOut(clamp(p * 1.6)))}" transform="rotate(-90 ${R + 12} ${R + 12})"/>
+      <circle cx="${R + 12}" cy="${R + 12}" r="${R * pulse}" fill="none" stroke="#DCE4EE" stroke-width="${7 * k}" stroke-linecap="round"
+        stroke-dasharray="${C2}" stroke-dashoffset="${C2 * (1 - easeOut(clamp(p * 1.6)))}" transform="rotate(-90 ${R + 12} ${R + 12})"/>
+    </svg>` + (label ? tagAt(cx, cy - r - 14, label, lp, k) : '');
+}
+function tagAt(x, y, text, p, k) {
+  const s = easeBack(clamp(p));
+  return `<div class="tag" style="left:${x * k}px;top:${y * k}px;font-size:${17 * k}px;padding:${2 * k}px ${12 * k}px;
+      opacity:${clamp(p * 3)};transform:translate(-50%, -100%) scale(${s})">${text}</div>`;
+}
+
+// ——— the scenes ———
+// Each is drawn from its own local time `u`; C.scenes gives start and length.
+const SCENES = {
+  hook(u, d) {
+    const L = C.L, sc = C.scenes.hook;
+    const ct = sc.from + u;
+    const enter = easeBack(prog(u, 0, 0.55));
+    const doorOpen = prog(ct, 4.45, 4.95);
+    const marks = [];
+    // The door, at its place on screen while it opens: a glow that says
+    // "look here" without a word.
+    if (doorOpen > 0 && doorOpen < 1 || u > 1.2) {
+      const g = Math.sin(Math.PI * prog(u, 1.0, 1.9));
+      marks.push(`<div class="mark" style="left:${(sc.door.x - 26) * L.k}px;top:${(sc.door.y0 - 12) * L.k}px;width:${52 * L.k}px;
+        height:${(sc.door.y1 - sc.door.y0 + 24) * L.k}px;border-radius:${10 * L.k}px;box-shadow:0 0 ${40 * L.k}px ${12 * L.k}px rgba(255,246,214,${0.75 * g});
+        border:${3 * L.k}px solid rgba(255,246,214,${0.9 * g})"></div>`);
+    }
+    return phone(u, {
+      clip: 'c1', ct, frame: C.frame('c1', ct), marks,
+      phone: { y: (1 - enter) * 160, s: lerp(0.9, 1, enter), r: (1 - enter) * -6, o: clamp(u * 4) },
+    }) + words('الباب ده فتح لوحده؟', { t: u, at: 0.18, out: d - 0.18, y: L.capY, size: L.type.big * 1.08 })
+      + `<div class="line big" style="top:${L.capY - L.type.big * 1.25}px;font-size:${L.type.big * 1.3}px;
+          opacity:${clamp((u - 0.9) * 4) * (1 - prog(u, d - 0.2, d))};transform:rotate(${8 * Math.sin(u * 9)}deg) scale(${easeBack(prog(u, 0.9, 1.3))})">؟؟</div>`;
+  },
+
+  reveal(u, d) {
+    const L = C.L, sc = C.scenes.reveal;
+    const ct = sc.hold;
+    const zin = easeInOut(prog(u, 0.25, 0.85)), zout = easeInOut(prog(u, d - 0.45, d - 0.05));
+    const z = 1 + (sc.zoom - 1) * zin * (1 - zout);
+    const fx = sc.shadow.x * L.k, fy = sc.shadow.y * L.k;
+    const zoom = { s: z, x: fx - fx * z + (L.screen.w / 2 - fx) * (z - 1) / (sc.zoom - 1) * 0.6 * zin * (1 - zout),
+                   y: fy - fy * z + (L.screen.h * 0.55 - fy) * (z - 1) / (sc.zoom - 1) * 0.6 * zin * (1 - zout) };
+    const marks = [ring(sc.shadow.x, sc.shadow.y, 40, prog(u, 0.7, 1.5), L.k, 'انت · من ٢٫٥ ثانية', prog(u, 1.05, 1.45))];
+    const flash = 1 - prog(u, 0, 0.3);
+    const dim = 0.35 * zin * (1 - zout);
+    return phone(u, { clip: null, ct, frame: C.frame('c1', ct), zoom, marks,
+        fx: `<div class="layer" style="background:radial-gradient(ellipse at ${50}% ${55}%, rgba(0,0,0,0) 30%, rgba(0,0,0,${dim}) 80%)"></div>` })
+      + `<div class="layer" style="background:rgba(255,248,226,${flash * 0.85})"></div>`
+      + words('لأ… ده [انت]', { t: u, at: 0.15, out: d - 0.2, y: L.capY, size: L.type.big * 1.08 })
+      + words('من ٢٫٥ ثانية بالظبط', { t: u, at: 0.55, out: d - 0.2, y: L.capY + L.type.big * 1.6, size: L.type.small, cls: 'sub' })
+      + words('الفاتح اللي على الزرار ده ماضيك', { t: u, at: 1.1, out: d - 0.2, y: L.lowY, size: L.type.mid, cls: 'cream' });
+  },
+
+  // Back to the start: the footage runs backwards, fast, like a tape.
+  rewind(u, d) {
+    const L = C.L, sc = C.scenes.rewind;
+    const p = easeInOut(prog(u, 0, d));
+    const ct = lerp(sc.a, sc.b, p);
+    const jitter = Math.round(Math.sin(u * 90) * 3);
+    const lines = `<div class="layer" style="background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 2px, rgba(0,0,0,0) 2px 6px);mix-blend-mode:multiply"></div>
+      <div class="abs" style="left:0;right:0;top:${(u * 2.2 % 1) * 100}%;height:${18 * L.k}px;background:rgba(255,255,255,.18)"></div>`;
+    const secs = (2.5 * p).toFixed(1);
+    return phone(u, { clip: null, ct, frame: C.frame('c1', ct), fx: lines,
+        zoom: { s: 1.02, x: jitter - 8, y: 0 } })
+      + `<div class="line big" style="top:${L.capY}px;font-size:${L.type.big * 1.15}px">
+           <bdi>${ar(secs)} ثانية</bdi> <span style="font-family:system-ui;display:inline-block;transform:scale(${1 + 0.12 * Math.sin(u * 30)})">◀◀</span></div>`
+      + words('نرجع ورا شوية', { t: u, at: 0.05, y: L.capY + L.type.big * 1.45, size: L.type.small, cls: 'sub' });
+  },
+
+  how(u, d) {
+    const L = C.L, sc = C.scenes.how;
+    const ct = sc.from + u;
+    const steps = sc.steps;
+    const marks = [];
+    // "you", over your head: the camera follows you, so you stay put.
+    marks.push(tagAt(422, 268, 'انت', prog(u, 0.1, 0.5), L.k));
+    if (ct > sc.shadowFrom) marks.push(`<div class="mark" style="left:0;top:0"></div>`);
+    let html = phone(u, { clip: 'c1', ct, frame: C.frame('c1', ct), marks });
+    steps.forEach(([at, out, n, text, sub]) => {
+      if (u >= at - 0.05 && u <= out + 0.3) html += step(n, text, sub, { t: u, at, out: out === d ? d - 0.2 : out, L });
+    });
+    return html + words('ورايا · لعبة ألغاز مصرية', { t: u, at: 0.3, y: L.lowY, size: L.type.small, cls: 'cream', stagger: 0.04 });
+  },
+
+  stepScene(u, d) {
+    const L = C.L, sc = C.scenes.step;
+    const ct = sc.from + u;
+    const marks = [];
+    const sx = pts(sc.shadowX, ct);
+    const show = prog(ct, sc.label[0], sc.label[0] + 0.3) * (1 - prog(ct, sc.label[1], sc.label[1] + 0.2));
+    if (show > 0) {
+      marks.push(tagAt(sx, sc.shadowY - 26, 'سلّمة', show, L.k));
+      marks.push(`<div class="mark" style="left:${(sx - 28) * L.k}px;top:${(sc.shadowY - 8) * L.k}px;width:${56 * L.k}px;height:${44 * L.k}px;
+         border-radius:${12 * L.k}px;box-shadow:0 0 ${28 * L.k}px ${8 * L.k}px rgba(220,228,238,${0.55 * show})"></div>`);
+    }
+    // The jump: a dotted arc from you onto it, drawn as you run.
+    const ap = prog(ct, sc.arc[0], sc.arc[1]);
+    if (ap > 0 && ap < 1.2) {
+      const x0 = 422, y0 = 300, x1 = sx, y1 = sc.shadowY - 6;
+      const mx = (x0 + x1) / 2, my = Math.min(y0, y1) - 60;
+      marks.push(`<svg class="mark" style="left:0;top:0;overflow:visible" width="${L.screen.w}" height="${L.screen.h}">
+        <path d="M${x0 * L.k} ${y0 * L.k} Q${mx * L.k} ${my * L.k} ${x1 * L.k} ${y1 * L.k}" fill="none" stroke="#FFE7B0" stroke-width="${4 * L.k}"
+          stroke-dasharray="${8 * L.k} ${10 * L.k}" stroke-linecap="round"
+          style="opacity:${1 - prog(ap, 0.9, 1.2)}" stroke-dashoffset="${-ct * 40 * L.k}"/></svg>`);
+    }
+    return phone(u, { clip: 'c2', ct, frame: C.frame('c2', ct), marks })
+      + words('وماضيك مش خيال', { t: u, at: 0.05, out: 1.7, y: L.capY, size: L.type.big })
+      + words('ده جسم حقيقي', { t: u, at: 0.35, out: 1.7, y: L.capY + L.type.big * 1.3, size: L.type.small, cls: 'sub' })
+      + words('تطلع فوقه', { t: u, at: 1.95, out: d - 0.2, y: L.capY, size: L.type.big })
+      + words('بس لو كنت وطيت', { t: u, at: 2.2, out: d - 0.2, y: L.capY + L.type.big * 1.3, size: L.type.small, cls: 'sub' })
+      + words('ورايا · لعبة ألغاز مصرية', { t: u, at: -1, y: L.lowY, size: L.type.small, cls: 'cream' });
+  },
+
+  // Three hard levels, cut fast, each arriving with a whip from the side.
+  montage(u, d) {
+    const L = C.L, sc = C.scenes.montage;
+    let acc = 0, html = '';
+    for (const [i, cut] of sc.cuts.entries()) {
+      if (u < acc + cut.dur || i === sc.cuts.length - 1) {
+        const v = u - acc, ct = cut.from + v;
+        const whip = 1 - easeOut(prog(v, 0, 0.28));
+        const blur = whip * 18;
+        html += phone(u, { clip: cut.clip, ct, frame: C.frame(cut.clip, ct),
+            phone: { x: whip * (i % 2 ? -1 : 1) * 260, r: whip * (i % 2 ? 3 : -3) },
+            fx: `<div class="layer" style="backdrop-filter:blur(${blur}px)"></div>` });
+        if (cut.counter) {
+          const n = Math.round(lerp(1, 16, easeOut(prog(v, 0.05, 0.9))));
+          const pop = 1 + 0.18 * (1 - easeOut(prog(v, 0.9, 1.2))) * (v > 0.9 ? 1 : 0);
+          html += `<div class="line big" style="top:${L.capY - L.type.big * 0.15}px;font-size:${L.type.big * 1.25}px;transform:scale(${pop})">${ar(n)} مرحلة</div>`
+            + words(cut.sub, { t: v, at: 0.5, y: L.capY + L.type.big * 1.45, size: L.type.small, cls: 'sub' });
+        } else {
+          const shake = cut.shake ? Math.sin(v * 40) * 6 * (1 - prog(v, 0, 0.6)) : 0;
+          html += words(cut.text, { t: v, at: 0.08, y: L.capY, size: L.type.big * 1.05, extra: `transform:translateX(${shake}px)` })
+            + words(cut.sub, { t: v, at: 0.35, y: L.capY + L.type.big * 1.38, size: L.type.small, cls: 'sub' });
+          if (cut.flash) html += `<div class="layer" style="background:rgba(255,248,226,${0.6 * (1 - prog(v, 0.15, 0.6))})"></div>`;
+        }
+        break;
+      }
+      acc += cut.dur;
+    }
+    return html;
+  },
+
+  platforms(u, d) {
+    const L = C.L, sc = C.scenes.platforms;
+    const ct = sc.from + u;
+    const lift = easeInOut(prog(u, 0, 0.5));
+    let html = phone(u, { clip: sc.clip, ct, frame: C.frame(sc.clip, ct),
+        phone: { y: -lift * L.platLift, s: lerp(1, L.platScale, lift) } })
+      + words('العبها في أي حتة', { t: u, at: 0.1, out: d - 0.15, y: lerp(L.capY, L.platCapY, lift), size: L.type.big });
+    const items = [
+      ['موبايل', 'Android · iPhone', 'phone'],
+      ['كمبيوتر', 'Windows · Mac · Linux', 'laptop'],
+      ['المتصفح', 'من غير تحميل', 'browser'],
+    ];
+    const cw = L.cardW, gap = 18, total = 3 * cw + 2 * gap, x0 = (L.W - total) / 2;
+    items.forEach(([name, sub, icon], i) => {
+      const p = prog(u, 0.45 + i * 0.16, 1.05 + i * 0.16);
+      const s = spring(p), o = clamp(p * 3) * (1 - prog(u, d - 0.2, d));
+      const x = x0 + (2 - i) * (cw + gap);   // right to left, as Arabic reads
+      html += `<div class="card" style="left:${x}px;top:${L.cardY}px;width:${cw}px;padding:${L.cardPad}px 0;opacity:${o};
+          transform:translateY(${(1 - s) * 140}px) scale(${lerp(.6, 1, s)})">
+          ${icons[icon](u - 0.6 - i * 0.16, L.iconS)}
+          <b style="font-size:${L.type.mid * 0.95}px">${name}</b><span style="font-size:${L.type.small * 0.54}px">${sub}</span></div>`;
+    });
+    return html;
+  },
+
+  end(u, d) {
+    const L = C.L;
+    const intro = easeOut(prog(u, 0, 0.5));
+    let html = `<div class="layer" style="opacity:${intro}">${endCard(u)}</div>`;
+    return html;
+  },
+};
+
+// ——— the icons on the platform cards, each doing its one thing ———
+const icons = {
+  phone(t, S) {   // turns on its side — the way the game is played
+    const r = 90 * easeInOut(prog(t, 0.2, 0.7));
+    return `<svg width="${S}" height="${S}" viewBox="0 0 84 84"><g transform="rotate(${-r} 42 42)">
+      <rect x="27" y="12" width="30" height="60" rx="6" fill="none" stroke="#FFE7B0" stroke-width="4"/>
+      <circle cx="42" cy="64" r="2.4" fill="#FFE7B0"/></g></svg>`;
+  },
+  laptop(t, S) {  // its lid opens
+    const a = lerp(0.08, 1, easeBack(prog(t, 0.25, 0.75)));
+    return `<svg width="${S}" height="${S}" viewBox="0 0 84 84">
+      <g transform="translate(0 56) scale(1 ${a}) translate(0 -56)"><rect x="16" y="22" width="52" height="34" rx="4" fill="none" stroke="#FFE7B0" stroke-width="4"/></g>
+      <path d="M8 62 H76" stroke="#FFE7B0" stroke-width="5" stroke-linecap="round"/></svg>`;
+  },
+  browser(t, S) { // a page loading
+    const w = 44 * easeInOut(prog(t, 0.3, 0.9));
+    return `<svg width="${S}" height="${S}" viewBox="0 0 84 84"><rect x="12" y="18" width="60" height="48" rx="6" fill="none" stroke="#FFE7B0" stroke-width="4"/>
+      <path d="M12 30 H72" stroke="#FFE7B0" stroke-width="4"/><circle cx="20" cy="24" r="2" fill="#FFE7B0"/><circle cx="27" cy="24" r="2" fill="#FFE7B0"/>
+      <rect x="20" y="44" width="${w}" height="6" rx="3" fill="#FFE7B0"/></svg>`;
+  },
+};
+
+// ——— the end card: the mark walking, the name, the way to get it ———
+function walker(t, lag, color, opacity, at) {
+  const u = t - lag;
+  if (u < 0) return '';
+  const x = 108 - ((u * 26) % 140);          // across the tile, right to left
+  const sw = Math.sin(u * 12) * 22, bob = Math.abs(Math.sin(u * 12)) * -1.2;
+  return `<g transform="translate(${x} ${bob})" opacity="${opacity}" fill="${color}" stroke="${color}" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8" transform="rotate(${-sw} 0 52.2)"/>
+    <path d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2" transform="rotate(${sw} -4.6 34.3)"/>
+    <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
+    <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/><circle cx="-6.1" cy="28.4" r="4.3" stroke="none"/>
+    <path d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8" transform="rotate(${sw} 0 52.2)"/>
+    <path d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2" transform="rotate(${-sw} -4.6 34.3)"/></g>`;
+}
+function markSvg(u, size, id, style) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" style="${style}">
+      <defs><linearGradient id="g${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7C032"/><stop offset=".78" stop-color="#E59D00"/><stop offset="1" stop-color="#D28C02"/></linearGradient>
+      <clipPath id="cl${id}"><rect width="100" height="100" rx="22"/></clipPath></defs>
+      <g clip-path="url(#cl${id})"><rect width="100" height="100" fill="url(#g${id})"/>
+        ${walker(u, 1.2, '#DCE4EE', .3)}${walker(u, 0.6, '#DCE4EE', .55)}${walker(u + 2.2, 0, '#07050A', 1)}
+        <rect x="0" y="78" width="100" height="22" fill="#0E0A10"/><rect x="0" y="78" width="100" height="1.6" fill="#D9A25C"/></g></svg>`;
+}
+
+// The QR code to waraya.pages.dev/get (which sends a phone to its own
+// store): dark dots on cream, the three corners as rounded squares, the mark
+// in the middle (the code is made at the highest error correction, so the
+// middle can be covered). It builds in a diagonal wipe, a scan line passes
+// over it once, and then it holds still — a code is scanned standing still.
+function qrSvg(u, S) {
+  const q = C.qr, n = q.size, m = 1, cell = S / (n + 2 * m);
+  const finder = (r, c) => (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
+  const hole = (r, c) => Math.abs(r - (n - 1) / 2) < n * 0.13 && Math.abs(c - (n - 1) / 2) < n * 0.13;
+  let dots = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    if (!q.data[r * n + c] || finder(r, c) || hole(r, c)) continue;
+    const p = prog(u, 0.25 + (r + c) / (2 * n) * 0.6, 0.45 + (r + c) / (2 * n) * 0.6);
+    if (p <= 0) continue;
+    const w = cell * 0.94 * easeBack(p);
+    dots += `<rect x="${(c + m + .5) * cell - w / 2}" y="${(r + m + .5) * cell - w / 2}" width="${w}" height="${w}" rx="${w * 0.32}"/>`;
+  }
+  let corners = '';
+  [[0, 0], [0, n - 7], [n - 7, 0]].forEach(([r, c], i) => {
+    const p = easeBack(prog(u, 0.2 + i * 0.1, 0.55 + i * 0.1));
+    const x = (c + m) * cell, y = (r + m) * cell, w = 7 * cell, cx = x + w / 2, cy = y + w / 2;
+    corners += `<g transform="translate(${cx} ${cy}) scale(${p}) rotate(${(1 - p) * 90}) translate(${-cx} ${-cy})">
+      <rect x="${x + cell / 2}" y="${y + cell / 2}" width="${w - cell}" height="${w - cell}" rx="${cell * 1.6}" fill="none" stroke="#0E0A10" stroke-width="${cell}"/>
+      <rect x="${x + 2 * cell}" y="${y + 2 * cell}" width="${3 * cell}" height="${3 * cell}" rx="${cell * .9}" fill="#0E0A10"/></g>`;
+  });
+  const lp = easeBack(prog(u, 0.9, 1.3)), ls = n * 0.26 * cell;
+  const logo = `<g transform="translate(${S / 2} ${S / 2}) scale(${lp}) translate(${-ls / 2} ${-ls / 2})">
+      <foreignObject width="${ls}" height="${ls}">${markSvg(u, ls, 'q', 'border-radius:22%')}</foreignObject></g>`;
+  const sp = prog(u, 1.15, 2.0);
+  const scan = sp > 0 && sp < 1 ? `<rect x="0" y="${sp * S - 3}" width="${S}" height="6" fill="#E59D00" opacity="${Math.sin(Math.PI * sp)}"/>
+      <rect x="0" y="${sp * S - 40}" width="${S}" height="40" fill="url(#scanfade)" opacity="${Math.sin(Math.PI * sp)}"/>` : '';
+  return `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" style="display:block">
+      <defs><linearGradient id="scanfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E59D00" stop-opacity="0"/><stop offset="1" stop-color="#E59D00" stop-opacity=".35"/></linearGradient></defs>
+      <g fill="#0E0A10">${dots}</g>${corners}${logo}${scan}</svg>`;
+}
+
+function endCard(u) {
+  const L = C.L, E = L.end;
+  const tile = easeBack(prog(u, 0.1, 0.65));
+  const mark = markSvg(u, E.mark, 'm', `border-radius:22%;box-shadow:0 22px 60px rgba(20,10,0,.4);
+      transform:scale(${tile}) rotate(${(1 - tile) * -12}deg)`);
+  const tp = prog(u, 0.35, 0.8);
+  const facts = ['لعبة مصرية', 'مجانية', 'من غير إعلانات'];
+  const factHtml = facts.map((f, i) => {
+    const p = easeBack(prog(u, 0.75 + i * 0.12, 1.1 + i * 0.12));
+    return `<span style="display:inline-block;opacity:${clamp(p * 2)};transform:scale(${p})">${f}</span>`;
+  }).join('<span style="opacity:.5"> · </span>');
+  // The QR card: it flips up into place, then the code builds on it.
+  const Q = E.qr, pad = Q.s * 0.07;
+  const qp = spring(prog(u, 0.55, 1.25));
+  const qrCard = `<div class="abs" style="left:${Q.cx - Q.s / 2 - pad}px;top:${Q.cy - Q.s / 2 - pad}px;padding:${pad}px;background:#FFE7B0;
+      border-radius:${pad * 1.4}px;box-shadow:0 26px 70px rgba(20,10,0,.45), 0 0 0 ${pad * 0.25}px rgba(20,16,10,.85);
+      opacity:${clamp(qp * 3)};transform:perspective(1200px) rotateX(${(1 - qp) * 50}deg) scale(${lerp(.6, 1, qp)})">${qrSvg(u - 0.4, Q.s)}</div>`;
+  const cp = prog(u, 1.8, 2.2);
+  const bob = Math.sin(Math.max(0, u - 2.2) * 5) * 6;
+  const qrWords = `<div class="abs" style="left:${Q.cx - 400}px;width:800px;top:${Q.cy + Q.s / 2 + pad + 18}px;text-align:center;
+      font-size:${Q.text}px;color:#14100A;font-weight:700;opacity:${clamp(cp * 2)};transform:translateY(${(1 - easeOut(cp)) * 30 + bob * (u > 2.2 ? 1 : 0)}px)">
+      <span style="font-family:system-ui;display:inline-block;transform:rotate(${Math.sin(u * 6) * 10}deg)">📱</span> صوّر الكود ونزّلها</div>`;
+  const pills = ['Google Play', 'App Store'].map((s, i) => {
+    const p = spring(prog(u, 1.15 + i * 0.12, 1.75 + i * 0.12));
+    return `<span class="pill" style="font-size:${E.pill}px;padding:${E.pill * .35}px ${E.pill * .9}px;opacity:${clamp(p * 3)};
+       transform:translateY(${(1 - p) * 80}px) scale(${lerp(.7, 1, p)})">${s}</span>`;
+  }).join('');
+  const url = 'waraya.pages.dev';
+  const typed = url.slice(0, Math.round(url.length * prog(u, 1.6, 2.3)));
+  const caret = u > 1.6 && Math.floor(u * 3) % 2 === 0 ? '|' : '&nbsp;';
+  const hx = E.headX == null ? L.W / 2 : E.headX;
+  return `<div class="layer" style="background:linear-gradient(#F7C032, #E59D00 ${E.horizon - 2}px, #D9A25C ${E.horizon}px, #0E0A10 ${E.horizon + 7}px)"></div>
+    <div class="abs" style="left:${hx - 400}px;width:800px;top:${E.head}px;display:flex;flex-direction:column;align-items:center">
+      ${mark}
+      <div style="font-size:${E.title}px;line-height:1.1;margin-top:6px;color:#14100A;opacity:${clamp(tp * 2)};transform:translateY(${(1 - easeOut(tp)) * 40}px) scale(${lerp(.85, 1, easeBack(tp))})">ورايا</div>
+      <div style="font-size:${E.facts}px;color:#2A1A06">${factHtml}</div>
+    </div>
+    ${qrCard}${qrWords}
+    <div class="abs" style="left:0;right:0;top:${E.horizon + E.gap}px;display:flex;flex-direction:column;align-items:center;gap:${E.rowGap}px">
+      <div style="display:flex;gap:22px;direction:ltr">${pills}</div>
+      <div style="font-size:${L.type.small * .8}px;color:#D9C2A0;opacity:${clamp((u - 1.45) * 4)}">وعلى الكمبيوتر و itch.io</div>
+      <div style="font-family:system-ui;font-size:${L.type.small * .85}px;color:#D9A25C;direction:ltr">${typed}${caret}</div>
+    </div>`;
+}
+
+// ——— the frame ———
+window.frame = (t) => {
+  const L = C.L;
+  let html = sky(t);
+  for (const [name, sc] of Object.entries(C.scenes)) {
+    if (t >= sc.at && t < sc.at + sc.dur) {
+      const fn = name === 'step' ? SCENES.stepScene : SCENES[name];
+      html += fn(t - sc.at, sc.dur);
+      break;
+    }
+  }
+  stage.innerHTML = html;
+  return Promise.all([document.fonts.ready,
+    ...[...stage.querySelectorAll('img')].map(i => i.complete && i.naturalWidth ? 0 : i.decode().catch(() => 0))]);
+};
+</script>
+</body>
+</html>
