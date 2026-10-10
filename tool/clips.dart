@@ -22,6 +22,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flutter/services.dart' show FontLoader;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/input/input.dart';
+import 'package:waraya/lab/lab_settings.dart';
 import 'package:waraya/level/level.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
@@ -58,6 +59,14 @@ const double stripHeight = 1400;
 /// or the join repeats it. A thin slice smears the dust in it into scratches;
 /// a thick one barely stretches at all.
 const int bleedRows = 150;
+
+/// How strongly your past is drawn — the settings page's slider
+/// (`GameSettings.shadowOpacity`). Unset is the game's default, 0.5; footage
+/// for a phone held at arm's length, squeezed into a video, wants it
+/// stronger: `WARAYA_CLIP_SHADOW=0.9`.
+final double? shadowOpacity = double.tryParse(
+  Platform.environment['WARAYA_CLIP_SHADOW'] ?? '',
+);
 
 const double fps = 60;
 const double dt = 1 / fps;
@@ -198,6 +207,9 @@ Future<({int frames, bool finished})> render(Clip clip) async {
       look: LevelLook.silhouette,
       startAt: clip.levelIndex,
       inputs: [scripted],
+      settings: shadowOpacity == null
+          ? null
+          : (LabSettings()..shadowOpacity = shadowOpacity!),
       readoutDetail: false,
       // Framed around the title in its corner; the entrance is for players.
       titleIntro: false,

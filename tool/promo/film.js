@@ -2,7 +2,8 @@
 //
 //   node tool/promo/film.js WORK [story|feed ...]
 //
-// WORK/clips/phone-<name>.mp4 is the game's own footage at a phone's screen
+// WORK/mark/{panel,tile}/NNN.png is the ending's walk-in, painted by the game
+// (tool/promo/mark_frames.dart). WORK/clips/phone-<name>.mp4 is the game's own footage at a phone's screen
 // size (tool/clips.dart with WARAYA_CLIP_DEVICE=844x390@2, 30 fps). This
 // cuts it into JPEG frames once, then draws every frame of the video in
 // tool/promo/motion.html — window.frame(t) is a pure function of t, so the
@@ -34,8 +35,8 @@ const LAYOUTS = {
     horizon: 1252, sunY: 720, capY: 400, lowY: 1420, reflect: true,
     type: { big: 96, mid: 58, small: 48 },
     platCapY: 330, platLift: 70, platScale: 1, cardY: 1300, cardW: 334, cardPad: 22, iconS: 100,
-    end: { mark: 190, title: 128, facts: 46, head: 150, horizon: 1250, gap: 60, rowGap: 26, pill: 46,
-      qr: { cx: 540, cy: 820, s: 400, text: 52 } },
+    end: { mark: 250, title: 128, facts: 46, head: 120, horizon: 1250, gap: 60, rowGap: 26, pill: 46,
+      qr: { cx: 540, cy: 860, s: 400, text: 52 } },
   },
   feed: {
     W: 1080, H: 1350,
@@ -67,11 +68,12 @@ const CLIPS = {
 // are in the phone screen's own pixels (844 x 390), read off the footage.
 const SCENES = {
   // A door opens in front of you, by itself.
-  hook: { at: 0, dur: 2.0, from: 3.2, door: { x: 215, y0: 185, y1: 335 } },
-  // Who opened it: freeze, push in on the pale one on the plate.
-  reveal: { at: 2.0, dur: 2.7, hold: 5.0, shadow: { x: 591, y: 306 }, zoom: 1.7 },
+  hook: { at: 0, dur: 1.9, from: 4.2, doorX: [[4.1, 140], [4.67, 207], [5.0, 245], [6.05, 375]], doorY: [185, 335],
+    glow: [4.65, 5.6] },
+  // Who opened it: freeze while your past stands on the plate, push in on it.
+  reveal: { at: 1.9, dur: 2.8, hold: 6.05, shadow: { x: 690, y: 311 }, zoom: 1.7 },
   // Back to the start, like a tape.
-  rewind: { at: 4.7, dur: 0.8, a: 5.0, b: 0.6 },
+  rewind: { at: 4.7, dur: 0.8, a: 6.05, b: 0.6 },
   // How: the whole level, in three steps.
   how: { at: 5.5, dur: 6.8, from: 0.6, steps: [
     [0, 2.9, 1, 'اقف على الزرار', 'حتى لو مالوش لازمة دلوقتي'],
@@ -79,12 +81,16 @@ const SCENES = {
     [4.4, 6.8, 3, 'ماضيك يدوس مكانك', 'والباب يفتحلك'],
   ] },
   // The second rule: your past is a body you can stand on.
-  step: { at: 12.3, dur: 4.2, from: 5.4, shadowX: [[6.9, 377], [7.3, 332], [7.8, 320]], shadowY: 297,
-    label: [6.4, 8.9], arc: [7.55, 8.35] },
+  step: { at: 12.3, dur: 4.2, from: 5.4, shadowY: 297,
+    shadowX: [[6.9, 378], [7.3, 330], [7.6, 305], [7.8, 320], [7.95, 340], [8.15, 360], [8.4, 395], [8.65, 425], [8.9, 430]],
+    // The tag from when your past ducks; the arc while you run at it, gone
+    // the frame you leave the ground (8.05).
+    label: [6.9, 8.9], arc: [7.3, 8.0] },
   // How far it goes, fast.
   montage: { at: 16.5, dur: 4.6, cuts: [
     { clip: 'c9', from: 7.4, dur: 1.6, text: 'ظلّين؟', sub: 'يبقى انت في مكانين في نفس اللحظة', shake: true },
-    { clip: 'c8', from: 2.6, dur: 1.5, text: 'والنور بيمسح ماضيك', sub: 'جوّه النور… مش موجود', flash: true },
+    // Your past walks into the light and is gone (4.8), then out the far side.
+    { clip: 'c8', from: 4.35, dur: 1.5, text: 'والنور بيمسح ماضيك', sub: 'جوّه النور… مش موجود', flash: 0.5 },
     { clip: 'c15', from: 1.0, dur: 1.5, counter: true, sub: 'كل واحدة أصعب من اللي قبلها' },
   ] },
   // Everywhere.
@@ -119,6 +125,7 @@ async function film(page, work, name) {
   await page.evaluate(({ layout, scenes, clips, counts, work, qr }) => {
     window.setup({
       L: layout, scenes, clips, qr,
+      mark: (shape, p) => `file://${work}/mark/${shape}/${String(Math.round(p * 45)).padStart(3, '0')}.png`,
       frame: (key, ct) => {
         const i = Math.min(counts[key], Math.max(1, Math.round(ct * 30) + 1));
         return `file://${work}/jpg/${key}/${String(i).padStart(5, '0')}.jpg`;
