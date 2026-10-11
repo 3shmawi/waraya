@@ -182,9 +182,7 @@ class _Row extends StatelessWidget {
           color: playing ? const Color(0x22D9A25C) : const Color(0x14FFE7B0),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: playing
-                ? LevelSelect._warm
-                : const Color(0x1AFFE7B0),
+            color: playing ? LevelSelect._warm : const Color(0x1AFFE7B0),
           ),
         ),
         child: Row(

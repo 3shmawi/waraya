@@ -66,6 +66,9 @@ class Words {
   String whatsNewIn(String version) =>
       _en ? "What's new in $version" : 'الجديد في نسخة $version';
   String get smallChanges => _en ? 'Small fixes.' : 'تصليحات صغيرة.';
+  String get updateRequired => _en
+      ? 'This version no longer works. Update to keep playing.'
+      : 'النسخة دي مبقتش شغالة. حدّث عشان تكمّل.';
   String get updateAvailable => _en ? 'Update available' : 'فيه تحديث';
 
   // The settings page.

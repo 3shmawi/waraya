@@ -6,5 +6,4 @@
 /// disk to read.
 library;
 
-export 'file_levels_stub.dart'
-    if (dart.library.io) 'file_levels_io.dart';
+export 'file_levels_stub.dart' if (dart.library.io) 'file_levels_io.dart';

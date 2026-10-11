@@ -12,7 +12,8 @@ void main() {
 
   testWithGame<LevelGame>(
     'the edge is on the past you can stand on, and only that one',
-    () => LevelGame(levels: [Levels.standOnYourself], inputs: [ScriptedInput()]),
+    () =>
+        LevelGame(levels: [Levels.standOnYourself], inputs: [ScriptedInput()]),
     (game) async {
       await game.ready();
       final delay = Levels.standOnYourself.delaySeconds;

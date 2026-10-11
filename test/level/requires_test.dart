@@ -107,35 +107,36 @@ void main() {
     );
   });
 
-  test('a build without the key would have refused the level, not thinned it',
-      () {
-    // What this is all for, spelled out. Strip `toggles` from the set — which
-    // is what an older build *is* — and the level that is entirely about a key
-    // no longer parses at all. The alternative, and the reason any of this
-    // exists, is the same JSON quietly becoming a level with a door nothing
-    // can open and no word said anywhere.
-    final json = jsonOf(Levels.closeWhatYouOpened);
-    expect(json['requires'], contains('toggles'));
-    expect(json['toggles'], hasLength(1));
+  test(
+    'a build without the key would have refused the level, not thinned it',
+    () {
+      // What this is all for, spelled out. Strip `toggles` from the set — which
+      // is what an older build *is* — and the level that is entirely about a key
+      // no longer parses at all. The alternative, and the reason any of this
+      // exists, is the same JSON quietly becoming a level with a door nothing
+      // can open and no word said anywhere.
+      final json = jsonOf(Levels.closeWhatYouOpened);
+      expect(json['requires'], contains('toggles'));
+      expect(json['toggles'], hasLength(1));
 
-    final older = {...json, 'requires': ['toggles', 'something-else']};
-    expect(
-      () => levelFromJson(older),
-      throwsA(
-        isA<LevelUnsupportedException>().having(
-          (e) => e.missing,
-          'missing',
-          {'something-else'},
+      final older = {
+        ...json,
+        'requires': ['toggles', 'something-else'],
+      };
+      expect(
+        () => levelFromJson(older),
+        throwsA(
+          isA<LevelUnsupportedException>().having((e) => e.missing, 'missing', {
+            'something-else',
+          }),
         ),
-      ),
-    );
-  });
+      );
+    },
+  );
 
   test('one level ahead of this build does not take the batch with it', () {
-    final ahead = jsonOf(
-      Levels.campaign[1],
-      requires: ['crates'],
-    )..['id'] = 'from-the-future';
+    final ahead = jsonOf(Levels.campaign[1], requires: ['crates'])
+      ..['id'] = 'from-the-future';
 
     final skipped = <LevelUnsupportedException>[];
     final levels = levelsFromJson([
@@ -152,21 +153,28 @@ void main() {
     expect(skipped.single.levelId, 'from-the-future');
   });
 
-  test('the server can only ever add, and never a level that will not run',
-      () async {
-    final source = LevelsThenExtras(
-      const BuiltInLevels(),
-      JsonLevels(
-        jsonEncode([
-          jsonOf(sample)..['id'] = 'needs-what-is-not-here',
-          // ...and the same id as a built-in, which is refused for a different
-          // reason: a bad upload must not replace a level known to be solvable.
-        ].map((json) => json..['requires'] = ['crates']).toList()),
-      ),
-    );
+  test(
+    'the server can only ever add, and never a level that will not run',
+    () async {
+      final source = LevelsThenExtras(
+        const BuiltInLevels(),
+        JsonLevels(
+          jsonEncode(
+            [
+              jsonOf(sample)..['id'] = 'needs-what-is-not-here',
+              // ...and the same id as a built-in, which is refused for a different
+              // reason: a bad upload must not replace a level known to be solvable.
+            ].map((json) => json..['requires'] = ['crates']).toList(),
+          ),
+        ),
+      );
 
-    expect((await source.load()).map((l) => l.id), Levels.campaign.map((l) => l.id));
-  });
+      expect(
+        (await source.load()).map((l) => l.id),
+        Levels.campaign.map((l) => l.id),
+      );
+    },
+  );
 
   test('a malformed level is still an error, not a skip', () {
     expect(

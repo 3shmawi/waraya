@@ -84,6 +84,9 @@ class LevelFade extends PositionComponent {
   @override
   void render(Canvas canvas) {
     if (_dark <= 0) return;
-    canvas.drawRect(size.toRect(), Paint()..color = _ink.withValues(alpha: _dark));
+    canvas.drawRect(
+      size.toRect(),
+      Paint()..color = _ink.withValues(alpha: _dark),
+    );
   }
 }

@@ -185,10 +185,7 @@ class _CampaignEndState extends State<CampaignEnd>
                         runSpacing: 12,
                         alignment: WrapAlignment.center,
                         children: [
-                          _Button(
-                            label: words.levels,
-                            onTap: widget.onLevels,
-                          ),
+                          _Button(label: words.levels, onTap: widget.onLevels),
                           _Button(
                             label: words.fromLevelOne,
                             onTap: widget.onRestart,

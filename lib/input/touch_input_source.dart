@@ -129,7 +129,6 @@ class TouchInputSource extends PositionComponent
     return dx.sign;
   }
 
-
   @override
   InputIntent poll() {
     final pads = _held.values.toSet();
@@ -314,10 +313,7 @@ class TouchInputSource extends PositionComponent
   void onTapCancel(TapCancelEvent event) {
     final id = event.pointerId;
     if (_dragging.contains(id)) return;
-    _cancelled[id] = (
-      _held[id],
-      id == _stickPointer ? stickCentre : null,
-    );
+    _cancelled[id] = (_held[id], id == _stickPointer ? stickCentre : null);
     _lift(id);
   }
 
@@ -338,10 +334,10 @@ class TouchInputSource extends PositionComponent
   /// on exactly the phones this is drawn on.
   final Map<(Color, double), Paint> _paints = {};
 
-  Paint _fill(Color color, double strength) => _paints.putIfAbsent(
-    (color, strength),
-    () => Paint()..color = color.withValues(alpha: color.a * strength),
-  );
+  Paint _fill(Color color, double strength) => _paints.putIfAbsent((
+    color,
+    strength,
+  ), () => Paint()..color = color.withValues(alpha: color.a * strength));
 
   final Map<double, Paint> _rims = {};
 

@@ -1289,31 +1289,35 @@ void main() {
   group('a door your own weight opened', () {
     /// A plate and a door far enough apart that a lingering door would let
     /// the player walk through on their own press.
-    LevelGame Function() bench({double linger = 4}) => () => LevelGame(
-      levels: [
-        Level(
-          id: 'linger-bench',
-          name: 'linger-bench',
-          teaches: '',
-          delaySeconds: 2,
-          spawnX: 0,
-          floorTop: 620,
-          blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
-          plates: const [
-            PlateSpec(area: Rect.fromLTRB(-50, 608, 50, 620), opens: 'gate'),
-          ],
-          doors: [
-            DoorSpec(
-              id: 'gate',
-              closed: const Rect.fromLTRB(300, 360, 326, 620),
-              lingerSeconds: linger,
+    LevelGame Function() bench({double linger = 4}) =>
+        () => LevelGame(
+          levels: [
+            Level(
+              id: 'linger-bench',
+              name: 'linger-bench',
+              teaches: '',
+              delaySeconds: 2,
+              spawnX: 0,
+              floorTop: 620,
+              blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
+              plates: const [
+                PlateSpec(
+                  area: Rect.fromLTRB(-50, 608, 50, 620),
+                  opens: 'gate',
+                ),
+              ],
+              doors: [
+                DoorSpec(
+                  id: 'gate',
+                  closed: const Rect.fromLTRB(300, 360, 326, 620),
+                  lingerSeconds: linger,
+                ),
+              ],
+              goal: const Rect.fromLTRB(500, 548, 580, 620),
             ),
           ],
-          goal: const Rect.fromLTRB(500, 548, 580, 620),
-        ),
-      ],
-      inputs: [ScriptedInput()],
-    );
+          inputs: [ScriptedInput()],
+        );
 
     testWithGame<LevelGame>(
       'shuts the moment you step off, however long its grace is',

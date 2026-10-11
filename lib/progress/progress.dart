@@ -30,8 +30,7 @@ abstract interface class Progress {
 /// unavailable — a private browsing window, a browser with site data blocked.
 /// Losing progress is a disappointment; refusing to start is a bug.
 class MemoryProgress implements Progress {
-  MemoryProgress([Iterable<String> beaten = const []])
-    : _beaten = {...beaten};
+  MemoryProgress([Iterable<String> beaten = const []]) : _beaten = {...beaten};
 
   final Set<String> _beaten;
 

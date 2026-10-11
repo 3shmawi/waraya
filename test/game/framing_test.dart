@@ -57,8 +57,7 @@ void main() {
       game.update(1 / 60);
 
       final view = game.camera.visibleWorldRect;
-      final groundFraction =
-          (game.level.floorTop - view.top) / view.height;
+      final groundFraction = (game.level.floorTop - view.top) / view.height;
       expect(
         groundFraction,
         closeTo(WarayaConfig.groundOnScreen, 0.02),
@@ -85,7 +84,8 @@ void main() {
         expect(
           rect.bottom,
           greaterThanOrEqualTo(bottom),
-          reason: 'the floor slab stops at ${rect.bottom} and the camera can '
+          reason:
+              'the floor slab stops at ${rect.bottom} and the camera can '
               'see down to ${bottom.toStringAsFixed(0)}',
         );
       }

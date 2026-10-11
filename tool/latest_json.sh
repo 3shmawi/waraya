@@ -10,6 +10,8 @@
 #               since the last release; otherwise written from the commits
 #               since then, so a release never goes out saying nothing — or
 #               saying the last release's news again
+# minVersion    fastlane/min_version.txt, or empty: builds older than it
+#               get an update they cannot wave away
 # changes       the last 30 commits, newest first, {sha, subject}: the web
 #               game shows the ones newer than the build it is running
 #
@@ -55,6 +57,11 @@ else
   en=$(cat fastlane/release_notes/en.txt)
 fi
 
+minimum=$(tr -d '[:space:]' 2>/dev/null < fastlane/min_version.txt || true)
+if [ -n "$minimum" ] && ! [[ "$minimum" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "fastlane/min_version.txt is not a version: $minimum" >&2; exit 1
+fi
+
 changes=$(git log --no-merges -n 30 --format='%H%x09%s' \
   | grep -vP '\tVersion [0-9]' \
   | jq -R -s 'split("\n") | map(select(length > 0) | split("\t") | {sha: .[0], subject: .[1]})')
@@ -66,8 +73,9 @@ jq -n \
   --arg ar "$ar" \
   --arg en "$en" \
   --argjson changes "$changes" \
+  --arg minVersion "$minimum" \
   '{version: $version, build: $build, buildNumber: $buildNumber,
-    notes: {ar: $ar, en: $en}, changes: $changes}' > "$out"
+    notes: {ar: $ar, en: $en}, minVersion: $minVersion, changes: $changes}' > "$out"
 
 jq -e '.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' "$out" > /dev/null
-echo "wrote $out: $version, build ${build:-none}, #$number, notes from $from"
+echo "wrote $out: $version, build ${build:-none}, #$number, min ${minimum:-none}, notes from $from"

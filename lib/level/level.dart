@@ -228,10 +228,7 @@ class Level {
   static const Set<String> labMechanics = <String>{'prelude'};
 
   /// What the bench accepts: everything the game does, and what is on trial.
-  static Set<String> get benchMechanics => {
-    ...knownMechanics,
-    ...labMechanics,
-  };
+  static Set<String> get benchMechanics => {...knownMechanics, ...labMechanics};
 
   /// What this level needs beyond the baseline, worked out from its contents.
   ///

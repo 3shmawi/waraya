@@ -387,9 +387,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
         : Prelude(
             moves: level.prelude,
             figure: ShadowFigure(
-              color: _lit
-                  ? SilhouettePalette.shadowColor
-                  : Palette.shadowColor,
+              color: _lit ? SilhouettePalette.shadowColor : Palette.shadowColor,
               opacity: settings.shadowOpacity,
               // Behind every real past: this one is not anybody's.
               priority: 80,
@@ -654,9 +652,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       final forcedShut = mine.any((plate) => plate.inverts && plate.isPressed);
       final open =
           mine.any((plate) => !plate.inverts && plate.isPressed) ||
-          toggles.any(
-            (toggle) => toggle.flips == door.id && toggle.flipped,
-          );
+          toggles.any((toggle) => toggle.flips == door.id && toggle.flipped);
       // The grace is your past's, not yours: a door held open by nothing but
       // the body you are standing in shuts the moment you step off it.
       final lingers =
@@ -681,9 +677,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     // Not once the level is won. The shadow is still walking during the beat
     // between touching the goal and the next level loading, and being caught
     // in that beat used to wipe the finish and put you back at the start.
-    if (settings.shadowKills &&
-        !_completed &&
-        ghosts.any(playerBox.overlaps)) {
+    if (settings.shadowKills && !_completed && ghosts.any(playerBox.overlaps)) {
       die();
     }
   }

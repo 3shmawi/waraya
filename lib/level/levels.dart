@@ -791,13 +791,7 @@ abstract final class Levels {
         Move.right(1.6),
       ],
       // Or press the near plate alone, which opens half a gate.
-      [
-        Move.left(0.8),
-        Move(2.0),
-        Move.right(1.4),
-        Move(4.0),
-        Move.right(1.6),
-      ],
+      [Move.left(0.8), Move(2.0), Move.right(1.4), Move(4.0), Move.right(1.6)],
     ],
     name: 'اتنين مش واحد',
     teaches: 'الباب عايز الزرارين مع بعض. انت واحد، وماضيك اتنين.',

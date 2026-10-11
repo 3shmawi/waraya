@@ -77,9 +77,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a phone that will not turn is never a dead end', (
-    tester,
-  ) async {
+  testWidgets('a phone that will not turn is never a dead end', (tester) async {
     // Reported from the first install: the game put on a home screen while
     // its manifest still said portrait stays upright for good, and the
     // turn-your-phone screen had nothing to press.

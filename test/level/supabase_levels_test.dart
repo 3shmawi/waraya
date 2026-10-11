@@ -46,11 +46,12 @@ void main() {
   final alsoGood = row(Levels.goInLow, 'also-from-the-server');
 
   test('what the server publishes comes through, in its order', () async {
-    final source = SupabaseLevels(
-      fetch: () async => body([good, alsoGood]),
-    );
+    final source = SupabaseLevels(fetch: () async => body([good, alsoGood]));
     final levels = await source.load();
-    expect(levels.map((l) => l.id), ['from-the-server', 'also-from-the-server']);
+    expect(levels.map((l) => l.id), [
+      'from-the-server',
+      'also-from-the-server',
+    ]);
   });
 
   test('a level the gate should not have passed is refused here', () async {

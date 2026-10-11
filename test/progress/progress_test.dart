@@ -43,11 +43,14 @@ void main() {
     // The whole reason progress is kept by id: the campaign is a list that is
     // meant to grow, and `LevelsThenExtras` exists so a server can append to
     // it. A remembered position would quietly mean a different level.
-    test('a level inserted in the middle does not hand out the ones after it', () {
-      final grown = [_level('a'), _level('new'), _level('b'), _level('c')];
-      expect(unlockedCount(grown, {'a', 'b'}), 2);
-      expect(resumeIndex(grown, {'a', 'b'}), 1);
-    });
+    test(
+      'a level inserted in the middle does not hand out the ones after it',
+      () {
+        final grown = [_level('a'), _level('new'), _level('b'), _level('c')];
+        expect(unlockedCount(grown, {'a', 'b'}), 2);
+        expect(resumeIndex(grown, {'a', 'b'}), 1);
+      },
+    );
 
     test('ids that are no longer in the campaign are ignored', () {
       expect(unlockedCount(campaign, {'a', 'deleted-level'}), 2);
@@ -95,7 +98,10 @@ void main() {
         _beaten.clear();
         _finished = 0;
         await game.ready();
-        final run = Playthrough(game, game.input.sources.first as ScriptedInput);
+        final run = Playthrough(
+          game,
+          game.input.sources.first as ScriptedInput,
+        );
 
         run.play(Levels.pressItEarly.solution, stopWhenComplete: true);
         expect(_beaten, ['press-it-early']);

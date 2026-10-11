@@ -6,4 +6,5 @@
 /// Reported from playing. Now the splash waits for this.
 library;
 
-export 'game_ready_stub.dart' if (dart.library.js_interop) 'game_ready_web.dart';
+export 'game_ready_stub.dart'
+    if (dart.library.js_interop) 'game_ready_web.dart';

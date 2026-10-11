@@ -92,7 +92,11 @@ class Blocks extends PositionComponent {
 /// A plate. Held down by any body resting on it — the player's or, crucially,
 /// the shadow's.
 class PressurePlate extends PositionComponent {
-  PressurePlate(this.spec, {this.look = LevelLook.greyBox, super.priority = -6});
+  PressurePlate(
+    this.spec, {
+    this.look = LevelLook.greyBox,
+    super.priority = -6,
+  });
 
   final PlateSpec spec;
   final LevelLook look;
@@ -279,8 +283,7 @@ class LightZone extends PositionComponent {
     );
     canvas.drawRect(
       lamp,
-      Paint()
-        ..color = _lit ? SilhouettePalette.blockFill : Palette.blockFill,
+      Paint()..color = _lit ? SilhouettePalette.blockFill : Palette.blockFill,
     );
     // The bulb: the underside of the housing, which is the brightest thing in
     // the level and the place the eye follows down into the beam.
@@ -763,18 +766,20 @@ class ShadowForecast extends PositionComponent {
   }
 
   late final Paint _ring = Paint()
-    ..color = (look == LevelLook.silhouette
-            ? SilhouettePalette.shadowColor
-            : Palette.shadowColor)
-        .withValues(alpha: 0.85)
+    ..color =
+        (look == LevelLook.silhouette
+                ? SilhouettePalette.shadowColor
+                : Palette.shadowColor)
+            .withValues(alpha: 0.85)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
 
   late final Paint _fill = Paint()
-    ..color = (look == LevelLook.silhouette
-            ? SilhouettePalette.shadowColor
-            : Palette.shadowColor)
-        .withValues(alpha: 0.3);
+    ..color =
+        (look == LevelLook.silhouette
+                ? SilhouettePalette.shadowColor
+                : Palette.shadowColor)
+            .withValues(alpha: 0.3);
 
   @override
   void render(Canvas canvas) {

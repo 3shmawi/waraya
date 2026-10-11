@@ -98,12 +98,7 @@ void main() {
       final run = Playthrough(game, game.input.sources.first as ScriptedInput)
         // The wrong idea this level pins: back out the way you came in and
         // wait by the door, where your own past is walking.
-        ..play(const [
-          Move.left(1.9),
-          Move(1.0),
-          Move.right(2.5),
-          Move(4),
-        ]);
+        ..play(const [Move.left(1.9), Move(1.0), Move.right(2.5), Move(4)]);
 
       expect(game.reloads, greaterThan(0), reason: run.where);
       expect(_heard.played, contains(Sfx.reset));

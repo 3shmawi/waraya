@@ -194,6 +194,36 @@ void main() {
       expect(pubspec, contains('- fastlane/release_notes/en.txt'));
     });
   });
+
+  group('a forced update', () {
+    String withMinimum(String minimum, {String version = '1.3.0'}) =>
+        jsonEncode({'version': version, 'minVersion': minimum});
+
+    test('a copy older than minVersion is forced', () async {
+      final update = await checker(() => withMinimum('1.3.0')).check();
+      expect(update!.isForced, isTrue);
+    });
+
+    test('a copy at or past minVersion is only offered it', () async {
+      final update = await checker(() => withMinimum('1.2.0')).check();
+      expect(update!.isForced, isFalse);
+      expect(
+        await checker(() => withMinimum('1.0.0', version: '1.2.0')).check(),
+        isNull,
+      );
+    });
+
+    test('no or a broken minVersion forces nothing', () async {
+      expect(
+        (await checker(() => file(version: '1.3.0')).check())!.isForced,
+        isFalse,
+      );
+      expect(
+        (await checker(() => withMinimum('soon')).check())!.isForced,
+        isFalse,
+      );
+    });
+  });
 }
 
 class _Notes extends CachingAssetBundle {

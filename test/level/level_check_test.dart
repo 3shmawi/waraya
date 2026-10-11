@@ -112,7 +112,10 @@ void main() {
     test('that a cheap run finishes is refused for it', () async {
       final verdict = await checkLevel(Levels.pressItEarly);
       expect(verdict.refusals, {Refusal.cheapRunFinishes});
-      expect(verdict.findings.single.detail, contains('touch what is behind you'));
+      expect(
+        verdict.findings.single.detail,
+        contains('touch what is behind you'),
+      );
     });
 
     test('that needs a mechanic this build lacks is refused by name', () async {

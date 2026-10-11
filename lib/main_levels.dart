@@ -257,6 +257,8 @@ class _WarayaLevelsState extends State<WarayaLevels>
       _update = found;
       _updateWaved = false;
     });
+    // Too old to play: the level stops under the card and stays stopped.
+    if (found.isForced) _hold('forced-update');
   }
 
   void _takeUpdate() {
@@ -387,6 +389,8 @@ class _WarayaLevelsState extends State<WarayaLevels>
 
   /// At most one card at a time: what just arrived first, then what is next.
   List<Widget> _cards(Lang lang) {
+    final forced = _update;
+    if (forced != null && forced.isForced) return [_forcedUpdate(lang, forced)];
     final whatsNew = _whatsNew;
     if (whatsNew != null) {
       return [
@@ -410,6 +414,22 @@ class _WarayaLevelsState extends State<WarayaLevels>
     }
     return const [];
   }
+
+  /// The whole screen, dimmed and deaf to taps, with the card on top and
+  /// only its update button.
+  Widget _forcedUpdate(Lang lang, Update update) => Positioned.fill(
+    child: Stack(
+      children: [
+        const ModalBarrier(dismissible: false, color: Color(0xCC000000)),
+        UpdateCard.update(
+          lang: lang,
+          update: update,
+          onTake: _takeUpdate,
+          onLater: () {},
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -490,7 +510,8 @@ class _WarayaLevelsState extends State<WarayaLevels>
             ),
           // Over the game, under any menu: the bar's rule, for the same
           // reason — a card left over a menu covers its buttons.
-          if (!_overlaid && !_upright) ..._cards(lang),
+          if (!_overlaid && !_upright || (_update?.isForced ?? false))
+            ..._cards(lang),
           if (_upright)
             Positioned.fill(
               child: TurnPhone(

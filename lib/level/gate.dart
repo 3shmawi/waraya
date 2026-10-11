@@ -3,11 +3,7 @@ import 'levels.dart';
 
 /// What the gate decided about one row of the `levels` table.
 class GateDecision {
-  const GateDecision({
-    required this.id,
-    required this.status,
-    this.verdict,
-  });
+  const GateDecision({required this.id, required this.status, this.verdict});
 
   /// The row's primary key, which is what gets updated.
   final String id;

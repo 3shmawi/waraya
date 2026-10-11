@@ -17,7 +17,7 @@ class UpdateCard extends StatelessWidget {
     required this.lang,
     required this.title,
     required this.notes,
-    required this.onDismiss,
+    this.onDismiss,
     this.action,
     this.onAction,
   });
@@ -32,18 +32,22 @@ class UpdateCard extends StatelessWidget {
   }) {
     final w = Words(lang);
     final published = update.published;
+    final notes = update.notesIn(lang);
     return UpdateCard(
       key: key,
       lang: lang,
       title: update.isNewVersion
           ? '${w.newVersion} · ${published.version}'
           : w.newVersion,
-      notes: update.notesIn(lang).isNotEmpty
-          ? update.notesIn(lang)
+      notes: update.isForced
+          ? [w.updateRequired, if (notes.isNotEmpty) notes].join('\n')
+          : notes.isNotEmpty
+          ? notes
           : w.smallChanges,
       action: update.route == UpdateRoute.reload ? w.refresh : w.download,
       onAction: onTake,
-      onDismiss: onLater,
+      // Forced: no "later" — the only way on is the update.
+      onDismiss: update.isForced ? null : onLater,
     );
   }
 
@@ -69,7 +73,9 @@ class UpdateCard extends StatelessWidget {
   final String notes;
   final String? action;
   final VoidCallback? onAction;
-  final VoidCallback onDismiss;
+
+  /// Null for an update that cannot be waved away.
+  final VoidCallback? onDismiss;
 
   static const Color _ink = Color(0xFFF3E2C6);
   static const Color _dim = Color(0xFFC9BBA9);
@@ -129,14 +135,18 @@ class UpdateCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        _Pill(
-                          label: action == null ? w.gotIt : w.later,
-                          onTap: onDismiss,
-                          quiet: action != null,
-                        ),
+                        if (onDismiss != null)
+                          _Pill(
+                            label: action == null ? w.gotIt : w.later,
+                            onTap: onDismiss!,
+                            quiet: action != null,
+                          ),
                         if (action != null) ...[
                           const SizedBox(width: 8),
-                          _Pill(label: action!, onTap: onAction ?? onDismiss),
+                          _Pill(
+                            label: action!,
+                            onTap: onAction ?? onDismiss ?? () {},
+                          ),
                         ],
                       ],
                     ),

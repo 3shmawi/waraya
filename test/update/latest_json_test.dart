@@ -34,4 +34,10 @@ void main() {
       expect(line, contains('WARAYA_BUILD_NUMBER'), reason: target);
     }
   });
+
+  test('latest.json carries minVersion from fastlane/min_version.txt', () {
+    final script = File('tool/latest_json.sh').readAsStringSync();
+    expect(script, contains('fastlane/min_version.txt'));
+    expect(script, contains(r'minVersion: $minVersion'));
+  });
 }

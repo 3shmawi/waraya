@@ -22,10 +22,7 @@ void main() {
 
   group('the bench and the game', () {
     test('no name is both on trial and in the game', () {
-      expect(
-        Level.labMechanics.intersection(Level.knownMechanics),
-        isEmpty,
-      );
+      expect(Level.labMechanics.intersection(Level.knownMechanics), isEmpty);
     });
 
     test('a level with a prelude says so', () {
@@ -111,18 +108,16 @@ void main() {
       },
     );
 
-    testWithGame<LevelGame>(
-      'the demonstration presses nothing',
-      build,
-      (game) async {
-        await game.ready();
-        // Leave the plate at once: only the demonstration is on it after
-        // that, and the door must not care.
-        final run = start(game)..play(const [Move.left(0.6), Move(0.01)]);
-        game.prelude!.restart(); // as if never dismissed
-        run.play(const [Move(2.5)]);
-        expect(game.plates.single.isPressed, isFalse, reason: run.where);
-      },
-    );
+    testWithGame<LevelGame>('the demonstration presses nothing', build, (
+      game,
+    ) async {
+      await game.ready();
+      // Leave the plate at once: only the demonstration is on it after
+      // that, and the door must not care.
+      final run = start(game)..play(const [Move.left(0.6), Move(0.01)]);
+      game.prelude!.restart(); // as if never dismissed
+      run.play(const [Move(2.5)]);
+      expect(game.plates.single.isPressed, isFalse, reason: run.where);
+    });
   });
 }

@@ -112,16 +112,14 @@ void main() {
       // `crates` is named in the plan and deliberately not built, which makes
       // it the honest stand-in for a level authored against a newer build
       // than this one.
-      write('ahead.json', Levels.campaign.first.toJson()..['requires'] = [
-        'crates',
-      ]);
+      write(
+        'ahead.json',
+        Levels.campaign.first.toJson()..['requires'] = ['crates'],
+      );
       write('here.json', Levels.campaign[1].toJson());
 
       final skipped = <LevelUnsupportedException>[];
-      final levels = await FileLevels(
-        dir.path,
-        onSkipped: skipped.add,
-      ).load();
+      final levels = await FileLevels(dir.path, onSkipped: skipped.add).load();
 
       expect(levels.single.id, Levels.campaign[1].id);
       expect(skipped.single.missing, {'crates'});

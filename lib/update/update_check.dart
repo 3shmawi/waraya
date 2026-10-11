@@ -23,9 +23,15 @@ class Published {
     this.notesAr = '',
     this.notesEn = '',
     this.changes = const [],
+    this.minVersion = '',
   });
 
   final String version;
+
+  /// The oldest version still allowed to play, or empty for none. A copy
+  /// older than this gets an update it cannot wave away: for the day a
+  /// server or level change leaves old builds broken, not for every release.
+  final String minVersion;
 
   /// The commit the web game was built from. Empty on a release's copy.
   final String build;
@@ -63,7 +69,11 @@ class Published {
     final build = json['build'];
     final number = json['buildNumber'];
     final changes = json['changes'];
+    final minimum = json['minVersion'];
     return Published(
+      minVersion: minimum is String && parseVersion(minimum) != null
+          ? minimum
+          : '',
       version: version,
       build: build is String ? build : '',
       buildNumber: number is int ? number : 0,
@@ -123,6 +133,12 @@ class Update {
   /// push between versions. The second still deserves a reload, but has no
   /// notes of its own to show.
   bool get isNewVersion => compareVersions(published.version, running) > 0;
+
+  /// Whether this copy is older than the oldest one allowed to play: the
+  /// update cannot be waved away.
+  bool get isForced =>
+      published.minVersion.isNotEmpty &&
+      compareVersions(running, published.minVersion) < 0;
 }
 
 /// `[major, minor, patch]`, or null for anything else.
@@ -210,7 +226,10 @@ class UpdateChecker {
           runningBuild.isNotEmpty &&
           published.build.isNotEmpty &&
           published.build != runningBuild;
-      if (!newer && !rebuilt) return null;
+      final forced =
+          published.minVersion.isNotEmpty &&
+          compareVersions(running, published.minVersion) < 0;
+      if (!newer && !rebuilt && !forced) return null;
       return Update(
         published: published,
         route: route,

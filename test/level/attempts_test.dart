@@ -51,24 +51,26 @@ void main() {
     expect(attempt.seconds, closeTo(run.finishedAt!, 0.05));
   });
 
-  testWithGame<LevelGame>('every retry is counted, and where it happened', build, (
-    game,
-  ) async {
-    await game.ready();
-    final run = start(game)..play(const [Move.left(1)]);
-    final x = game.player.x;
-    game.reload();
-    run.play(const [Move.right(0.5)]);
-    game.reload();
-    run.play(Levels.pressItEarly.solution, stopWhenComplete: true);
+  testWithGame<LevelGame>(
+    'every retry is counted, and where it happened',
+    build,
+    (game) async {
+      await game.ready();
+      final run = start(game)..play(const [Move.left(1)]);
+      final x = game.player.x;
+      game.reload();
+      run.play(const [Move.right(0.5)]);
+      game.reload();
+      run.play(Levels.pressItEarly.solution, stopWhenComplete: true);
 
-    final attempt = sink.rows.single;
-    expect(attempt.reloads, 2);
-    expect(attempt.deaths, hasLength(2));
-    expect(attempt.deaths.first.$1, x.round());
-    // All three goes, not the last one: the level cost them that long.
-    expect(attempt.seconds, greaterThan(run.finishedAt! - 0.05));
-  });
+      final attempt = sink.rows.single;
+      expect(attempt.reloads, 2);
+      expect(attempt.deaths, hasLength(2));
+      expect(attempt.deaths.first.$1, x.round());
+      // All three goes, not the last one: the level cost them that long.
+      expect(attempt.seconds, greaterThan(run.finishedAt! - 0.05));
+    },
+  );
 
   testWithGame<LevelGame>('picking another level leaves this one', build, (
     game,
