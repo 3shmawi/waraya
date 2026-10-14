@@ -1655,6 +1655,651 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(2600, 358, 2680, 430),
   );
 
+  /// **Phase 12, one.** The reversed button you cannot jump.
+  ///
+  /// `yourPastShutsIt` taught that an inverted plate on the way to a gate is
+  /// a thing to jump. This one is on the floor of a tunnel, where there is no
+  /// jumping, and the plate that holds the gate is at the far end of it. So
+  /// the first thing to work out is that going **in** over it is harmless —
+  /// your past crosses it before it has held anything open — and the second
+  /// is that coming **back** over it is the whole failure: your past steps
+  /// off the plate, crawls after you, and wipes the gate's grace three
+  /// seconds before you can reach it. The way home is over the tunnel's roof.
+  ///
+  /// And the roof needs a step, at the one end you are standing at. Duck on
+  /// the plate, which sits against the roof's face: the body you leave there
+  /// holds the gate and is the stair, the same seconds of you doing both
+  /// (`holdYourOwnDoor`).
+  ///
+  /// The light at the roof's other end is what keeps it one route. Without
+  /// it you could build the step on the near side before ever going in,
+  /// walk the roof both ways and never meet the tunnel. A body ducked clear
+  /// of the beam is too far out to reach the roof from — `more_levels_test`
+  /// sweeps it.
+  ///
+  /// The tunnel's floor past the plate is longer than the delay on purpose:
+  /// from the reversed button to the gate is nearly four seconds, so your
+  /// past is on it before you get there, however long you held the plate.
+  static final Level inUnderBackOver = Level(
+    id: 'in-under-back-over',
+    solution: const [
+      Move.left(1.3), // to the mouth of the tunnel
+      Move.left(3.4, crouch: true), // through it, over the reversed button
+      Move.left(0.3),
+      Move(1.5, crouch: true), // duck on the plate, against the roof
+      Move.left(0.6), // out of your own way
+      Move(0.9),
+      Move.right(0.55, jump: true), // onto your own head
+      Move(0.1),
+      Move.right(0.7, jump: true), // and onto the roof
+      Move.right(6), // over the tunnel, down, and through the gate
+    ],
+    wrongIdeas: const [
+      // Back the way you came. Your past follows you into the tunnel three
+      // seconds later, onto the reversed button, and the gate shuts in front
+      // of you for good.
+      [
+        Move.left(1.3),
+        Move.left(3.4, crouch: true),
+        Move.left(0.3),
+        Move(1.5, crouch: true),
+        Move.right(3.6, crouch: true),
+        Move.right(6),
+      ],
+      // Build the step on this side, so the roof is a way there as well as
+      // back. The lamp is where the step would have to be.
+      [
+        Move.left(0.6),
+        Move(1.5, crouch: true),
+        Move.right(0.6),
+        Move(1.0),
+        Move.left(0.55, jump: true),
+        Move(0.1),
+        Move.left(0.7, jump: true),
+        Move.left(5),
+        Move(1.5, crouch: true),
+        Move.right(8),
+      ],
+    ],
+    name: 'رايح من تحت، راجع من فوق',
+    teaches: 'المعكوس جوّه النفق. خُش منه، بس مترجعش منه.',
+    nameEn: 'In Under, Back Over',
+    teachesEn:
+        'The reversed button is in the tunnel. In through it, never back.',
+    delaySeconds: 3,
+    spawnX: -200,
+    floorTop: _floor,
+    blocks: [
+      _ground(-1100, 400),
+      // The dead end, 420 tall: nothing climbs it.
+      const Rect.fromLTRB(-1100, 200, -1060, 620),
+      // The tunnel's roof. Its underside is at 540, so a standing body (96)
+      // does not fit under it and a ducked one (69) does; its top is 190
+      // above the floor, out of a jump's reach and inside a step's.
+      const Rect.fromLTRB(-800, 430, -500, 540),
+    ],
+    // Over the tunnel's mouth on this side, to the floor. A past ducked
+    // anywhere in it is not there, and a past ducked clear of it is too far
+    // from the roof to climb onto it.
+    lights: const [Rect.fromLTRB(-500, 200, -360, 620)],
+    plates: const [
+      // Hard against the roof's face, so ducking on it leaves the step.
+      PlateSpec(area: Rect.fromLTRB(-880, 608, -810, 620), opens: 'gate'),
+      PlateSpec(
+        area: Rect.fromLTRB(-690, 608, -610, 620),
+        opens: 'gate',
+        inverts: true,
+      ),
+    ],
+    // Long grace, because it is the only clock: from stepping off the plate
+    // to the gate is the climb, the roof and the walk. It cannot rescue the
+    // tunnel — the reversed button wipes it.
+    doors: const [
+      DoorSpec(
+        id: 'gate',
+        closed: Rect.fromLTRB(0, 360, 26, 620),
+        lingerSeconds: 6.5,
+      ),
+    ],
+    goal: const Rect.fromLTRB(200, 548, 280, 620),
+  );
+
+  /// **Phase 12, two.** Two lamps, and they ask opposite things.
+  ///
+  /// A lamp that stops at head height erases a standing past and misses a
+  /// ducked one — `underTheLight` used that to make you duck on a plate, so
+  /// that your past would be there to hold it. The first room asks it again.
+  ///
+  /// The second room has the same lamp over a key, and here you want the
+  /// opposite. A key your past arrives on is a key your past flips back
+  /// (`closeWhatYouOpened`), and the door it opens is the last one in the
+  /// level, a climb away — far longer than three seconds. So duck on it, as
+  /// the room before just taught, and your past comes back, ducked, out of
+  /// the light, and shuts that door while you are building the step. Stand
+  /// on it and your past arrives standing, in the light, and is not there:
+  /// the flip is yours alone, and it stays.
+  ///
+  /// Same lamp, same height, and what you want from your past decides how
+  /// you stand under it. That is the level.
+  static final Level standToStay = Level(
+    id: 'stand-to-stay',
+    solution: const [
+      Move.left(1.36), // the wrong way first, to the plate under the lamp
+      Move(1.2, crouch: true), // duck on it: under the lamp, ducked counts
+      Move.right(2.7), // to the gate, and through as it opens
+      Move.right(1.0), // to the foot of the balcony
+      Move.right(0.55, jump: true), // up onto the key, under the second lamp
+      Move(0.3), // standing: your past will not be there to flip it back
+      Move.right(1.8), // off it, to the foot of the shelf
+      Move(1.0, crouch: true), // duck: the step up
+      Move.left(0.5), // out of your own way
+      Move(1.6),
+      Move.right(0.55, jump: true), // onto your own head
+      Move(0.1),
+      Move.right(0.7, jump: true), // onto the shelf
+      Move.right(3), // and through the door the key opened
+    ],
+    wrongIdeas: const [
+      // The first room's answer carried into the second: duck under the
+      // lamp. Your past ducks on the key three seconds later and the last
+      // door shuts while you are building the step to it.
+      [
+        Move.left(1.36),
+        Move(1.2, crouch: true),
+        Move.right(2.7),
+        Move.right(1.0),
+        Move.right(0.55, jump: true),
+        Move(0.3, crouch: true),
+        Move.right(1.8),
+        Move(1.0, crouch: true),
+        Move.left(0.5),
+        Move(1.6),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(3),
+      ],
+      // Stand on the plate, the way every plate is stood on. Your past
+      // arrives with its head in the lamp and holds nothing.
+      [
+        Move.left(1.36),
+        Move(1.2),
+        Move.right(2.7),
+        Move(3.0),
+        Move.right(1.0),
+        Move.right(0.55, jump: true),
+        Move(0.3),
+        Move.right(1.8),
+        Move(1.0, crouch: true),
+        Move.left(0.5),
+        Move(1.6),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(3),
+      ],
+    ],
+    name: 'اقف عشان تفضل',
+    teaches: 'تحت اللمبة، ماضيك الواطي موجود والواقف لأ. اختار.',
+    nameEn: 'Stand So It Stays',
+    teachesEn:
+        'Under a lamp your crouched past is there and your standing one '
+        'is not.',
+    delaySeconds: 3,
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [
+      _ground(-500, 1640),
+      const Rect.fromLTRB(-540, 200, -500, 620),
+      // The balcony the key is on, so nothing flips it by walking past.
+      const Rect.fromLTRB(600, 506, 700, 522),
+      // The shelf with the last door on it: 190, a step and not a jump.
+      const Rect.fromLTRB(1100, 430, 1640, 620),
+      // Closing its far end, so the step goes at this one.
+      const Rect.fromLTRB(1600, 170, 1640, 430),
+    ],
+    lights: const [
+      // Over the plate. Its bottom edge is at 540: a standing body's head is
+      // at 524 and in it, a ducked body's at 551 and clear.
+      Rect.fromLTRB(-370, 200, -230, 540),
+      // Over the key, at the same height above the balcony as the first is
+      // above the floor: a standing head on the balcony is at 410, a ducked
+      // one at 437, and the edge is between them at 425.
+      Rect.fromLTRB(590, 200, 710, 425),
+    ],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(610, 494, 690, 506), flips: 'last'),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-350, 608, -250, 620), opens: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(
+        id: 'gate',
+        closed: Rect.fromLTRB(300, 360, 326, 620),
+        lingerSeconds: 1.5,
+      ),
+      DoorSpec(id: 'last', closed: Rect.fromLTRB(1300, 170, 1326, 430)),
+    ],
+    goal: const Rect.fromLTRB(1480, 358, 1560, 430),
+  );
+
+  /// **Phase 12, three.** The only place for the step shuts the door.
+  ///
+  /// The shelf can be climbed from one place: its foot, where a step is
+  /// close enough to jump from. And the whole of that place is a reversed
+  /// button for the gate on the shelf. A step is a ducked body, a ducked
+  /// body presses, and so for as long as your step is there, the gate is
+  /// held shut — and when your past stands up and walks off it, the grace
+  /// went with it.
+  ///
+  /// Which makes the order every level so far has taught — press, then
+  /// climb — the one order that cannot work. Press the plate on the balcony
+  /// and then duck for the step, and your past presses the plate and then
+  /// ducks on the reversed button: whatever it held is wiped before you are
+  /// up. The step has to come **first**. Duck at the foot, go back and press
+  /// the plate while the step is still on its way, and come back to climb
+  /// it. By the time you are at the gate your past has climbed off the
+  /// button and walked to the plate, and that is what opens it.
+  ///
+  /// The delay is long so that round trip is not a race: five and a half
+  /// seconds, and how long you duck is how long the step stays.
+  static final Level theStepThatShuts = Level(
+    id: 'the-step-that-shuts',
+    solution: const [
+      Move.right(2.45), // to the foot of the shelf, onto the reversed button
+      Move(1.0, crouch: true), // duck: the step, first
+      Move.left(0.8), // then back to the balcony
+      Move.left(0.55, jump: true), // up onto the plate
+      Move.left(0.1),
+      Move(0.5), // stand: this is what will hold the gate
+      Move.right(0.6), // off it
+      Move(1.5), // and wait for the step you left
+      Move.right(0.25),
+      Move.right(0.55, jump: true), // onto your own head
+      Move(0.1),
+      Move.right(0.7, jump: true), // onto the shelf
+      Move.right(6), // to the gate, open once your past is on the plate
+    ],
+    wrongIdeas: const [
+      // Press, then climb — the order of every level before this. Your past
+      // does the same: presses the plate, then ducks on the reversed button,
+      // and the gate is shut by the step you are standing on.
+      [
+        Move.right(0.9),
+        Move.right(0.55, jump: true),
+        Move(0.5),
+        Move.right(1.6),
+        Move(1.0, crouch: true),
+        Move.left(0.6),
+        Move(4.0),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(8),
+      ],
+      // Leave the step just off the button, where it shuts nothing. It is
+      // also too far out to climb from.
+      [
+        Move.right(1.6),
+        Move(1.0, crouch: true),
+        Move.left(0.3),
+        Move.left(0.55, jump: true),
+        Move.left(0.1),
+        Move(0.5),
+        Move.right(0.4),
+        Move(2.6),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(6),
+      ],
+    ],
+    name: 'السلّمة بتقفل',
+    teaches: 'مكان السلّمة الوحيد بيقفل الباب. فكّر في الترتيب.',
+    nameEn: 'The Step That Shuts',
+    teachesEn:
+        'The only place for a step shuts the door. Think about the order.',
+    delaySeconds: 5.5,
+    spawnX: -200,
+    floorTop: _floor,
+    blocks: [
+      _ground(-600, 1240),
+      const Rect.fromLTRB(-640, 200, -600, 620),
+      // The balcony, a hop up, so the plate is pressed on purpose.
+      const Rect.fromLTRB(0, 506, 100, 522),
+      // The shelf: 190, a step and not a jump.
+      const Rect.fromLTRB(400, 430, 1200, 620),
+      // Closing its far end. Open floor past it would be a second foot.
+      const Rect.fromLTRB(1200, 170, 1240, 620),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(10, 494, 90, 506), opens: 'gate'),
+      // The whole foot of the shelf, and then some. A step climbs to the
+      // shelf from about 150 out; a body that is off this plate — less than
+      // a footprint over its edge — is more than 200 out, and falls short.
+      PlateSpec(
+        area: Rect.fromLTRB(200, 608, 400, 620),
+        opens: 'gate',
+        inverts: true,
+      ),
+    ],
+    doors: const [
+      DoorSpec(
+        id: 'gate',
+        closed: Rect.fromLTRB(800, 170, 826, 430),
+        lingerSeconds: 3,
+      ),
+    ],
+    goal: const Rect.fromLTRB(1000, 358, 1080, 430),
+  );
+
+  /// **Phase 12, four.** A lamp hung high enough to miss you — until your
+  /// past is a stair.
+  ///
+  /// The first shelf has a lamp at its foot, ending just above head height.
+  /// It misses a standing body and misses a ducked one, so the step goes
+  /// where it always goes, right at the foot, and works. The lesson the room
+  /// gives is *this lamp does not matter*.
+  ///
+  /// The roof needs two steps (`stairOfYourself`): the far past ducked on
+  /// the shelf, and the near one ducked on top of it, floating sixty-nine
+  /// up. The same lamp hangs at the roof's foot at the same height — and a
+  /// stair has a body higher than you ever are. The top step is touched by
+  /// the light and is not there. Build the stair at the foot, as the first
+  /// room said you could, and you jump through your own past.
+  ///
+  /// So the stair goes in the dark, just clear of the beam, where the top
+  /// step is still close enough to jump from: from about a body's width out
+  /// to the lamp's edge. `more_levels_test` sweeps that band.
+  static final Level stairInTheDark = Level(
+    id: 'stair-in-the-dark',
+    solution: const [
+      Move.right(1.25), // to the foot of the shelf, under the high lamp
+      Move(1.2, crouch: true), // duck: the lamp is above a ducked body
+      Move(0.3),
+      Move(0.9), // wait for it
+      Move(0.5, jump: true), // straight up onto it
+      Move.right(0.9, jump: true), // and off it onto the shelf
+      Move.right(1.95), // along the shelf, short of the second lamp
+      Move(3.5, crouch: true), // duck, long: the bottom step
+      Move(1.6), // wait for the far one under you
+      Move(0.5, jump: true), // up onto it
+      Move(1.0, crouch: true), // and duck on top: the second step
+      Move(1.0), // wait for the near one on top
+      Move(0.7, jump: true), // up onto that, in the dark
+      Move.right(0.9, jump: true), // and onto the roof
+      Move.right(1.5),
+    ],
+    wrongIdeas: const [
+      // The stair at the foot of the roof, where the first room's step went.
+      // The top step is in the light.
+      [
+        Move.right(1.25),
+        Move(1.2, crouch: true),
+        Move(0.3),
+        Move(0.9),
+        Move(0.5, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(2.25),
+        Move(3.5, crouch: true),
+        Move(1.6),
+        Move(0.5, jump: true),
+        Move(1.0, crouch: true),
+        Move(1.0),
+        Move(0.7, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+      // One step, in the dark, which is all the first shelf needed.
+      [
+        Move.right(1.25),
+        Move(1.2, crouch: true),
+        Move(0.3),
+        Move(0.9),
+        Move(0.5, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.95),
+        Move(1.5, crouch: true),
+        Move(1.0),
+        Move(0.5, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+    ],
+    name: 'السلّمة في الضلمة',
+    teaches: 'اللمبة العالية مبتلمسكش. بس السلّمة أعلى منك.',
+    nameEn: 'A Stair in the Dark',
+    teachesEn: 'The high lamp misses you. A stair of you is taller than you.',
+    delays: const [2, 5],
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [
+      _ground(-400, 1500),
+      // One step up: 190.
+      const Rect.fromLTRB(300, 430, 1500, 620),
+      // Two steps up: 230 above the shelf, past one ducked body's 205 and
+      // inside two bodies' 274. It ends where the shelf does, so it has no
+      // back way up.
+      const Rect.fromLTRB(900, 200, 1500, 430),
+    ],
+    lights: const [
+      // Both end 105 above what they hang over: a standing head is 96 up, a
+      // ducked one 69, and the top of a stair 138.
+      Rect.fromLTRB(260, 200, 300, 515),
+      Rect.fromLTRB(860, 0, 900, 325),
+    ],
+    goal: const Rect.fromLTRB(1100, 128, 1180, 200),
+  );
+
+  /// **Phase 12, last.** All of it again — nothing new, everything somewhere
+  /// else, the way `allOfIt` closed Phase 7.
+  ///
+  /// 1. **The key under the lamp, stood on** (`standToStay`). It opens the
+  ///    door at the end of the next room, and the next room takes longer
+  ///    than the delay. Up here at the start, with no lamp-plate before it,
+  ///    the trap is the campaign's older habit — a lamp means duck.
+  /// 2. **The step that shuts** (`theStepThatShuts`), with the plate under
+  ///    a lamp. Step first, then duck on the plate, then climb. The plate is
+  ///    on the way, and walking over it does nothing: a walking past is
+  ///    standing, and its head is in the lamp.
+  /// 3. **The tunnel** (`inUnderBackOver`), the other way round: the plate
+  ///    is on this side and the gate beyond. The tunnel is the obvious way
+  ///    on, and the reversed button in it is behind the plate, so it is the
+  ///    wrong one. Duck on the plate against the roof and go over.
+  ///
+  /// Nothing kills. Every mistake is a shut door you can see, and a restart.
+  static final Level allOfItAgain = Level(
+    id: 'all-of-it-again',
+    solution: const [
+      Move.right(0.3),
+      Move.right(0.55, jump: true), // up onto the key
+      Move(0.3), // standing, under the lamp
+      Move.right(2.6), // off it, over the lamp plate, to the step spot
+      Move(1.5, crouch: true), // duck on the reversed button: the step first
+      Move.left(1.0), // back to the plate under the lamp
+      Move(0.8, crouch: true), // duck on it
+      Move.right(0.25), // short of the button: your past will run up here too
+      Move(0.55), // wait for the step
+      Move.right(0.65, jump: true), // a running jump onto your own head
+      Move.right(0.1),
+      Move.right(0.7, jump: true), // up onto the shelf
+      Move.right(1.2), // to the gate, and through as your past presses
+      Move(1.0),
+      Move.right(4.0), // through the key's door, and off the end
+      Move(1.2, crouch: true), // duck on the plate by the roof
+      Move.left(0.6), // out of your own way
+      Move(2.2),
+      Move.right(0.55, jump: true), // onto your own head
+      Move(0.1),
+      Move.right(0.7, jump: true), // onto the roof
+      Move.right(5), // over the tunnel and through the last gate
+    ],
+    wrongIdeas: const [
+      // The campaign's older habit at the first lamp: duck under it. Your
+      // past ducks on the key four seconds later, out of the light, and the
+      // key's door shuts while you are still building the step to the shelf.
+      [
+        Move.right(0.3),
+        Move.right(0.55, jump: true),
+        Move(0.3, crouch: true),
+        Move.right(2.6),
+        Move(1.5, crouch: true),
+        Move.left(1.0),
+        Move(0.8, crouch: true),
+        Move.right(0.25),
+        Move(0.55),
+        Move.right(0.65, jump: true),
+        Move.right(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(1.2),
+        Move(1.0),
+        Move.right(4.0),
+        Move(1.2, crouch: true),
+        Move.left(0.6),
+        Move(2.2),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(5),
+      ],
+      // The plate first and then the step, the order of every level before
+      // `theStepThatShuts`. Your past ducks on the reversed button after it
+      // has pressed, and the gate is shut by the step you are standing on.
+      [
+        Move.right(0.3),
+        Move.right(0.55, jump: true),
+        Move(0.3),
+        Move.right(1.6),
+        Move(0.8, crouch: true),
+        Move.right(1.0),
+        Move(1.5, crouch: true),
+        Move.left(0.5),
+        Move(2.0),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(1.2),
+        Move(3.0),
+        Move.right(4.0),
+        Move(1.2, crouch: true),
+        Move.left(0.6),
+        Move(2.2),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(5),
+      ],
+      // The right order, standing on the plate. Its head is in the lamp.
+      [
+        Move.right(0.3),
+        Move.right(0.55, jump: true),
+        Move(0.3),
+        Move.right(2.6),
+        Move(1.5, crouch: true),
+        Move.left(1.0),
+        Move(0.8),
+        Move.right(0.25),
+        Move(0.55),
+        Move.right(0.65, jump: true),
+        Move.right(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(1.2),
+        Move(1.0),
+        Move.right(4.0),
+        Move(1.2, crouch: true),
+        Move.left(0.6),
+        Move(2.2),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(5),
+      ],
+      // The tunnel, because it is the way on. Your past follows you onto the
+      // reversed button just inside it and wipes the last gate's grace.
+      [
+        Move.right(0.3),
+        Move.right(0.55, jump: true),
+        Move(0.3),
+        Move.right(2.6),
+        Move(1.5, crouch: true),
+        Move.left(1.0),
+        Move(0.8, crouch: true),
+        Move.right(0.25),
+        Move(0.55),
+        Move.right(0.65, jump: true),
+        Move.right(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(1.2),
+        Move(1.0),
+        Move.right(4.0),
+        Move(1.2, crouch: true),
+        Move.right(3.6, crouch: true),
+        Move.right(5),
+      ],
+    ],
+    name: 'كله تاني',
+    teaches: 'مفيش جديد. آخر أربع مراحل، في أوض تانية.',
+    nameEn: 'All of It, Again',
+    teachesEn: 'Nothing new. The last four levels, in other rooms.',
+    delaySeconds: 4,
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [
+      _ground(-300, 2900),
+      const Rect.fromLTRB(-340, 200, -300, 620),
+      // The key's balcony.
+      const Rect.fromLTRB(100, 506, 200, 522),
+      // The shelf, 190 up, with the gate and the key's door on it. It ends
+      // 420 short of the roof, which no jump crosses.
+      const Rect.fromLTRB(800, 430, 1450, 620),
+      // The tunnel's roof: 540 underneath, 190 on top.
+      const Rect.fromLTRB(1870, 430, 2170, 540),
+    ],
+    lights: const [
+      // Over the key: a standing head on the balcony is in it, a ducked one
+      // clear (`standToStay`).
+      Rect.fromLTRB(90, 150, 210, 425),
+      // Over the plate: a standing past is in it, a ducked one clear.
+      Rect.fromLTRB(430, 200, 570, 540),
+    ],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(110, 494, 190, 506), flips: 'key'),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(450, 608, 550, 620), opens: 'one'),
+      // The shelf's whole foot, as in `theStepThatShuts`.
+      PlateSpec(
+        area: Rect.fromLTRB(600, 608, 800, 620),
+        opens: 'one',
+        inverts: true,
+      ),
+      // Against the roof's face, so ducking on it leaves the step.
+      PlateSpec(area: Rect.fromLTRB(1800, 608, 1870, 620), opens: 'three'),
+      // Just inside the tunnel, so the crawl from it to the last gate is
+      // longer than the delay.
+      PlateSpec(
+        area: Rect.fromLTRB(1890, 608, 1970, 620),
+        opens: 'three',
+        inverts: true,
+      ),
+    ],
+    doors: const [
+      DoorSpec(
+        id: 'one',
+        closed: Rect.fromLTRB(1000, 170, 1026, 430),
+        lingerSeconds: 3,
+      ),
+      DoorSpec(id: 'key', closed: Rect.fromLTRB(1200, 170, 1226, 430)),
+      DoorSpec(
+        id: 'three',
+        closed: Rect.fromLTRB(2700, 360, 2726, 620),
+        lingerSeconds: 6.5,
+      ),
+    ],
+    goal: const Rect.fromLTRB(2820, 548, 2900, 620),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -1673,6 +2318,11 @@ abstract final class Levels {
     yourPastShutsIt,
     threeGatesOnePast,
     allOfIt,
+    inUnderBackOver,
+    standToStay,
+    theStepThatShuts,
+    stairInTheDark,
+    allOfItAgain,
   ];
 
   /// The levels whose intended solution **is** one of the cheap runs

@@ -158,8 +158,8 @@ const shots = <Shot>[
     'all-of-it',
     3.0,
     Words(
-      'ستاشر مرحلة. ومفيش زرار تسجيل.',
-      'Sixteen levels. No record button.',
+      'واحد وعشرين مرحلة. ومفيش زرار تسجيل.',
+      'Twenty-one levels. No record button.',
     ),
     Words(
       'التأخير شغال طول الوقت، سواء انت جاهز أو لأ.',
