@@ -3322,6 +3322,329 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(1100, 358, 1180, 430),
   );
 
+  /// **Phase 12, the light switch, a chain through the gate.**
+  /// `aChainOfDark` with the gate in the middle of it, and the far past
+  /// working twice as in `theFarOneTwice`.
+  ///
+  /// At the moment you leave: you are on your plate in the second room,
+  /// which puts out the lamp back in the first, over the switch for the
+  /// second room's lamp; the far past is on that switch, so the lamp over
+  /// the last gate's plate is out; and the near past is on that plate. So
+  /// the plate at the far end of the first room (the far past holds the
+  /// first gate a little later), the switch for long enough, through, the
+  /// last plate, a step up onto yours, and out on the last gate's grace.
+  ///
+  /// The roles are not a choice: the switch is too far from your plate for
+  /// the near past, and the first gate's plate too far from the gate for it.
+  /// The switch's lamp comes right up to the first gate, so no stair can be
+  /// built against it.
+  static final Level aChainThroughTheGate = Level(
+    id: 'a-chain-through-the-gate',
+    solution: const [
+      Move.left(2.55), // the wrong way, to the first gate's plate
+      Move(0.45),
+      Move.left(0.6, jump: true), // up onto it
+      Move(1.6), // the far past will stand here, six seconds on
+      Move.right(0.45),
+      Move(0.1),
+      Move.right(1.9), // back, to the switch for the next room
+      Move(0.45),
+      Move.right(0.6, jump: true), // up onto it, under its own lamp
+      Move(2.1), // and stand: the far past will, after the plate
+      Move.right(0.4), // down to the gate: the far past is on its plate
+      Move(0.15),
+      Move.right(0.55), // through, to the foot of the next plate
+      Move(0.4),
+      Move.right(0.6, jump: true), // up onto it, under the next room's lamp
+      Move(0.9), // the near past will stand here, two seconds on
+      Move.right(0.15),
+      Move(0.15),
+      Move.right(0.55, jump: true), // a step up, onto yours
+      Move.right(0.25),
+      Move(0.2), // both lamps go out, one for the other, and the gate opens
+      Move.right(5), // and its grace gets you there
+    ],
+    wrongIdeas: const [
+      // The first room's plate and the second room's two, but not the switch
+      // back in the first: nobody puts out the lamp over the last plate.
+      [
+        Move.left(2.55),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(1.6),
+        Move.right(3.3),
+        Move(0.15),
+        Move.right(0.6),
+        Move(0.45),
+        Move.right(0.6, jump: true),
+        Move(0.9),
+        Move.right(0.15),
+        Move(0.15),
+        Move.right(0.55, jump: true),
+        Move.right(0.25),
+        Move(2.15),
+        Move.right(5),
+      ],
+      // The switch first, as it is on the way, then the plate. The far past
+      // is on the switch long before you are on yours, and on the first
+      // gate's plate only after you needed it.
+      [
+        Move.right(0.35),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(2.1),
+        Move.left(2.45),
+        Move(0.4),
+        Move.left(0.6, jump: true),
+        Move(1.6),
+        Move.right(3.3),
+        Move(0.15),
+        Move.right(0.6),
+        Move(0.45),
+        Move.right(0.6, jump: true),
+        Move(0.9),
+        Move.right(0.15),
+        Move(0.15),
+        Move.right(0.55, jump: true),
+        Move.right(0.25),
+        Move(2.15),
+        Move.right(5),
+      ],
+      // Everything but your own plate: the switch is under a lamp, and only
+      // you, from here, can put it out.
+      [
+        Move.left(2.55),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(1.6),
+        Move.right(0.45),
+        Move(0.1),
+        Move.right(1.9),
+        Move(0.45),
+        Move.right(0.6, jump: true),
+        Move(2.1),
+        Move.right(0.4),
+        Move(0.15),
+        Move.right(0.55),
+        Move(0.4),
+        Move.right(0.6, jump: true),
+        Move(0.9),
+        Move.right(2.6),
+        Move(3.15),
+        Move.right(5),
+      ],
+    ],
+    name: 'سلسلة من ورا الباب',
+    teaches: 'زرارك هنا بيطفي ورا الباب، واللي ورا الباب بيطفي هنا.',
+    nameEn: 'A Chain Through the Gate',
+    teachesEn: 'Your plate here puts out the room behind; that one, this one.',
+    delays: const [2, 6],
+    spawnX: -100,
+    floorTop: _floor,
+    blocks: [
+      _ground(-900, 1100),
+      const Rect.fromLTRB(-940, 200, -900, 620),
+      // The first gate's plate, at the far end of the first room.
+      const Rect.fromLTRB(-800, 506, -700, 522),
+      // The switch for the second room's lamp, under a lamp of its own.
+      const Rect.fromLTRB(-170, 506, -70, 522),
+      // The second gate's plate, under the second room's lamp.
+      const Rect.fromLTRB(150, 506, 250, 522),
+      // Yours: puts out the lamp back in the first room.
+      const Rect.fromLTRB(350, 506, 450, 522),
+    ],
+    lights: const [
+      LightSpec(Rect.fromLTRB(-200, 200, -40, 620), id: 'switch-lamp'),
+      LightSpec(Rect.fromLTRB(120, 200, 280, 620), id: 'plate-lamp'),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-790, 494, -710, 506), opens: 'first'),
+      PlateSpec(area: Rect.fromLTRB(-160, 494, -80, 506), opens: 'plate-lamp'),
+      PlateSpec(area: Rect.fromLTRB(160, 494, 240, 506), opens: 'last'),
+      PlateSpec(area: Rect.fromLTRB(360, 494, 440, 506), opens: 'switch-lamp'),
+    ],
+    doors: const [
+      DoorSpec(
+        id: 'first',
+        closed: Rect.fromLTRB(0, 150, 26, 620),
+        lingerSeconds: 1.5,
+      ),
+      DoorSpec(
+        id: 'last',
+        closed: Rect.fromLTRB(800, 150, 826, 620),
+        lingerSeconds: 3,
+      ),
+    ],
+    goal: const Rect.fromLTRB(950, 548, 1030, 620),
+  );
+
+  /// **Phase 12, the light switch, the last switch is you.** The sequel to
+  /// `theFarOneTwice`, and its answer is the first wrong idea.
+  ///
+  /// The far past's dark ends six seconds after you leave its switch, however
+  /// long you stood there — and the climb takes most of that. So on the
+  /// shelf, where the last gate's plate is under the same lamp, the far past
+  /// has gone and the lamp is lit again. The lamp has a second switch up
+  /// there: you hold it, and the near past stands on the plate in your dark.
+  /// The first room as before, the climb, the plate, then the switch until
+  /// the gate opens, and out on its grace.
+  ///
+  /// This level was first drawn with one switch for both jobs. It cannot be
+  /// done: from leaving the switch to the near past on the plate is seven
+  /// seconds, and nothing stretches the six.
+  static final Level youHoldTheLast = Level(
+    id: 'you-hold-the-last',
+    solution: const [
+      Move.left(1.6), // the wrong way, to the first gate's plate
+      Move(0.45),
+      Move.left(0.6, jump: true), // up onto it
+      Move(1.25), // the far past will stand here, six seconds on
+      Move.right(0.45),
+      Move(0.1),
+      Move.right(2.15), // back to the switch by the gate
+      Move(0.4),
+      Move.right(0.6, jump: true), // up onto it
+      Move(2.25), // and stand: the far past will, for the climb
+      Move.right(0.15),
+      Move(0.15),
+      Move.right(1.45), // through, to the foot of the shelf
+      Move(0.15),
+      Move(1.0, crouch: true), // duck: the near past will
+      Move.left(0.25),
+      Move(0.85),
+      Move.right(0.55, jump: true), // onto it, in the far past's dark
+      Move(0.1),
+      Move.right(0.9, jump: true), // and up
+      Move.right(0.1),
+      Move(0.65), // onto the last gate's plate: the near past will stand here
+      Move.right(0.65), // to the lamp's other switch, and hold it yourself
+      Move(0.9), // until the near past is on the plate in your dark
+      Move.right(4), // and out on the gate's grace
+    ],
+    wrongIdeas: const [
+      // The last level's answer: the far past holds the dark, you climb —
+      // and walk to a gate whose plate nobody is on.
+      [
+        Move.left(1.6),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(1.25),
+        Move.right(0.45),
+        Move(0.1),
+        Move.right(2.15),
+        Move(0.4),
+        Move.right(0.6, jump: true),
+        Move(2.25),
+        Move.right(0.15),
+        Move(0.15),
+        Move.right(1.45),
+        Move(0.15),
+        Move(1.0, crouch: true),
+        Move.left(0.25),
+        Move(0.85),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.9, jump: true),
+        Move.right(4),
+      ],
+      // The plate up there, and on to the gate: the far past's dark was
+      // over six seconds after you left its switch, and nobody holds it now.
+      [
+        Move.left(1.6),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(1.25),
+        Move.right(0.45),
+        Move(0.1),
+        Move.right(2.15),
+        Move(0.4),
+        Move.right(0.6, jump: true),
+        Move(2.25),
+        Move.right(0.15),
+        Move(0.15),
+        Move.right(1.45),
+        Move(0.15),
+        Move(1.0, crouch: true),
+        Move.left(0.25),
+        Move(0.85),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.9, jump: true),
+        Move.right(0.1),
+        Move(0.65),
+        Move.right(4),
+      ],
+      // The switch by the gate touched on the way: the far past has been and
+      // gone before the near one ducks, and there is no climbing it.
+      [
+        Move.left(1.6),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(1.25),
+        Move.right(0.45),
+        Move(0.1),
+        Move.right(2.15),
+        Move(0.4),
+        Move.right(0.6, jump: true),
+        Move(0.45),
+        Move.right(0.15),
+        Move(0.15),
+        Move.right(1.45),
+        Move(0.15),
+        Move(1.0, crouch: true),
+        Move.left(0.25),
+        Move(0.85),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.9, jump: true),
+        Move.right(0.1),
+        Move(0.65),
+        Move.right(0.65),
+        Move(0.9),
+        Move.right(4),
+      ],
+    ],
+    name: 'انت المطفي الأخير',
+    teaches: 'البعيد يطفي للسلّمة من ورا الباب، وانت تطفي للقريب فوق.',
+    nameEn: 'You Hold the Last',
+    teachesEn: 'The far past holds the dark for the climb; you, for the near.',
+    delays: const [2, 6],
+    spawnX: -300,
+    floorTop: _floor,
+    blocks: [
+      _ground(-900, 1000),
+      const Rect.fromLTRB(-940, 200, -900, 620),
+      // The first gate's plate, at the far end of the first room.
+      const Rect.fromLTRB(-800, 506, -700, 522),
+      // A switch for the second room's lamp, by the gate, in the first room.
+      const Rect.fromLTRB(-110, 506, -10, 522),
+      const Rect.fromLTRB(330, 430, 1000, 620),
+      const Rect.fromLTRB(1000, -100, 1040, 620),
+    ],
+    // One lamp over the foot of the shelf and the plate on top of it.
+    lights: const [LightSpec(Rect.fromLTRB(100, 200, 520, 620), id: 'lamp')],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-790, 494, -710, 506), opens: 'first'),
+      PlateSpec(area: Rect.fromLTRB(-100, 494, -20, 506), opens: 'lamp'),
+      PlateSpec(area: Rect.fromLTRB(420, 418, 500, 430), opens: 'last'),
+      // The same lamp's other switch, up on the shelf, in the dark.
+      PlateSpec(area: Rect.fromLTRB(560, 418, 640, 430), opens: 'lamp'),
+    ],
+    doors: const [
+      DoorSpec(
+        id: 'first',
+        closed: Rect.fromLTRB(0, 150, 26, 620),
+        lingerSeconds: 3,
+      ),
+      DoorSpec(
+        id: 'last',
+        closed: Rect.fromLTRB(760, 70, 786, 430),
+        lingerSeconds: 1.5,
+      ),
+    ],
+    goal: const Rect.fromLTRB(880, 358, 960, 430),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -3355,6 +3678,8 @@ abstract final class Levels {
     aChainOfDark,
     theKeyBehindYou,
     theFarOneTwice,
+    youHoldTheLast,
+    aChainThroughTheGate,
     allOfItInTheDark,
   ];
 
