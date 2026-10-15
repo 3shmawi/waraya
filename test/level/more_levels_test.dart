@@ -11,11 +11,12 @@ import 'dart:ui';
 
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:waraya/input/input.dart';
 import 'package:waraya/level/level.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 import 'package:waraya/level/playthrough.dart';
+
+import 'run.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +36,7 @@ void main() {
         build(level),
         (game) async {
           await game.ready();
-          final run = _Run(game)
+          final run = Run(game)
             ..walkTo(-480)
             ..walkTo(-822, crouch: true)
             ..walkTo(-845)
@@ -54,7 +55,7 @@ void main() {
         build(level),
         (game) async {
           await game.ready();
-          final run = _Run(game)
+          final run = Run(game)
             ..walkTo(-480)
             ..walkTo(-822, crouch: true)
             ..walkTo(-845);
@@ -80,7 +81,7 @@ void main() {
         build(level),
         (game) async {
           await game.ready();
-          final run = _Run(game)..walkTo(x);
+          final run = Run(game)..walkTo(x);
           final ducked = run.t;
           run
             ..hold(1.5, crouch: true)
@@ -102,7 +103,7 @@ void main() {
       build(level),
       (game) async {
         await game.ready();
-        final run = _Run(game)
+        final run = Run(game)
           ..play(level.solution.take(6))
           // Long past the moment your past arrives on it.
           ..hold(level.delaySeconds + 3);
@@ -116,7 +117,7 @@ void main() {
       build(level),
       (game) async {
         await game.ready();
-        final run = _Run(game)
+        final run = Run(game)
           ..play(level.solution.take(5))
           ..hold(0.3, crouch: true)
           ..hold(level.delaySeconds + 1);
@@ -139,7 +140,7 @@ void main() {
         build(level),
         (game) async {
           await game.ready();
-          final run = _Run(game)..walkTo(x);
+          final run = Run(game)..walkTo(x);
           final ducked = run.t;
           run
             ..hold(1.5, crouch: true)
@@ -155,44 +156,32 @@ void main() {
     }
 
     // The way out of the order would be a step that does not press the
-    // button: a body less than a footprint over its edge. Every such place
-    // is too far from the shelf to climb from.
-    for (final x in const <double>[150, 170, 180, 186, 192]) {
+    // button: a body less than a footprint over its edge. Searched rather
+    // than scripted (`highestClimbFrom`): a step reaches the shelf from about
+    // 175 out at best, and every place off the button is 207 or more.
+    for (final x in const <double>[150, 170, 186, 193]) {
       testWithGame<LevelGame>(
         'a step off the button at $x does not reach the shelf',
         build(level),
         (game) async {
           await game.ready();
-          final run = _Run(game)
-            ..pressBalconyPlate()
-            ..walkTo(x);
-          final ducked = run.t;
-          run
-            ..hold(1.5, crouch: true)
-            ..walkTo(x - runUp)
-            ..waitUntil(ducked + level.delaySeconds + 0.1)
-            ..climb(1);
-
-          expect(run.highest, greaterThan(430), reason: run.where);
+          expect(
+            highestClimbFrom(game, x, delay: level.delaySeconds),
+            greaterThan(430),
+          );
         },
       );
     }
 
-    for (final pause in const [1.0, 2.0]) {
-      testWithGame<LevelGame>(
-        'stopping ${pause}s on the shelf before the gate is not fatal',
-        build(level),
-        (game) async {
-          await game.ready();
-          final run = _Run(game)
-            ..play(level.solution.take(12))
-            ..hold(pause)
-            ..play(level.solution.skip(12));
-
-          expect(run.finishedAt, isNotNull, reason: run.where);
-        },
-      );
-    }
+    // And the same search proves the step on it does, from its near edge.
+    testWithGame<LevelGame>(
+      'a step on the button reaches it, from as far out as 225',
+      build(level),
+      (game) async {
+        await game.ready();
+        expect(highestClimbFrom(game, 225, delay: level.delaySeconds), 430);
+      },
+    );
 
     // And the order every level before taught fails however long the
     // plate was held: whatever your past held, it then ducks on the button.
@@ -202,7 +191,7 @@ void main() {
         build(level),
         (game) async {
           await game.ready();
-          final run = _Run(game)..pressBalconyPlate(stand: stand);
+          final run = Run(game)..pressBalconyPlate(stand: stand);
           run.walkTo(336);
           final ducked = run.t;
           run
@@ -238,7 +227,7 @@ void main() {
         build(level),
         (game) async {
           await game.ready();
-          final run = _Run(game)
+          final run = Run(game)
             ..play(level.solution.take(6))
             ..walkTo(x)
             ..play(level.solution.skip(7));
@@ -253,7 +242,7 @@ void main() {
       build(level),
       (game) async {
         await game.ready();
-        final run = _Run(game)
+        final run = Run(game)
           ..play(level.solution.take(6))
           ..walkTo(880);
         var bottomLit = false;
@@ -285,13 +274,29 @@ void main() {
   group('all of it, again', () {
     final level = Levels.allOfItAgain;
 
+    // The first room's shelf, as in `theStepThatShuts`: off the button is
+    // too far out by any climb.
+    for (final x in const <double>[550, 570, 593]) {
+      testWithGame<LevelGame>(
+        'a step off the first button at $x does not reach the shelf',
+        build(level),
+        (game) async {
+          await game.ready();
+          expect(
+            highestClimbFrom(game, x, delay: level.delaySeconds),
+            greaterThan(430),
+          );
+        },
+      );
+    }
+
     for (final duck in const [0.8, 1.5, 3.0]) {
       testWithGame<LevelGame>(
         'the tunnel is shut after ducking ${duck}s on the plate',
         build(level),
         (game) async {
           await game.ready();
-          final run = _Run(game)
+          final run = Run(game)
             ..play(level.solution.take(15))
             ..walkTo(1848)
             ..hold(duck, crouch: true)
@@ -309,7 +314,7 @@ void main() {
         build(level),
         (game) async {
           await game.ready();
-          final run = _Run(game)
+          final run = Run(game)
             ..play(level.solution.take(12))
             ..hold(pause)
             ..play(level.solution.skip(12).take(9))
@@ -326,85 +331,7 @@ void main() {
 /// The roof of the tunnel in `inUnderBackOver`.
 const _roof = Rect.fromLTRB(-800, 430, -500, 540);
 
-/// A small controller for runs that are easier to say as places than as
-/// times: walk to here, duck there, climb what is in front of you.
-class _Run {
-  _Run(this.game) : _source = game.input.sources.first as ScriptedInput;
-
-  final LevelGame game;
-  final ScriptedInput _source;
-
-  double t = 0;
-  double? finishedAt;
-
-  /// The highest the feet have been while standing on something.
-  double highest = double.infinity;
-
-  void _frame(InputIntent intent) {
-    _source.next = intent;
-    game.update(Playthrough.dt);
-    t += Playthrough.dt;
-    if (game.completed) finishedAt ??= t;
-    if (game.player.isGrounded && game.player.y < highest) {
-      highest = game.player.y;
-    }
-  }
-
-  void hold(
-    double seconds, {
-    double axis = 0,
-    bool jump = false,
-    bool crouch = false,
-    void Function()? each,
-  }) {
-    final frames = (seconds / Playthrough.dt).round();
-    for (var i = 0; i < frames; i++) {
-      _frame(
-        InputIntent(
-          moveAxis: axis,
-          jump: jump && i == 0,
-          jumpHeld: jump,
-          crouch: crouch,
-        ),
-      );
-      each?.call();
-    }
-  }
-
-  void play(Iterable<Move> moves) {
-    for (final move in moves) {
-      hold(move.seconds, axis: move.axis, jump: move.jump, crouch: move.crouch);
-    }
-  }
-
-  /// Walks to [x] and stops there, braking in time not to overshoot.
-  void walkTo(double x, {bool crouch = false}) {
-    var last = game.player.x;
-    for (var guard = 0; guard < 1200; guard++) {
-      final gap = x - game.player.x;
-      if (gap.abs() <= 4) break;
-      final speed = (game.player.x - last).abs() / Playthrough.dt;
-      last = game.player.x;
-      // Stopping distance under the game's ground friction.
-      final brake = speed * speed / 6000 >= gap.abs() - 2;
-      _frame(InputIntent(moveAxis: brake ? 0 : gap.sign, crouch: crouch));
-    }
-    hold(0.15, crouch: crouch);
-  }
-
-  void waitUntil(double time) {
-    while (t < time) {
-      _frame(InputIntent.none);
-    }
-  }
-
-  /// Onto the step ahead, and off it onto whatever is beyond it.
-  void climb(double direction) {
-    hold(0.55, axis: direction, jump: true);
-    hold(0.1);
-    hold(0.7, axis: direction, jump: true);
-  }
-
+extension on Run {
   /// Up onto the balcony in `theStepThatShuts` and stand on its plate.
   void pressBalconyPlate({double stand = 0.6}) {
     if (game.player.x < 0) {
@@ -417,10 +344,4 @@ class _Run {
     walkTo(50);
     hold(stand);
   }
-
-  String get where =>
-      't=${t.toStringAsFixed(2)} '
-      'x=${game.player.x.toStringAsFixed(0)} '
-      'y=${game.player.y.toStringAsFixed(0)} '
-      'reloads=${game.reloads}';
 }

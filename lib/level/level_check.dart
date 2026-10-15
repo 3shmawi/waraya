@@ -327,7 +327,7 @@ Iterable<Finding> _bounds(Level level) sync* {
   ).expandToInclude(level.goal);
   for (final rect in [
     ...level.blocks,
-    ...level.lights,
+    for (final light in level.lights) light.area,
     ...level.markers,
     for (final plate in level.plates) plate.area,
     for (final toggle in level.toggles) toggle.area,
@@ -386,14 +386,25 @@ Iterable<Finding> _bounds(Level level) sync* {
       );
     }
   }
+  // And the lights a plate or a key can switch, which share the names: a
+  // plate that "opens" a name has to mean one thing.
+  final lightIds = <String>{};
+  for (final light in level.lights) {
+    final id = light.id;
+    if (id == null) continue;
+    if (doorIds.contains(id) || !lightIds.add(id)) {
+      yield out('two things are called "$id"');
+    }
+  }
+  final targets = {...doorIds, ...lightIds};
   for (final plate in level.plates) {
-    if (!doorIds.contains(plate.opens)) {
-      yield out('a plate opens "${plate.opens}", which is not a door');
+    if (!targets.contains(plate.opens)) {
+      yield out('a plate opens "${plate.opens}", which is not a door or a light');
     }
   }
   for (final toggle in level.toggles) {
-    if (!doorIds.contains(toggle.flips)) {
-      yield out('a key flips "${toggle.flips}", which is not a door');
+    if (!targets.contains(toggle.flips)) {
+      yield out('a key flips "${toggle.flips}", which is not a door or a light');
     }
   }
 

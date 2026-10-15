@@ -174,6 +174,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   final List<PressurePlate> plates = [];
   final List<Toggle> toggles = [];
   final List<Door> doors = [];
+  final List<LightZone> lights = [];
   final List<Goal> goals = [];
 
   int _index;
@@ -319,6 +320,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     plates.clear();
     toggles.clear();
     doors.clear();
+    lights.clear();
     goals.clear();
     ticker.reset();
     steps.reset();
@@ -366,6 +368,20 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     plates.addAll(level.plates.map((spec) => PressurePlate(spec, look: look)));
     toggles.addAll(level.toggles.map((spec) => Toggle(spec, look: look)));
     doors.addAll(level.doors.map((spec) => Door(spec, look: look)));
+    lights.addAll(
+      level.lights.map(
+        (spec) => LightZone(
+          spec,
+          look: look,
+          landsOnSomething: level.blocks.any(
+            (block) =>
+                (block.top - spec.area.bottom).abs() < 1 &&
+                block.left < spec.area.right &&
+                block.right > spec.area.left,
+          ),
+        ),
+      ),
+    );
     goals
       ..add(Goal(area: level.goal, look: look))
       ..addAll(
@@ -401,18 +417,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       if (_lit) ..._scenery().world(),
       ?prelude?.figure,
       Blocks(level.blocks, look: look),
-      ...level.lights.map(
-        (area) => LightZone(
-          area,
-          look: look,
-          landsOnSomething: level.blocks.any(
-            (block) =>
-                (block.top - area.bottom).abs() < 1 &&
-                block.left < area.right &&
-                block.right > area.left,
-          ),
-        ),
-      ),
+      ...lights,
       ...plates,
       ...toggles,
       ...doors,
@@ -645,6 +650,32 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       if (clicked) audio.play(Sfx.plate, volume: 0.7);
     }
 
+    // A light a plate or a key names, which "open" switches off — the same
+    // order as a door: an inverted plate held keeps it lit whatever else is
+    // true, then a plate held or a key thrown puts it out. No linger.
+    //
+    // Your past in a lit light presses nothing (`ghosts` above), so a plate
+    // under its own light cannot switch it off. Somebody in the dark has to.
+    var switched = false;
+    for (final light in lights) {
+      final id = light.spec.id;
+      if (id == null) continue;
+      final mine = plates.where((plate) => plate.opens == id);
+      final keptOn = mine.any((plate) => plate.inverts && plate.isPressed);
+      final putOut =
+          mine.any((plate) => !plate.inverts && plate.isPressed) ||
+          toggles.any((toggle) => toggle.flips == id && toggle.flipped);
+      if (light.hold(on: keptOn || !putOut)) switched = true;
+    }
+    if (switched) {
+      // Now, not at the next tick: a past the light has just left is a body
+      // again this frame, and one it has just caught is not.
+      for (final ghost in shadows) {
+        if (ghost.isActive) ghost.inLight = _standsInLight(ghost.bounds);
+      }
+      audio.play(Sfx.plate, volume: 0.35);
+    }
+
     for (final door in doors) {
       final mine = plates.where((plate) => plate.opens == door.id);
       // The order is the rule. An inverted plate under a body beats a plate
@@ -702,8 +733,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// knowing when drawing a level: the reach is half a body (22) wider than
   /// the lit rectangle on each side, because it is the body that has to be
   /// clear of the beam, not the body's middle.
+  ///
+  /// Only a light that is on: a switched-off lamp erases nobody.
   bool _standsInLight(Rect body) =>
-      level.lights.any((light) => light.overlaps(body));
+      lights.any((light) => light.isOn && light.area.overlaps(body));
 
   /// Whether [body] is standing on [trigger] rather than touching its edge.
   ///
@@ -919,6 +952,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
     for (final toggle in toggles) {
       toggle.reset();
+    }
+    for (final light in lights) {
+      light.reset();
     }
     for (final goal in goals) {
       goal.reset();

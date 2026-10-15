@@ -37,6 +37,7 @@ class Piece {
     this.link = noDoor,
     this.inverts = false,
     this.doorId = '',
+    this.lightId = '',
     this.linger = 0,
   });
 
@@ -57,6 +58,10 @@ class Piece {
   /// A door's name.
   String doorId;
 
+  /// A light's name, which plates and keys can switch it by; empty for a light
+  /// nothing switches (`LightSpec.id`).
+  String lightId;
+
   /// How long a door stays open after its plate is let go.
   double linger;
 
@@ -66,6 +71,7 @@ class Piece {
     link: link,
     inverts: inverts,
     doorId: doorId,
+    lightId: lightId,
     linger: linger,
   );
 }
@@ -118,7 +124,8 @@ class EditorDoc {
     prelude: level.prelude,
     pieces: [
       for (final rect in level.blocks) Piece(PieceKind.block, rect),
-      for (final rect in level.lights) Piece(PieceKind.light, rect),
+      for (final light in level.lights)
+        Piece(PieceKind.light, light.area, lightId: light.id ?? ''),
       for (final rect in level.markers) Piece(PieceKind.marker, rect),
       for (final plate in level.plates)
         Piece(
@@ -201,7 +208,10 @@ class EditorDoc {
       // Exactly one: the editor neither adds nor removes it ([canRemove]).
       goal: of(PieceKind.goal).first.rect,
       blocks: [for (final p in of(PieceKind.block)) p.rect],
-      lights: [for (final p in of(PieceKind.light)) p.rect],
+      lights: [
+        for (final p in of(PieceKind.light))
+          LightSpec(p.rect, id: p.lightId.isEmpty ? null : p.lightId),
+      ],
       markers: [for (final p in of(PieceKind.marker)) p.rect],
       plates: [
         for (final p in of(PieceKind.plate))
@@ -241,6 +251,15 @@ class EditorDoc {
     for (final p in pieces)
       if (p.kind == PieceKind.door) p.doorId,
   ];
+
+  /// The names of the lights that have one, in order.
+  List<String> get lightIds => [
+    for (final p in pieces)
+      if (p.kind == PieceKind.light && p.lightId.isNotEmpty) p.lightId,
+  ];
+
+  /// Everything a plate or a key can point at: doors, then named lights.
+  List<String> get linkTargets => [...doorIds, ...lightIds];
 
   /// A door name nobody has used yet.
   String freshDoorId() {
@@ -301,6 +320,19 @@ class EditorDoc {
   void renameDoor(Piece door, String to) {
     final from = door.doorId;
     door.doorId = to;
+    _relink(from, to);
+  }
+
+  /// Names a light, or renames it and everything pointing at it with it. An
+  /// empty name makes it a light nothing switches, and whatever pointed at it
+  /// is left pointing at nothing — drawn red, and named by the check.
+  void renameLight(Piece light, String to) {
+    final from = light.lightId;
+    light.lightId = to;
+    if (from.isNotEmpty && to.isNotEmpty) _relink(from, to);
+  }
+
+  void _relink(String from, String to) {
     for (final p in pieces) {
       if (p.kind.links && p.link == from) p.link = to;
     }

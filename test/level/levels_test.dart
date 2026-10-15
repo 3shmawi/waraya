@@ -802,7 +802,9 @@ void main() {
               doors: const [
                 DoorSpec(id: 'gate', closed: Rect.fromLTRB(400, 360, 426, 620)),
               ],
-              lights: lit ? const [Rect.fromLTRB(-70, 200, 70, 620)] : const [],
+              lights: lit
+                  ? const [LightSpec(Rect.fromLTRB(-70, 200, 70, 620))]
+                  : const [],
               goal: const Rect.fromLTRB(600, 548, 680, 620),
             ),
           ],
@@ -826,7 +828,7 @@ void main() {
           spawnX: 0,
           floorTop: 620,
           blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
-          lights: const [Rect.fromLTRB(-200, 200, 0, 620)],
+          lights: const [LightSpec(Rect.fromLTRB(-200, 200, 0, 620))],
           goal: const Rect.fromLTRB(600, 548, 680, 620),
         ),
       ],
@@ -901,7 +903,9 @@ void main() {
               doors: const [
                 DoorSpec(id: 'gate', closed: Rect.fromLTRB(400, 360, 426, 620)),
               ],
-              lights: lit ? const [Rect.fromLTRB(-70, 200, 70, 620)] : const [],
+              lights: lit
+                  ? const [LightSpec(Rect.fromLTRB(-70, 200, 70, 620))]
+                  : const [],
               goal: const Rect.fromLTRB(600, 548, 680, 620),
             ),
           ],
@@ -947,7 +951,9 @@ void main() {
               floorTop: 620,
               shadowKills: true,
               blocks: [const Rect.fromLTRB(-900, 620, 900, 1200)],
-              lights: lit ? const [Rect.fromLTRB(-70, 200, 70, 620)] : const [],
+              lights: lit
+                  ? const [LightSpec(Rect.fromLTRB(-70, 200, 70, 620))]
+                  : const [],
               goal: const Rect.fromLTRB(600, 548, 680, 620),
             ),
           ],

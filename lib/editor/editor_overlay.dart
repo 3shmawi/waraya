@@ -83,10 +83,12 @@ class EditorOverlay extends Component {
       canvas.drawRect(piece.rect, stroke(bad ? _bad : _outline, bad ? 2.5 : 1));
     }
 
-    // Plates and keys to their doors.
+    // Plates and keys to their doors — and to the lights they switch.
     final doors = {
       for (final p in doc.pieces)
         if (p.kind == PieceKind.door) p.doorId: p,
+      for (final p in doc.pieces)
+        if (p.kind == PieceKind.light && p.lightId.isNotEmpty) p.lightId: p,
     };
     for (final piece in doc.pieces) {
       if (!piece.kind.links) continue;

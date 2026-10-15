@@ -786,6 +786,16 @@ class _Inspector extends StatelessWidget {
               : editor.edit((_) => piece.linger = n(t)!, group: (piece, 'l')),
         ),
       ],
+      if (piece.kind == PieceKind.light)
+        _Field(
+          label: 'name (to switch it; empty = always on)',
+          value: piece.lightId,
+          id: (piece, 'light'),
+          onChanged: (t) => editor.edit(
+            (doc) => doc.renameLight(piece, t.trim()),
+            group: (piece, 'light'),
+          ),
+        ),
       if (piece.kind.links) ...[
         Row(
           children: [
@@ -797,7 +807,7 @@ class _Inspector extends StatelessWidget {
               value: piece.link,
               isDense: true,
               items: [
-                for (final id in {Piece.noDoor, ...doc.doorIds})
+                for (final id in {Piece.noDoor, ...doc.linkTargets})
                   DropdownMenuItem(value: id, child: Text(id)),
               ],
               onChanged: (id) =>

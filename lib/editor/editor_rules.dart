@@ -43,12 +43,18 @@ class DrawnRules {
       },
       danglingLinks = {
         for (final plate in level.plates)
-          if (!level.doors.any((d) => d.id == plate.opens)) plate.area,
+          if (!_targets(level).contains(plate.opens)) plate.area,
         for (final toggle in level.toggles)
-          if (!level.doors.any((d) => d.id == toggle.flips)) toggle.area,
+          if (!_targets(level).contains(toggle.flips)) toggle.area,
       } {
     climbable = _climbable(ledges, reach);
   }
+
+  /// What a plate or a key may name: a door, or a light with a name.
+  static Set<String> _targets(Level level) => {
+    for (final door in level.doors) door.id,
+    for (final light in level.lights) ?light.id,
+  };
 
   /// How high a body standing on its own past can get its feet.
   final double reach;

@@ -161,14 +161,46 @@ class PressurePlate extends PositionComponent {
 /// direction, so a lit column strengthens the scene rather than fighting it.
 class LightZone extends PositionComponent {
   LightZone(
-    this.area, {
+    this.spec, {
     this.look = LevelLook.greyBox,
     this.landsOnSomething = true,
     super.priority = 60,
   });
 
-  final Rect area;
+  final LightSpec spec;
+  Rect get area => spec.area;
   final LevelLook look;
+
+  /// Whether it is lit right now — the rule, decided on the level's own
+  /// clock (`LevelGame._resolveInteractions`). Only a named light
+  /// ([LightSpec.id]) is ever anything but on.
+  bool isOn = true;
+
+  /// How much of the light is drawn: 1 lit, 0 out. Paint only, and it trails
+  /// [isOn] by [_fadeSeconds] so a light going out reads as going out rather
+  /// than as a frame missing. The rule changed the moment [isOn] did.
+  double _glow = 1;
+
+  static const double _fadeSeconds = 0.15;
+
+  /// Sets the light, and says whether that changed it.
+  bool hold({required bool on}) {
+    if (on == isOn) return false;
+    isOn = on;
+    return true;
+  }
+
+  void reset() {
+    isOn = true;
+    _glow = 1;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    final step = dt / _fadeSeconds;
+    _glow = (isOn ? _glow + step : _glow - step).clamp(0.0, 1.0);
+  }
 
   /// Whether the beam comes down onto a floor, or stops in the air.
   ///
@@ -287,11 +319,45 @@ class LightZone extends PositionComponent {
     );
     // The bulb: the underside of the housing, which is the brightest thing in
     // the level and the place the eye follows down into the beam.
+    // Out, the bulb is the housing's own dark, with only a rim to say there
+    // is a lamp there to come back on.
     canvas.drawRect(
       Rect.fromLTWH(lamp.left, lamp.bottom - 3, lamp.width, 3),
-      Paint()..color = const Color(0xFFFFE7B0),
+      Paint()
+        ..color = Color.lerp(
+          const Color(0x55FFE7B0),
+          const Color(0xFFFFE7B0),
+          _glow,
+        )!,
     );
 
+    if (_glow > 0) {
+      // Faded as one layer while it is going out or coming on, so beam, core
+      // and pool fade together; lit or out, nothing extra is drawn.
+      final fading = _glow < 1;
+      if (fading) {
+        canvas.saveLayer(
+          area.inflate(4),
+          Paint()..color = Color.fromRGBO(0, 0, 0, _glow),
+        );
+      }
+      _drawBeam(canvas);
+      if (fading) canvas.restore();
+    }
+    if (_lit) return;
+    // The bench is for measuring, so there the rectangle has an outline and
+    // you can see exactly where it ends — fainter while the light is out,
+    // because the rule is not there then, only the place it would be.
+    canvas.drawRect(
+      area,
+      Paint()
+        ..color = isOn ? const Color(0x66FFFFFF) : const Color(0x26FFFFFF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
+
+  void _drawBeam(Canvas canvas) {
     canvas.drawRect(area, _beam);
     canvas.drawRect(area.deflate(area.width * 0.28), _core);
     if (landsOnSomething) {
@@ -305,16 +371,6 @@ class LightZone extends PositionComponent {
         _pool,
       );
     }
-    if (_lit) return;
-    // The bench is for measuring, so there the rectangle has an outline and
-    // you can see exactly where it ends.
-    canvas.drawRect(
-      area,
-      Paint()
-        ..color = const Color(0x66FFFFFF)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
   }
 }
 

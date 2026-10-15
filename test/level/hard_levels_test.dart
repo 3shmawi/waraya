@@ -163,7 +163,7 @@ void main() {
 
   group('under the light', () {
     final level = Levels.underTheLight;
-    final lamp = level.lights.first, beam = level.lights.last;
+    final lamp = level.lights.first.area, beam = level.lights.last.area;
 
     testWithGame<LevelGame>(
       'duck under the lamp, and out of the beam',

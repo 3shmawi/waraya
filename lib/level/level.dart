@@ -123,10 +123,14 @@ class Level {
   /// one sentence — *that is me, four seconds ago* — into two systems to model
   /// at once. A rectangle the shadow does not exist in keeps the sentence.
   ///
-  /// The test is the centre of the shadow's body, not an overlap: a body half
-  /// in the light is somewhere a player can see is half in the light, and
-  /// deciding it by its middle is the version they can predict.
-  final List<Rect> lights;
+  /// Any overlap counts: a body the beam touches is not there
+  /// (`LevelGame._standsInLight` has the history).
+  ///
+  /// A light with an [LightSpec.id] can be switched off — by a plate or a key
+  /// that names it, exactly as one names a door, "open" meaning dark. That is
+  /// not the timer refused above: the light still never changes on its own,
+  /// only because a body is standing somewhere. See [LightSpec].
+  final List<LightSpec> lights;
 
   /// Squares that fill in when touched but end nothing. Scenery with feedback:
   /// the lab uses them to mark the two things worth reaching without turning
@@ -225,7 +229,7 @@ class Level {
   /// puts the level proving it into the campaign, with its solution, its
   /// wrong idea, and a version bump. A mechanic that fails is deleted from
   /// here and from the code, and its levels stay refused.
-  static const Set<String> labMechanics = <String>{'prelude'};
+  static const Set<String> labMechanics = <String>{'prelude', 'light-switch'};
 
   /// What the bench accepts: everything the game does, and what is on trial.
   static Set<String> get benchMechanics => {...knownMechanics, ...labMechanics};
@@ -246,6 +250,12 @@ class Level {
     if (toggles.isNotEmpty) 'toggles',
     if (plates.any((plate) => plate.inverts)) 'inverted-plates',
     if (lights.isNotEmpty) 'lights',
+    // A named light. An older build has never seen a light that is anything
+    // but a bare rectangle, and would either fail to read one or — worse, if
+    // it read the rectangle and dropped the name — keep a light on that the
+    // level was drawn around switching off. Named at all, not only when
+    // something switches it: the name is only there to be switched.
+    if (lights.any((light) => light.id != null)) 'light-switch',
     // One delay is the baseline and says nothing. More than one is the
     // dangerous kind of new field: an older build reading `delaySeconds`
     // alone puts up a level with one shadow, which is a level that looks
@@ -303,7 +313,7 @@ class PlateSpec {
   final Rect area;
 
   /// Id of the [DoorSpec] this plate holds open — or, with [inverts], holds
-  /// shut.
+  /// shut. Or of a [LightSpec], which "open" switches off.
   final String opens;
 
   /// Holds the door **shut** while a body rests on it, instead of open.
@@ -339,7 +349,7 @@ class ToggleSpec {
   /// The slab itself, as drawn.
   final Rect area;
 
-  /// Id of the [DoorSpec] this flips.
+  /// Id of the [DoorSpec] — or the [LightSpec] — this flips.
   final String flips;
 
   /// Slightly taller than the slab, so a body resting on it counts as on it.
@@ -378,6 +388,38 @@ class DoorSpec {
   /// latched the door open forever, and that came straight back as a bug
   /// report: a door that never shuts is not a door anyone is holding.
   final double lingerSeconds;
+}
+
+/// A lit rectangle: inside it your past is not there.
+///
+/// Without an [id] it is lit for good, which is every light in the game
+/// before this field. With one, plates and keys can name it the way they name
+/// a door, and **"open" means dark**: a plate held or a key thrown switches it
+/// off, an inverted plate held keeps it on whatever else is true — the same
+/// order as `Door.hold`. There is no linger; a light is on or off this tick.
+///
+/// What it adds is *when*. A light says where your past does not exist; a
+/// switch says for how long. And because your past inside a lit light presses
+/// nothing, a plate under its own light cannot switch it off — somebody in
+/// the dark has to (`docs/phase-12-more.md` §2).
+class LightSpec {
+  const LightSpec(this.area, {this.id});
+
+  final Rect area;
+
+  /// What a plate's `opens` or a key's `flips` calls it, or null for a light
+  /// nothing switches.
+  final String? id;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LightSpec && other.area == area && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(area, id);
+
+  @override
+  String toString() => 'LightSpec($area${id == null ? '' : ', id: $id'})';
 }
 
 /// How the level is drawn.
@@ -499,7 +541,13 @@ extension LevelJson on Level {
       'prelude': [for (final move in prelude) _moveToJson(move)],
     'goal': _rectToJson(goal),
     'blocks': blocks.map(_rectToJson).toList(),
-    'lights': lights.map(_rectToJson).toList(),
+    // A bare rectangle, as every light was, unless it has a name.
+    'lights': [
+      for (final light in lights)
+        light.id == null
+            ? _rectToJson(light.area)
+            : {'area': _rectToJson(light.area), 'id': light.id},
+    ],
     'markers': markers.map(_rectToJson).toList(),
     'plates': [
       for (final plate in plates)
@@ -638,7 +686,15 @@ Level levelFromJson(Object? source, {Set<String>? accepts}) {
       ],
       prelude: _moveList(json['prelude'], 'prelude'),
       blocks: _rectList(json['blocks'], 'blocks'),
-      lights: _rectList(json['lights'], 'lights'),
+      lights: [
+        for (final (i, entry) in _asList(json['lights'], 'lights').indexed)
+          entry is Map
+              ? LightSpec(
+                  _rectFromJson(entry['area'], 'lights[$i].area'),
+                  id: _asString(entry['id'], 'lights[$i].id'),
+                )
+              : LightSpec(_rectFromJson(entry, 'lights[$i]')),
+      ],
       markers: _rectList(json['markers'], 'markers'),
       plates: [
         for (final (i, entry) in _asList(json['plates'], 'plates').indexed)

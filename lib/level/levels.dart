@@ -732,7 +732,7 @@ abstract final class Levels {
     ],
     // Hard against the shelf's left edge: the shortest climb in the level, and
     // the one place a body left behind is worth nothing.
-    lights: const [Rect.fromLTRB(-20, 200, 60, 620)],
+    lights: const [LightSpec(Rect.fromLTRB(-20, 200, 60, 620))],
     goal: const Rect.fromLTRB(380, 358, 460, 430),
   );
 
@@ -1290,11 +1290,11 @@ abstract final class Levels {
     lights: const [
       // The lamp over the plate. Its bottom edge is at 540: a standing body's
       // head is at 524 and in it, a ducked body's is at 551 and eleven clear.
-      Rect.fromLTRB(-440, 200, -300, 540),
+      LightSpec(Rect.fromLTRB(-440, 200, -300, 540)),
       // The beam at the foot of the shelf, to the floor. Narrow, so the dark
       // is close: a body ducked anywhere from about 570 to 628 is clear of
       // it and near enough to jump onto the shelf from.
-      Rect.fromLTRB(650, 200, 700, 620),
+      LightSpec(Rect.fromLTRB(650, 200, 700, 620)),
     ],
     // The wrong way from the gate, as the first plate in the game was, and
     // far enough from the spawn that ducking your way past it is too slow to
@@ -1627,8 +1627,8 @@ abstract final class Levels {
       ToggleSpec(area: Rect.fromLTRB(-350, 494, -270, 506), flips: 'first'),
     ],
     lights: const [
-      Rect.fromLTRB(160, 200, 300, 540),
-      Rect.fromLTRB(2350, 200, 2400, 620),
+      LightSpec(Rect.fromLTRB(160, 200, 300, 540)),
+      LightSpec(Rect.fromLTRB(2350, 200, 2400, 620)),
     ],
     plates: const [
       PlateSpec(area: Rect.fromLTRB(180, 608, 280, 620), opens: 'second'),
@@ -1741,7 +1741,7 @@ abstract final class Levels {
     // Over the tunnel's mouth on this side, to the floor. A past ducked
     // anywhere in it is not there, and a past ducked clear of it is too far
     // from the roof to climb onto it.
-    lights: const [Rect.fromLTRB(-500, 200, -360, 620)],
+    lights: const [LightSpec(Rect.fromLTRB(-500, 200, -360, 620))],
     plates: const [
       // Hard against the roof's face, so ducking on it leaves the step.
       PlateSpec(area: Rect.fromLTRB(-880, 608, -810, 620), opens: 'gate'),
@@ -1861,11 +1861,11 @@ abstract final class Levels {
     lights: const [
       // Over the plate. Its bottom edge is at 540: a standing body's head is
       // at 524 and in it, a ducked body's at 551 and clear.
-      Rect.fromLTRB(-370, 200, -230, 540),
+      LightSpec(Rect.fromLTRB(-370, 200, -230, 540)),
       // Over the key, at the same height above the balcony as the first is
       // above the floor: a standing head on the balcony is at 410, a ducked
       // one at 437, and the edge is between them at 425.
-      Rect.fromLTRB(590, 200, 710, 425),
+      LightSpec(Rect.fromLTRB(590, 200, 710, 425)),
     ],
     toggles: const [
       ToggleSpec(area: Rect.fromLTRB(610, 494, 690, 506), flips: 'last'),
@@ -1975,9 +1975,11 @@ abstract final class Levels {
     ],
     plates: const [
       PlateSpec(area: Rect.fromLTRB(10, 494, 90, 506), opens: 'gate'),
-      // The whole foot of the shelf, and then some. A step climbs to the
-      // shelf from about 150 out; a body that is off this plate — less than
-      // a footprint over its edge — is more than 200 out, and falls short.
+      // The whole foot of the shelf, and then some. The best climb off a step
+      // — onto it in place, to its edge, and jump — reaches the shelf from
+      // about 175 out; a body that is off this plate, less than a footprint
+      // over its edge, is 207 out or more, and falls short
+      // (`highestClimbFrom` in the tests searches it).
       PlateSpec(
         area: Rect.fromLTRB(200, 608, 400, 620),
         opens: 'gate',
@@ -2086,8 +2088,8 @@ abstract final class Levels {
     lights: const [
       // Both end 105 above what they hang over: a standing head is 96 up, a
       // ducked one 69, and the top of a stair 138.
-      Rect.fromLTRB(260, 200, 300, 515),
-      Rect.fromLTRB(860, 0, 900, 325),
+      LightSpec(Rect.fromLTRB(260, 200, 300, 515)),
+      LightSpec(Rect.fromLTRB(860, 0, 900, 325)),
     ],
     goal: const Rect.fromLTRB(1100, 128, 1180, 200),
   );
@@ -2259,9 +2261,9 @@ abstract final class Levels {
     lights: const [
       // Over the key: a standing head on the balcony is in it, a ducked one
       // clear (`standToStay`).
-      Rect.fromLTRB(90, 150, 210, 425),
+      LightSpec(Rect.fromLTRB(90, 150, 210, 425)),
       // Over the plate: a standing past is in it, a ducked one clear.
-      Rect.fromLTRB(430, 200, 570, 540),
+      LightSpec(Rect.fromLTRB(430, 200, 570, 540)),
     ],
     toggles: const [
       ToggleSpec(area: Rect.fromLTRB(110, 494, 190, 506), flips: 'key'),
@@ -2414,9 +2416,254 @@ abstract final class Levels {
   /// here; `step_edge_test.dart` holds that.
   static const Set<String> showsSteps = {'stand-on-yourself'};
 
+  /// **On the bench: the light switch, one.** You are the helper.
+  ///
+  /// The plate that holds the gate is under a lamp, and your past in a lamp
+  /// is nothing — so for eleven levels a plate under a light was a plate only
+  /// you could press. Now there is a switch for the lamp, on a balcony in the
+  /// dark, and the level turns the game's sentence round: stand on the plate,
+  /// walk away, and then **you** stand somewhere useless — the switch — while
+  /// your past does the work in the dark you made for it. Step off and the
+  /// lamp is lit, your past is gone, and the gate's grace is what you run on.
+  ///
+  /// The grace starts when your past steps off the plate, so it has to cover
+  /// the switch you are still standing on as well as the walk: four seconds,
+  /// enough for a short press held a while.
+  static final Level youHoldTheDark = Level(
+    id: 'you-hold-the-dark',
+    solution: const [
+      Move.left(1.75), // to the plate under the lamp
+      Move(1.0), // stand on it: your past will, in the light
+      Move.right(2.45), // to the foot of the balcony
+      Move.right(0.55, jump: true), // up onto the switch
+      Move.right(0.15),
+      Move(1.5), // stand: the lamp is out, and your past is on the plate
+      Move.right(4), // off, and through while the gate lingers
+    ],
+    wrongIdeas: const [
+      // The plate, and then the gate, as every plate before it. Your past
+      // arrives in the light and holds nothing.
+      [Move.left(1.75), Move(1.0), Move.right(6)],
+      // The switch first, then the plate. Your past puts the lamp out, but by
+      // the time it walks to the plate it has stepped off the switch.
+      [
+        Move.right(0.75),
+        Move.right(0.55, jump: true),
+        Move(1.0),
+        Move.left(2.75),
+        Move(1.5),
+        Move.right(6),
+      ],
+    ],
+    name: 'انت اللي مطفّيه',
+    teaches: 'الزرار تحت النور. اقف انت في الضلمة، وماضيك يدوسه.',
+    nameEn: 'You Hold the Dark',
+    teachesEn:
+        'The button is under the lamp. Stand in the dark; your past '
+        'presses it.',
+    delaySeconds: 4,
+    spawnX: -100,
+    floorTop: _floor,
+    blocks: [
+      _ground(-700, 800),
+      const Rect.fromLTRB(-740, 200, -700, 620),
+      const Rect.fromLTRB(100, 506, 200, 522),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(-520, 200, -380, 620), id: 'lamp')],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-500, 608, -400, 620), opens: 'gate'),
+      PlateSpec(area: Rect.fromLTRB(110, 494, 190, 506), opens: 'lamp'),
+    ],
+    doors: const [
+      DoorSpec(
+        id: 'gate',
+        closed: Rect.fromLTRB(500, 360, 526, 620),
+        lingerSeconds: 4,
+      ),
+    ],
+    goal: const Rect.fromLTRB(650, 548, 730, 620),
+  );
+
+  /// **On the bench: the light switch, two.** A key puts the lamp out for
+  /// exactly as long as your past takes to reach it — and that is the
+  /// stretch of your past from **before** you threw it.
+  ///
+  /// The shelf can only be climbed from its foot, and its foot is under a
+  /// lamp: a step there is erased. The key on the balcony puts the lamp out
+  /// until your past arrives on the key and throws it back, D seconds later.
+  /// In those D seconds your past is replaying what you did in the D seconds
+  /// before the key. So the step has to be there already: duck at the foot,
+  /// then go and throw the key, then come back and climb.
+  ///
+  /// The order every level teaches — make the thing that opens the way, then
+  /// use it — is the wrong one again: throw the key first and the lamp is out
+  /// over your walk to the shelf, and back on before the step you then leave
+  /// arrives. It is `theStepThatShuts` with a lamp instead of a button, which
+  /// is the point: the same order, for a different reason.
+  static final Level yourPastsDark = Level(
+    id: 'your-pasts-dark',
+    solution: const [
+      Move.right(2.45), // under the lamp, to the foot of the shelf
+      Move(1.0, crouch: true), // duck: a step the lamp will erase
+      Move.left(0.8), // back to the balcony
+      Move.left(0.55, jump: true), // up onto the key
+      Move.left(0.1),
+      Move(0.2), // the lamp goes out, over the last few seconds of you
+      Move.right(0.6),
+      Move(1.0),
+      Move.right(0.25),
+      Move.right(0.55, jump: true), // onto your own head
+      Move(0.1),
+      Move.right(0.7, jump: true), // onto the shelf
+      Move.right(3),
+    ],
+    wrongIdeas: const [
+      // The key first, so the lamp is out while you build the step. It is out
+      // over what you did before the key — and the step is after it. By the
+      // time your past ducks, the lamp is back on.
+      [
+        Move.right(0.75),
+        Move.right(0.55, jump: true),
+        Move(0.2),
+        Move.right(1.1),
+        Move(1.0, crouch: true),
+        Move.left(0.5),
+        Move(4.5),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(3),
+      ],
+      // The step in the dark, short of the lamp, where nothing erases it and
+      // no key is needed. It is too far out to climb from.
+      [
+        Move.right(1.6),
+        Move(1.0, crouch: true),
+        Move(4.2), // stand where it will be, and wait for it under you
+        Move(0.5, jump: true), // up onto it
+        Move.right(0.9, jump: true), // and at the shelf
+        Move.right(3),
+      ],
+      // No key at all: the step under the lamp, and wait for it.
+      [
+        Move.right(2.45),
+        Move(1.0, crouch: true),
+        Move.left(0.5),
+        Move(4.5),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.7, jump: true),
+        Move.right(3),
+      ],
+    ],
+    name: 'ضلمة ماضيك',
+    teaches: 'المفتاح بيطفي النور شوية — على اللي عملته قبله.',
+    nameEn: 'Your Past\'s Dark',
+    teachesEn:
+        'The key puts the lamp out for a while — over what you did '
+        'before it.',
+    delaySeconds: 5,
+    spawnX: -200,
+    floorTop: _floor,
+    blocks: [
+      _ground(-600, 1240),
+      const Rect.fromLTRB(-640, 200, -600, 620),
+      const Rect.fromLTRB(0, 506, 100, 522),
+      const Rect.fromLTRB(400, 430, 1200, 620),
+      const Rect.fromLTRB(1200, 170, 1240, 620),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(220, 200, 400, 620), id: 'lamp')],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(10, 494, 90, 506), flips: 'lamp'),
+    ],
+    goal: const Rect.fromLTRB(1000, 358, 1080, 430),
+  );
+
+  /// **On the bench: the light switch, three.** Two pasts, two jobs.
+  ///
+  /// The plate is under a lamp and the gate has no grace, so somebody has to
+  /// be standing on the switch at the moment you walk through — and you are at
+  /// the gate. With one past that cannot be done. With two, the near one
+  /// holds the switch while the far one, four seconds further back, stands on
+  /// the plate in the dark it is making. So: the plate first and long, then
+  /// the switch, then the gate.
+  ///
+  /// The window is the overlap of the far past on the plate and the near one
+  /// on the switch, and how long you stood on the plate is how wide it is:
+  /// the lever `twoNotOne` taught, not a stopwatch. The switch is close to
+  /// the plate because the walk between them comes straight off that window.
+  static final Level oneHoldsTheDark = Level(
+    id: 'one-holds-the-dark',
+    solution: const [
+      Move.left(2.3), // the wrong way, to the plate under the lamp
+      // Stand on it, and long: how long is how wide the window will be.
+      Move(2.0),
+      Move.right(0.85), // back to the foot of the balcony
+      Move.right(0.55, jump: true), // up onto the switch
+      Move(1.6), // stand on it: the near past will, two seconds on
+      Move.right(1.9), // to the gate, and wait for both of them
+      Move(1.0),
+      Move.right(1.5),
+    ],
+    wrongIdeas: const [
+      // One past's way of doing it: hold the switch yourself until the gate
+      // opens, then run for it. The moment you step off, the lamp is lit,
+      // the past on the plate is gone, and the gate has no grace to give.
+      [
+        Move.left(2.3),
+        Move(1.0),
+        Move.right(0.85),
+        Move.right(0.55, jump: true),
+        Move(4.0),
+        Move.right(4),
+      ],
+      // The switch first and then the plate. The near past would press it
+      // and the far one hold the dark — but the plate is too far from the
+      // gate to be there inside two seconds.
+      [
+        Move.left(0.6),
+        Move.left(0.55, jump: true),
+        Move.left(0.1),
+        Move(1.0),
+        Move.left(1.25),
+        Move(1.0),
+        Move.right(3.4),
+        Move(4.0),
+        Move.right(1.5),
+      ],
+    ],
+    name: 'واحد يطفي وواحد يدوس',
+    teaches: 'ماضيك اتنين: واحد يطفي النور، والتاني يدوس تحته.',
+    nameEn: 'One Holds the Dark',
+    teachesEn:
+        'Your past is two: one puts the lamp out, the other presses under it.',
+    delays: const [2, 6],
+    spawnX: 100,
+    floorTop: _floor,
+    blocks: [
+      _ground(-700, 600),
+      const Rect.fromLTRB(-740, 200, -700, 620),
+      const Rect.fromLTRB(-150, 506, -50, 522),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(-470, 200, -330, 620), id: 'lamp')],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-450, 608, -350, 620), opens: 'gate'),
+      PlateSpec(area: Rect.fromLTRB(-140, 494, -60, 506), opens: 'lamp'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(250, 260, 276, 620)),
+    ],
+    goal: const Rect.fromLTRB(400, 548, 480, 620),
+  );
+
   /// Levels on the bench and not in the campaign: they use something still
   /// on trial. The editor's start menu offers them.
-  static final List<Level> bench = [thatsYou];
+  static final List<Level> bench = [
+    thatsYou,
+    youHoldTheDark,
+    yourPastsDark,
+    oneHoldsTheDark,
+  ];
 
   static final Level lab = Level(
     id: 'lab',
