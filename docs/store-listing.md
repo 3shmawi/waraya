@@ -55,9 +55,9 @@ Your shadow repeats everything you did, seconds later. Plan your past to pass.
 
 مفيش زرار تسجيل ومفيش رجوع بالوقت. التأخير شغال طول الوقت، سواء انت جاهز أو لأ، وده اللي بيخلّي الإحساس أقرب لإنك متطارد من إنه لغز هادي.
 
-ستة وعشرين مرحلة:
+تمانية وعشرين مرحلة:
 • عشرة بيعلّموا، كل مرحلة فكرة واحدة: الزرار، المنصة، العقبة، التضحية، المفتاح اللي ماضيك بيقلبه تاني، النور، وظلين بتأخيرين مختلفين في نفس الوقت
-• وستاشر مرحلة صعبة بيجمعوا ده كله، وبيقلبوا اللي اتعلّمته — ومنهم زرار بيطفي النور
+• وتمنتاشر مرحلة صعبة بيجمعوا ده كله، وبيقلبوا اللي اتعلّمته — ومنهم زرار بيطفي النور
 
 الصعوبة في الفهم مش في السرعة: مفيش عدّاد بيجري، ومفيش مرحلة بتعاقبك على لحظة تفكير.
 
@@ -88,9 +88,9 @@ And your shadow is not a picture. It is a real thing in the world:
 
 There is no record button and no rewind. The delay runs whether you are ready or not, which makes it feel closer to being chased than to a quiet puzzle box.
 
-Twenty-six levels:
+Twenty-eight levels:
 • Ten that teach, one idea each: the plate, the platform, the obstacle, the sacrifice, the switch your past flips back, the light, and two shadows at two different delays at once
-• Sixteen hard levels that put all of it together and turn it over — among them a switch that puts the light out
+• Eighteen hard levels that put all of it together and turn it over — among them a switch that puts the light out
 
 The difficulty is in understanding, not speed: no timer running down, and no level that punishes a moment spent thinking.
 
@@ -108,10 +108,10 @@ Made by one developer, one day a week.
 
 ```
 <ar>
-أول نسخة: ستة وعشرين مرحلة.
+أول نسخة: تمانية وعشرين مرحلة.
 </ar>
 <en-US>
-First release: twenty-six levels.
+First release: twenty-eight levels.
 </en-US>
 ```
 
@@ -155,8 +155,8 @@ en: puzzle,platformer,shadow,time,delay,echo,logic,atmospheric,indie,egypt
 **Promotional text** (≤ 170, can be changed without a new version):
 
 ```
-ar: انت مش بتتحكم في ظلك. بتتحكم في اللي هيعمله بعد شوية. ستة وعشرين مرحلة، من غير إعلانات.
-en: You do not control your shadow. You control what it does next. Twenty-six levels, no ads.
+ar: انت مش بتتحكم في ظلك. بتتحكم في اللي هيعمله بعد شوية. تمانية وعشرين مرحلة، من غير إعلانات.
+en: You do not control your shadow. You control what it does next. Twenty-eight levels, no ads.
 ```
 
 **Description:** the same full descriptions as Google Play.

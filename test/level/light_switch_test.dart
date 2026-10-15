@@ -16,6 +16,7 @@ import 'package:waraya/level/level_check.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 import 'package:waraya/level/playthrough.dart';
+import 'package:waraya/level/props.dart';
 
 import 'run.dart';
 
@@ -557,6 +558,269 @@ void main() {
         expect(opened, isFalse);
       },
     );
+  });
+
+  group('the last six seconds', () {
+    final level = Levels.theLastSixSeconds;
+
+    // Up the step and onto the shelf the moment the step is there, after
+    // whatever the run before it was.
+    void climbWhenThere(Run run, double ducked) => run
+      ..walkTo(330)
+      ..waitUntil(ducked + level.delaySeconds + 0.1)
+      ..hold(0.5, jump: true)
+      ..hold(0.9, axis: 1, jump: true)
+      ..hold(5, axis: 1);
+
+    // The budget is the six seconds before the key. The walk from the step
+    // to the key and back spends a little over four of them, and what is
+    // left is how long you can stop to think between the step and the key.
+    for (final (pause, works) in const [
+      (0.0, true),
+      (0.6, true),
+      (1.2, true),
+      (2.5, false),
+    ]) {
+      testWithGame<LevelGame>(
+        'stopping ${pause}s between the step and the key '
+        '${works ? 'still fits' : 'does not fit'}',
+        build(level),
+        (game) async {
+          await game.ready();
+          final run = Run(game)..play(level.solution.take(6));
+          final ducked = run.t;
+          run
+            ..play(level.solution.skip(6).take(1))
+            ..hold(pause)
+            ..play(level.solution.skip(7).take(4));
+          climbWhenThere(run, ducked);
+          expect(run.finishedAt, works ? isNotNull : isNull, reason: run.where);
+        },
+      );
+    }
+
+    // Each wrong idea fails at the step, for the reason it says — so each
+    // has to have thrown the key, and the plate held the gate for a moment.
+    for (final (i, idea) in level.wrongIdeas.indexed) {
+      testWithGame<LevelGame>(
+        'wrong idea ${i + 1} throws the key and stands on the plate',
+        build(level),
+        (game) async {
+          await game.ready();
+          var dark = false;
+          var held = false;
+          final run = Run(game);
+          for (final move in idea) {
+            run.hold(
+              move.seconds,
+              axis: move.axis,
+              jump: move.jump,
+              crouch: move.crouch,
+              each: () {
+                if (!game.lights.single.isOn) dark = true;
+                if (game.doors.single.openFraction > 0) held = true;
+              },
+            );
+          }
+          expect(dark, isTrue, reason: run.where);
+          expect(held, isTrue, reason: run.where);
+          expect(run.finishedAt, isNull, reason: run.where);
+        },
+      );
+    }
+
+    // The other order of the two, the step first, fits too: the lesson is
+    // the key last, not which of the others comes first.
+    testWithGame<LevelGame>(
+      'the step and then the plate, then the key, fits too',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = Run(game)..walkTo(330);
+        final ducked = run.t;
+        run
+          ..hold(1.0, crouch: true)
+          ..walkTo(235)
+          ..hold(0.55, axis: -1, jump: true)
+          ..walkTo(118)
+          ..hold(0.3)
+          ..walkTo(65)
+          ..hold(0.2)
+          ..walkTo(65)
+          ..hold(0.55, axis: -1, jump: true)
+          ..hold(0.2);
+        expect(game.lights.single.isOn, isFalse, reason: run.where);
+        climbWhenThere(run, ducked);
+        expect(run.finishedAt, isNotNull, reason: run.where);
+      },
+    );
+
+    // The plate's balcony is as high as the step, and the shelf is the
+    // whole lamp away from it: no running jump off it gets there.
+    testWithGame<LevelGame>(
+      'the shelf is out of reach from the plate\'s balcony',
+      build(level),
+      (game) async {
+        await game.ready();
+        for (var runUp = 0.0; runUp <= 0.6; runUp += Playthrough.dt * 2) {
+          game.reload();
+          final run = Run(game)
+            ..play(level.solution.take(4))
+            ..walkTo(105)
+            ..hold(runUp, axis: 1)
+            ..hold(1.2, axis: 1, jump: true);
+          expect(
+            game.player.y,
+            isNot(430),
+            reason: 'run-up $runUp: ${run.where}',
+          );
+        }
+      },
+    );
+
+    // And a past ducked on the plate is a step and a press at once, nearly
+    // as high as the shelf. With the plate at the balcony's far end it is
+    // short however it is run off, which is what keeps the two things two.
+    // Ducks at [x] on the plate's balcony, throws the key, comes back up
+    // onto that step and runs off it to the right, [frames] frames before
+    // jumping: whether that lands on the shelf.
+    Future<bool> runOffStep(LevelGame game, double x, int frames) async {
+      game.reload();
+      final run = Run(game)
+        ..walkTo(235)
+        ..hold(0.55, axis: -1, jump: true)
+        ..walkTo(x);
+      final ducked = run.t;
+      run
+        ..hold(2.0, crouch: true)
+        ..walkTo(65)
+        ..hold(0.2)
+        ..walkTo(65)
+        ..hold(0.55, axis: -1, jump: true)
+        ..hold(0.2)
+        ..walkTo(235)
+        ..hold(0.2)
+        ..walkTo(235)
+        ..hold(0.55, axis: -1, jump: true)
+        ..walkTo(x - 48)
+        ..waitUntil(ducked + level.delaySeconds + 0.2)
+        ..hold(0.15, axis: 1, jump: true) // up onto it
+        ..hold(0.6)
+        ..walkTo(x - 25);
+      expect(game.player.y, lessThan(450), reason: 'on it: ${run.where}');
+      run
+        ..hold(frames * Playthrough.dt, axis: 1)
+        ..hold(1.0, axis: 1, jump: true)
+        ..hold(1.5, axis: 1);
+      return game.player.y == 430;
+    }
+
+    // And a past ducked on the plate is a step and a press at once, nearly
+    // as high as the shelf. With the plate at the balcony's far end it is
+    // short however it is run off, which is what keeps the two things two.
+    testWithGame<LevelGame>(
+      'a step on the plate is out of reach of the shelf',
+      build(level),
+      (game) async {
+        await game.ready();
+        for (final x in const <double>[140, 146]) {
+          for (var frames = 0; frames <= 30; frames++) {
+            expect(
+              await runOffStep(game, x, frames),
+              isFalse,
+              reason: 'at $x, $frames frames',
+            );
+          }
+        }
+      },
+    );
+
+    // The control that says the search above can find a way: a step at the
+    // balcony's other end, off the plate, does reach.
+    testWithGame<LevelGame>(
+      'a step at the balcony\'s other end does reach the shelf',
+      build(level),
+      (game) async {
+        await game.ready();
+        var reached = false;
+        for (var frames = 0; frames <= 30 && !reached; frames++) {
+          reached = await runOffStep(game, 190, frames);
+        }
+        expect(reached, isTrue);
+      },
+    );
+  });
+
+  group('a chain of dark', () {
+    final level = Levels.aChainOfDark;
+
+    LightZone lamp(LevelGame game, String id) =>
+        game.lights.singleWhere((light) => light.spec.id == id);
+
+    // What each wrong idea did, watched frame by frame, so each fails for the
+    // reason its comment gives and not by missing a balcony.
+    for (final (i, (switchOut, plateOut, opened)) in const [
+      (true, true, true), // yours first; the gate opens, but not for you
+      (false, true, false), // never on your own plate
+      (false, true, true), // the gate opens, and you are too far
+    ].indexed) {
+      testWithGame<LevelGame>(
+        'wrong idea ${i + 1} stands where it says and does not finish',
+        build(level),
+        (game) async {
+          await game.ready();
+          var sawSwitchOut = false;
+          var sawPlateOut = false;
+          var sawOpen = false;
+          final run = Run(game);
+          for (final move in level.wrongIdeas[i]) {
+            run.hold(
+              move.seconds,
+              axis: move.axis,
+              jump: move.jump,
+              crouch: move.crouch,
+              each: () {
+                if (!lamp(game, 'switch-lamp').isOn) sawSwitchOut = true;
+                if (!lamp(game, 'plate-lamp').isOn) sawPlateOut = true;
+                // Open by a past while you are away over by the switch.
+                if (game.doors.single.openFraction > 0.5 &&
+                    game.player.x < -400) {
+                  sawOpen = true;
+                }
+              },
+            );
+          }
+          expect(sawSwitchOut, switchOut, reason: run.where);
+          expect(sawPlateOut, plateOut, reason: run.where);
+          expect(sawOpen, opened, reason: run.where);
+          expect(run.finishedAt, isNull, reason: run.where);
+        },
+      );
+    }
+
+    // The far past leaves the switch six seconds after you did, and by then
+    // you have to be on your own plate: the walk there takes a little over
+    // four, and the rest is how long you can stop on the way.
+    for (final (pause, works) in const [
+      (0.0, true),
+      (0.8, true),
+      (1.5, true),
+      (2.5, false),
+    ]) {
+      testWithGame<LevelGame>(
+        'stopping ${pause}s between the switch and the plate '
+        '${works ? 'still chains' : 'breaks the chain'}',
+        build(level),
+        (game) async {
+          await game.ready();
+          final run = Run(game)
+            ..play(level.solution.take(5))
+            ..hold(pause)
+            ..play(level.solution.skip(5));
+          expect(run.finishedAt, works ? isNotNull : isNull, reason: run.where);
+        },
+      );
+    }
   });
 }
 
