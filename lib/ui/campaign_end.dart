@@ -22,14 +22,18 @@ const Color _dim = Color(0xFF9A8B7A);
 /// outright — the only place it is ever stated, because everywhere else the
 /// player is meant to work it out. Then two ways onward and nothing else.
 ///
-/// It arrives rather than appearing. The three bodies walk in — you first,
-/// then the two of you still on their way — and the words come up behind
-/// them. The screen that says the mechanic out loud opens by performing it,
-/// and a beat of nothing is also the only pause the game ever gives anybody:
+/// It arrives rather than appearing. The three bodies walk across the panel —
+/// you first, then your past on the same steps 0.85 and 1.7 seconds behind,
+/// over and over, the animation the loading screen opens the game with — and
+/// the words come up behind them. The screen that says the mechanic out loud
+/// opens by performing it, and the last thing the game shows is the first.
+/// A beat of nothing is also the only pause the game ever gives anybody:
 /// everywhere else the delay is running and standing still costs something.
 ///
-/// A tap anywhere skips to the end of it. Somebody replaying the campaign has
-/// seen this, and an animation you cannot get past is a wall.
+/// A tap anywhere skips the words to the end. Somebody replaying the campaign
+/// has seen this, and an animation you cannot get past is a wall. The walk
+/// keeps going — it is in the way of nothing — unless the device asks for
+/// less motion, when it is the still mark.
 class CampaignEnd extends StatefulWidget {
   const CampaignEnd({
     super.key,
@@ -57,9 +61,6 @@ class CampaignEnd extends StatefulWidget {
 
 class _CampaignEndState extends State<CampaignEnd>
     with SingleTickerProviderStateMixin {
-  /// How long the three of them take to walk in.
-  static const double _walkIn = 1.5;
-
   /// When the last word has faded up. Past this the ticker has nothing left
   /// to say and stops, so a screen that sits there is not also a screen
   /// rebuilding sixty times a second.
@@ -126,15 +127,7 @@ class _CampaignEndState extends State<CampaignEnd>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
-                      width: 208,
-                      height: 128,
-                      child: CustomPaint(
-                        painter: GameMark.panel(
-                          entrance: (_at / _walkIn).clamp(0.0, 1.0),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(width: 208, height: 128, child: _Crossing()),
                     const SizedBox(height: 28),
                     _Rise(
                       at: _fade(1.15),
@@ -201,6 +194,60 @@ class _CampaignEndState extends State<CampaignEnd>
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The mark, walking: you across the panel and your past behind you on the
+/// same steps, on a loop (`GameMark.crossing`).
+///
+/// Its own ticker, so the words can settle and stop asking for frames while
+/// this goes on repainting only itself. Still when the platform asks for
+/// reduced motion — the mark as it stands everywhere else.
+class _Crossing extends StatefulWidget {
+  const _Crossing();
+
+  @override
+  State<_Crossing> createState() => _CrossingState();
+}
+
+class _CrossingState extends State<_Crossing>
+    with SingleTickerProviderStateMixin {
+  late final Ticker _ticker;
+  double _seconds = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker((elapsed) {
+      setState(
+        () =>
+            _seconds = elapsed.inMicroseconds / Duration.microsecondsPerSecond,
+      );
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (still && _ticker.isActive) _ticker.stop();
+    if (!still && !_ticker.isActive) _ticker.start();
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    return CustomPaint(
+      painter: still
+          ? const GameMark.panel()
+          : GameMark.panel(crossing: _seconds),
     );
   }
 }

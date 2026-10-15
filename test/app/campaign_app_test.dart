@@ -9,6 +9,7 @@ import 'package:waraya/main_levels.dart';
 import 'package:waraya/progress/progress.dart';
 import 'package:waraya/settings/game_settings.dart';
 import 'package:waraya/ui/campaign_end.dart';
+import 'package:waraya/ui/game_mark.dart';
 import 'package:waraya/ui/level_select.dart';
 import 'package:waraya/update/update_check.dart';
 
@@ -419,8 +420,61 @@ void main() {
       await tester.pump();
       expect(wordAt(tester), 1);
 
-      // And it has stopped: settling means the ticker is done, not that it is
-      // still running with nothing left to change.
+      // And the words stay there. The walk above them goes on — it is the
+      // loading screen's, on a loop — so this screen never settles; the
+      // words are what a tap is for.
+      await tester.pump(const Duration(seconds: 3));
+      expect(wordAt(tester), 1);
+    });
+
+    /// The mark, as it is painted this frame.
+    GameMark markAt(WidgetTester tester) =>
+        tester
+                .widget<CustomPaint>(
+                  find.byWidgetPredicate(
+                    (w) => w is CustomPaint && w.painter is GameMark,
+                  ),
+                )
+                .painter!
+            as GameMark;
+
+    testWidgets('and the mark walks, as it does while the game loads', (
+      tester,
+    ) async {
+      await tester.pumpWidget(endWith());
+      await tester.pump();
+      final before = markAt(tester).crossing!;
+      // Well past the walk-in and the words: it is still going, round and
+      // round, with your past on the same steps behind you.
+      await tester.pump(const Duration(seconds: 6));
+      final after = markAt(tester).crossing!;
+      expect(after - before, closeTo(6, 0.1));
+      expect(GameMark.crossLags, [1.7, 0.85, 0]);
+      expect(GameMark.crossSeconds, 4.4);
+    });
+
+    testWidgets('and stands still for anyone who asked for less motion', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: Size(400, 800),
+            disableAnimations: true,
+          ),
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: CampaignEnd(
+              levels: Levels.campaign,
+              onLevels: () {},
+              onRestart: () {},
+            ),
+          ),
+        ),
+      );
+      expect(markAt(tester).crossing, isNull);
+      await tester.tapAt(const Offset(200, 60));
+      // Nothing left running, so it settles.
       await tester.pumpAndSettle();
     });
 

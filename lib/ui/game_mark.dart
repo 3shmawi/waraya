@@ -35,6 +35,7 @@ class GameMark extends CustomPainter {
     this.scale = 1,
     this.phase = 0,
     this.entrance = 1,
+    this.crossing,
     this.layer = MarkLayer.all,
   });
 
@@ -44,12 +45,13 @@ class GameMark extends CustomPainter {
   /// logo is a square app icon and this is not. They are drawn running, and a
   /// running stride is nearly half a body wide — at the icon's spacing the
   /// three of them came out as one blur with six legs.
-  const GameMark.panel({double entrance = 1})
+  const GameMark.panel({double entrance = 1, double? crossing})
     : this(
         at: const [0.78, 0.55, 0.32],
         cornerRadius: 0.18,
         border: true,
         entrance: entrance,
+        crossing: crossing,
       );
 
   /// In a square tile, at the spacing and the corner `site/logo.svg` uses.
@@ -126,6 +128,32 @@ class GameMark extends CustomPainter {
   /// by doing it.
   final double entrance;
 
+  /// Seconds into the loading screen's walk, or null for the mark standing
+  /// where [at] puts it.
+  ///
+  /// The same animation `web/index.html` plays while the game loads: you
+  /// cross the tile, and your past crosses it on the very same steps
+  /// [crossLags] behind — each past absent until its delay has passed, the
+  /// way a shadow does not exist until the buffer has filled. Round and round,
+  /// every [crossSeconds]. The ending opens with it, so the last thing the
+  /// game shows is the first thing it showed.
+  ///
+  /// Every pose is a function of where the body is, as in the walk-in, which
+  /// is what makes the pasts the *same* walk rather than three walks: at any
+  /// spot each of them has exactly the legs you had there.
+  final double? crossing;
+
+  /// One crossing, edge to edge: the splash's.
+  static const double crossSeconds = 4.4;
+
+  /// How far behind you each body walks, oldest first — the splash's 1.7 and
+  /// 0.85 seconds.
+  static const List<double> crossLags = [1.7, 0.85, 0];
+
+  /// Where a crossing starts and ends, in tile widths: off the right edge,
+  /// and off the left.
+  static const double _crossFrom = 1.22, _crossTo = -0.24;
+
   /// Where they walk in from, in tile widths, right of the frame.
   static const double _entryFrom = 1.45;
 
@@ -181,7 +209,31 @@ class GameMark extends CustomPainter {
     // Oldest first, so the body you are now is painted over the top of them.
     final bodyPx = size.height * bodyHeight * scale;
     final span = 1 - (at.length - 1) * _stagger;
-    for (var i = 0; people && i < at.length; i++) {
+    if (crossing case final seconds?) {
+      for (var i = 0; people && i < crossLags.length; i++) {
+        final walked = seconds - crossLags[i];
+        // Not there yet: your past does not exist before its delay.
+        if (walked < 0) continue;
+        final u = (walked % crossSeconds) / crossSeconds;
+        final x = _crossFrom + (_crossTo - _crossFrom) * u;
+        canvas.save();
+        canvas.translate(size.width * x, ground);
+        Figure(
+          height: bodyPx,
+          color: i == crossLags.length - 1
+              ? SilhouettePalette.bodyColor
+              : SilhouettePalette.shadowColor.withValues(alpha: _alpha[i]),
+        ).render(
+          canvas,
+          phase: phase - x * size.width / (Figure.stride * bodyPx),
+          moving: true,
+          airborne: false,
+          facing: _facing,
+        );
+        canvas.restore();
+      }
+    }
+    for (var i = 0; people && crossing == null && i < at.length; i++) {
       final ahead = at.length - 1 - i;
       final home = 0.5 + (at[i] - 0.5) * scale;
 
@@ -240,5 +292,7 @@ class GameMark extends CustomPainter {
 
   @override
   bool shouldRepaint(GameMark oldDelegate) =>
-      oldDelegate.phase != phase || oldDelegate.entrance != entrance;
+      oldDelegate.phase != phase ||
+      oldDelegate.entrance != entrance ||
+      oldDelegate.crossing != crossing;
 }
