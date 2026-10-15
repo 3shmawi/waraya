@@ -216,8 +216,8 @@ class TouchInputSource extends PositionComponent
   }
 
   void _hold(int pointerId, _Pad pad) {
-    // Only the first frame of a press is a jump request; holding it after that
-    // is the variable height, which `Locomotion` reads from jumpHeld.
+    // Only the first frame of a press is a jump request. Holding it after
+    // that changes nothing — every jump is a full one (`Locomotion`).
     if (pad == _Pad.jump && !_held.values.contains(_Pad.jump)) {
       _jumpQueued = true;
     }

@@ -103,8 +103,8 @@ void main() {
       );
       step(player, input, source, frames: 2);
 
-      // Held all the way up: a released jump is cut short now, and a hop does
-      // not clear this beam.
+      // Held all the way up, as a player would — though a released jump is
+      // a full jump too now.
       step(
         player,
         input,

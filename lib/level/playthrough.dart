@@ -4,7 +4,9 @@ import 'level_game.dart';
 /// One held input, for a length of time.
 ///
 /// [jump] presses on the first frame of the move and stays held for the rest
-/// of it, because the jump is variable-height: a press with no hold is a hop.
+/// of it. The hold used to decide the height — a press with no hold was a
+/// hop — and is still recorded so runs written then read the same; every
+/// jump is a full one now.
 ///
 /// This lives in `lib` rather than in the tests because a recorded run is part
 /// of a level now, not part of a test: a level arriving from outside carries

@@ -158,7 +158,10 @@ void main() {
       expect(height, closeTo(designed, 8));
     });
 
-    test('a tap is a hop', () {
+    // There used to be a short hop for a tap. Nobody noticed it was there,
+    // and a tap rose about 34 — half a ducked past (69) — so a quick press
+    // could not climb the step the game is built on. Every jump is whole now.
+    test('a tap is the whole jump, the same as a hold', () {
       final tap = Body()..step(tapped);
       var apex = 0.0;
       while (!tap.grounded) {
@@ -167,8 +170,8 @@ void main() {
       }
 
       final full = Body()..step(pressed);
-      expect(-apex, lessThan(apexOf(full) * 0.5));
-      expect(-apex, greaterThan(0), reason: 'it is still a jump');
+      expect(-apex, closeTo(apexOf(full), 0.001));
+      expect(-apex, greaterThan(69), reason: 'a tap climbs a ducked past');
     });
 
     test('coyote time: a jump just after the ledge still counts', () {

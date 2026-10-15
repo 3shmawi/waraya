@@ -82,10 +82,6 @@ abstract final class WarayaConfig {
   /// cannot tunnel through a floor in one frame.
   static const double maxFallSpeed = 1700;
 
-  /// Releasing the jump key while still rising clips the climb to this
-  /// fraction of [jumpSpeed] — a tap hops, a hold clears the platform.
-  static const double jumpCutFactor = 0.4;
-
   /// How long after walking off an edge a jump still counts.
   ///
   /// The player pressed it, and on their screen they were still on the ledge.

@@ -68,13 +68,15 @@ class Locomotion {
       jumped = true;
     }
 
-    // Let go early and the climb is cut short. Never on the launch frame: a
-    // buffered press that was already released would otherwise be clipped
-    // before it had risen at all.
-    final cutSpeed = WarayaConfig.jumpSpeed * WarayaConfig.jumpCutFactor;
-    if (!jumped && !intent.jumpHeld && verticalVelocity < -cutSpeed) {
-      verticalVelocity = -cutSpeed;
-    }
+    // Every jump is the whole jump, however briefly it was pressed. Letting go
+    // early used to cut the climb short, and playing said nobody noticed the
+    // difference — except as a jump that sometimes did not reach: a quick tap
+    // rose about 34, and your own ducked past is 69 tall, so a tap on the
+    // touch button could not get you onto the step the whole game is built
+    // around. Every height a level is measured against is the full jump
+    // (`Levels.crouchedLadderReach`), so dropping the short one takes away a
+    // lower arc and adds no reach. `intent.jumpHeld` is still recorded; it
+    // just no longer changes anything here.
 
     final gravity = isRising ? WarayaConfig.gravity : WarayaConfig.fallGravity;
     verticalVelocity = min(
