@@ -3049,6 +3049,279 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(760, 248, 840, 320),
   );
 
+  /// **Phase 12, the light switch, two rooms.** The far past has two jobs,
+  /// one after the other, and both are in the first room.
+  ///
+  /// The gate between the rooms is held by a plate at the far end of the
+  /// first, and the lamp over the second room's step is put out by a switch
+  /// by the gate — in the first room too. So six seconds after you, your
+  /// far past opens the gate for you, and a few seconds after that it is on
+  /// the switch, holding the dark over the step the near past is making two
+  /// seconds after you. The plate, then the switch for long enough, then the
+  /// duck, then the climb.
+  ///
+  /// The switch is close to the step on purpose: touch it on your way past
+  /// and the far past has been and gone before you are climbing. Standing
+  /// on it is the whole of it. The gate is tall because a stair of both
+  /// pasts on the switch's balcony gets your feet to 232.
+  static final Level theFarOneTwice = Level(
+    id: 'the-far-one-twice',
+    solution: const [
+      Move.left(1.6), // the wrong way, to the far end
+      Move(0.45),
+      Move.left(0.6, jump: true), // up onto the gate's plate
+      Move(1.15), // the far past will stand here, six seconds on
+      Move.right(0.45),
+      Move(0.1),
+      Move.right(2.15), // back to the switch by the gate
+      Move(0.4),
+      Move.right(0.6, jump: true), // up onto it
+      Move(2.15), // and stand: the far past will, after the plate
+      Move.right(1.6), // through the gate its first job is holding
+      Move(0.15),
+      Move(1.0, crouch: true), // duck at the foot: the near past will
+      Move.left(0.25),
+      Move(0.85),
+      Move.right(0.55, jump: true), // onto it, in the dark of its second job
+      Move(0.1),
+      Move.right(0.9, jump: true),
+      Move.right(5),
+    ],
+    wrongIdeas: const [
+      // The switch first, as the room it is in suggests, then the plate. The
+      // far past is on the switch while you are still in the first room, and
+      // on the plate long after you needed it.
+      [
+        Move.right(0.65),
+        Move(0.45),
+        Move.right(0.6, jump: true),
+        Move(2.15),
+        Move.left(2.7),
+        Move(0.4),
+        Move.left(0.6, jump: true),
+        Move(1.65),
+        Move.right(4.75),
+        Move(0.15),
+        Move(1.0, crouch: true),
+        Move.left(0.25),
+        Move(0.85),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.9, jump: true),
+        Move.right(5),
+      ],
+      // The plate, and straight through: the next room's switch is never
+      // stood on, and its lamp is lit over the step.
+      [
+        Move.left(1.6),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(1.15),
+        Move.right(4.75),
+        Move(0.15),
+        Move(1.0, crouch: true),
+        Move.left(0.25),
+        Move(0.85),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.9, jump: true),
+        Move.right(5),
+      ],
+      // The switch touched on the way: the far past is on it for a moment,
+      // and that moment is long over when you are at the step.
+      [
+        Move.left(1.6),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(1.15),
+        Move.right(0.45),
+        Move(0.1),
+        Move.right(2.15),
+        Move(0.4),
+        Move.right(0.6, jump: true),
+        Move(0.45),
+        Move.right(2.1),
+        Move(0.15),
+        Move(1.0, crouch: true),
+        Move.left(0.25),
+        Move(0.85),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.9, jump: true),
+        Move.right(5),
+      ],
+    ],
+    name: 'البعيد بيشتغل مرتين',
+    teaches: 'البعيد يفتحلك الباب، وبعدين يطفيلك نور الأوضة الجاية.',
+    nameEn: 'The Far One Works Twice',
+    teachesEn: 'The far past opens the gate, then holds the next room dark.',
+    delays: const [2, 6],
+    spawnX: -300,
+    floorTop: _floor,
+    blocks: [
+      _ground(-900, 1500),
+      const Rect.fromLTRB(-940, 200, -900, 620),
+      // The gate's plate, at the far end of the first room.
+      const Rect.fromLTRB(-800, 506, -700, 522),
+      // The next room's switch, by the gate. The gate is tall for it: a
+      // stair of both pasts up here gets your feet to 232.
+      const Rect.fromLTRB(-110, 506, -10, 522),
+      const Rect.fromLTRB(330, 430, 1500, 620),
+      const Rect.fromLTRB(1500, 170, 1540, 620),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(100, 200, 330, 620), id: 'lamp')],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-790, 494, -710, 506), opens: 'gate'),
+      PlateSpec(area: Rect.fromLTRB(-100, 494, -20, 506), opens: 'lamp'),
+    ],
+    doors: const [
+      DoorSpec(
+        id: 'gate',
+        closed: Rect.fromLTRB(0, 150, 26, 620),
+        lingerSeconds: 2,
+      ),
+    ],
+    goal: const Rect.fromLTRB(1200, 358, 1280, 430),
+  );
+
+  /// **Phase 12, the light switch, behind you.** `yourPastsDark` with the
+  /// key in the room you have left.
+  ///
+  /// The step is in the second room, under a lamp, and the key that puts it
+  /// out is in the first, by the gate. The key puts out the six seconds
+  /// before it, so the step has to come first: through the gate, duck, back
+  /// through it to the key, and through again to climb. The gate is held by
+  /// your past on a plate at the far end of the first room, with a grace, so
+  /// it is open for all three crossings only if you stood there long — touch
+  /// the plate and it shuts you in with the step and without the key.
+  ///
+  /// Every key before this one was thrown on the way. This one is on the way
+  /// too, which is the trap.
+  static final Level theKeyBehindYou = Level(
+    id: 'the-key-behind-you',
+    solution: const [
+      Move.left(0.7), // the wrong way, to the foot of the gate's plate
+      Move(0.45),
+      Move.left(0.6, jump: true), // up onto it
+      Move(4.0), // and stand, long: the gate will be open as long, and more
+      Move.right(2.35), // to the gate
+      Move(0.15), // open: your past is on the plate
+      Move.right(1.45), // through, to the foot of the shelf
+      Move(0.15),
+      Move(1.0, crouch: true), // duck: the step, before the key
+      Move.left(1.15), // back through the gate
+      Move(0.45),
+      Move.left(0.6, jump: true), // up onto the key: the dark falls on the
+      Move(0.3), // last six seconds, and the step is in them
+      Move.right(1.35), // through the gate again
+      Move(1.2), // and wait for the step
+      Move.right(0.55, jump: true),
+      Move(0.1),
+      Move.right(0.9, jump: true),
+      Move.right(5),
+    ],
+    wrongIdeas: const [
+      // The key first, on the way, as every key before it: the dark falls
+      // over the walk to the plate, and is gone again before the step.
+      [
+        Move.right(0.65),
+        Move(0.45),
+        Move.right(0.6, jump: true),
+        Move(0.3),
+        Move.left(1.8),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(3.1),
+        Move.right(2.35),
+        Move(0.65),
+        Move.right(1.45),
+        Move(0.15),
+        Move(1.0, crouch: true),
+        Move.left(0.25),
+        Move(4.85),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.9, jump: true),
+        Move.right(5),
+      ],
+      // The right order, but the plate only touched: the gate lets you
+      // through once, and is shut when you turn back for the key.
+      [
+        Move.left(0.7),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(0.6),
+        Move.right(2.35),
+        Move(3.15),
+        Move.right(1.45),
+        Move(0.15),
+        Move(1.0, crouch: true),
+        Move.left(1.15),
+        Move(0.45),
+        Move.left(0.55, jump: true),
+        Move.left(5),
+        Move(0.3),
+        Move.right(1.1),
+        Move(0.15),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.9, jump: true),
+        Move.right(5),
+      ],
+      // No key: the step under the lamp, and wait for it.
+      [
+        Move.left(0.7),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(3.1),
+        Move.right(2.35),
+        Move(0.65),
+        Move.right(1.45),
+        Move(0.15),
+        Move(1.0, crouch: true),
+        Move.left(0.25),
+        Move(4.85),
+        Move.right(0.55, jump: true),
+        Move(0.1),
+        Move.right(0.9, jump: true),
+        Move.right(5),
+      ],
+    ],
+    name: 'المفتاح ورا ضهرك',
+    teaches: 'السلّمة قدّام والمفتاح ورا: اعمل السلّمة، وارجع للمفتاح.',
+    nameEn: 'The Key Behind You',
+    teachesEn:
+        'The step is ahead and the key behind: the step first, then back.',
+    delaySeconds: 6,
+    spawnX: -300,
+    floorTop: _floor,
+    blocks: [
+      _ground(-700, 1400),
+      const Rect.fromLTRB(-740, 200, -700, 620),
+      // The gate's plate, at the far end of the first room.
+      const Rect.fromLTRB(-600, 506, -500, 522),
+      // The key to the next room's lamp, by the gate, in this room.
+      const Rect.fromLTRB(-110, 506, -10, 522),
+      const Rect.fromLTRB(330, 430, 1400, 620),
+      const Rect.fromLTRB(1400, 170, 1440, 620),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(100, 200, 330, 620), id: 'lamp')],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-100, 494, -20, 506), flips: 'lamp'),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-590, 494, -510, 506), opens: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(
+        id: 'gate',
+        closed: Rect.fromLTRB(0, 260, 26, 620),
+        lingerSeconds: 3.5,
+      ),
+    ],
+    goal: const Rect.fromLTRB(1100, 358, 1180, 430),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -3080,6 +3353,8 @@ abstract final class Levels {
     yourStepIsTheSwitch,
     theThirdFlip,
     aChainOfDark,
+    theKeyBehindYou,
+    theFarOneTwice,
     allOfItInTheDark,
   ];
 

@@ -1051,6 +1051,235 @@ void main() {
       );
     }
   });
+
+  group('the far one works twice', () {
+    final level = Levels.theFarOneTwice;
+
+    // The far past is on the switch for as long as you stood there, six
+    // seconds on — and has to be when you climb, a little under five after
+    // you leave it. So a stand too short is a far past still on its way.
+    for (final (stand, works) in const [
+      (0.45, false),
+      (1.0, false),
+      (1.5, true),
+      (2.5, true),
+      (3.5, true),
+    ]) {
+      testWithGame<LevelGame>(
+        '${stand}s on the next room\'s switch '
+        '${works ? 'holds' : 'does not hold'} its dark for the climb',
+        build(level),
+        (game) async {
+          await game.ready();
+          final run = Run(game)
+            ..play(level.solution.take(9))
+            ..hold(stand)
+            ..play(level.solution.skip(10));
+          expect(run.finishedAt, works ? isNotNull : isNull, reason: run.where);
+        },
+      );
+    }
+
+    // The near past's step is there for as long as you ducked.
+    for (final (duck, pause, works) in const [
+      (1.0, 0.0, true),
+      (2.0, 0.8, true),
+      (1.0, 0.8, false),
+    ]) {
+      testWithGame<LevelGame>(
+        'a ${duck}s duck and a ${pause}s stop '
+        '${works ? 'still' : 'no longer'} climbs',
+        build(level),
+        (game) async {
+          await game.ready();
+          final run = Run(game)..play(level.solution.take(12));
+          final ducked = run.t;
+          run
+            ..hold(duck, crouch: true)
+            ..hold(0.25, axis: -1)
+            ..waitUntil(ducked + 2.1 + pause)
+            ..play(level.solution.skip(15));
+          expect(run.finishedAt, works ? isNotNull : isNull, reason: run.where);
+        },
+      );
+    }
+
+    // Each wrong idea gets through the gate to the step — it fails at the
+    // climb, for its own reason — and puts the lamp out or never does.
+    for (final (i, darkens) in const [true, false, true].indexed) {
+      testWithGame<LevelGame>(
+        'wrong idea ${i + 1} reaches the step and does not finish',
+        build(level),
+        (game) async {
+          await game.ready();
+          var dark = false;
+          var through = false;
+          final run = Run(game);
+          for (final move in level.wrongIdeas[i]) {
+            run.hold(
+              move.seconds,
+              axis: move.axis,
+              jump: move.jump,
+              crouch: move.crouch,
+              each: () {
+                if (!game.lights.single.isOn) dark = true;
+                if (game.player.x > 250) through = true;
+              },
+            );
+          }
+          expect(dark, darkens, reason: run.where);
+          expect(through, isTrue, reason: run.where);
+          expect(run.finishedAt, isNull, reason: run.where);
+        },
+      );
+    }
+
+    // A stair of both pasts — on the switch's balcony beside the gate, or on
+    // the floor between the gate and the lamp. Searched; each builds, none
+    // gets over the shut gate or onto the shelf.
+    for (final (x, balcony) in const [
+      (-40.0, true),
+      (-25.0, true),
+      (55.0, false),
+      (75.0, false),
+    ]) {
+      testWithGame<LevelGame>(
+        'a stair at $x${balcony ? ' on the switch\'s balcony' : ''} '
+        'gets over nothing',
+        build(level),
+        (game) async {
+          await game.ready();
+          var highest = double.infinity;
+          var over = false;
+          for (var shuffle = 0; shuffle <= 34; shuffle += 2) {
+            game.reload();
+            final run = Run(game);
+            // To the far side of the gate, through it, for the floor ones.
+            if (!balcony) run.play(level.solution.take(11));
+            if (balcony) {
+              run
+                ..walkTo(-155)
+                ..hold(0.2)
+                ..walkTo(-155)
+                ..hold(0.55, axis: 1, jump: true);
+            }
+            run.walkTo(x);
+            final shut = balcony;
+            void hold(
+              double seconds, {
+              double axis = 0,
+              bool jump = false,
+              bool crouch = false,
+            }) => run.hold(
+              seconds,
+              axis: axis,
+              jump: jump,
+              crouch: crouch,
+              each: () {
+                final player = game.player;
+                if (player.y < highest) highest = player.y;
+                final onShelf =
+                    player.isGrounded && player.y <= 431 && player.x > 320;
+                final pastGate =
+                    shut &&
+                    player.x > 40 &&
+                    game.doors.single.openFraction < 0.05;
+                if (onShelf || pastGate) over = true;
+              },
+            );
+            hold(4.5, crouch: true);
+            hold(1.6);
+            hold(0.5, jump: true);
+            hold(1.0, crouch: true);
+            hold(1.0);
+            hold(0.7, jump: true);
+            hold(shuffle * Playthrough.dt, axis: 1);
+            hold(1.0, axis: 1, jump: true);
+            hold(0.6, axis: 1);
+          }
+          expect(highest, lessThan(balcony ? 260 : 370), reason: 'it builds');
+          expect(over, isFalse);
+        },
+      );
+    }
+  });
+
+  group('the key behind you', () {
+    final level = Levels.theKeyBehindYou;
+
+    // Two clocks after the duck. The step is there six seconds on, for as
+    // long as you ducked; and the gate stays open three and a half seconds
+    // after your past leaves the plate — so how long you stood there is how
+    // long you can stop on the way back for the key.
+    for (final (stand, pause, works) in const [
+      (4.0, 0.0, true),
+      (4.0, 1.0, true),
+      (3.1, 1.0, false), // the gate shuts before you are back through
+      (4.0, 2.2, false), // the step is gone before you are back
+    ]) {
+      testWithGame<LevelGame>(
+        '${stand}s on the plate and a ${pause}s stop after the duck '
+        '${works ? 'still' : 'no longer'} gets up',
+        build(level),
+        (game) async {
+          await game.ready();
+          final run = Run(game)
+            ..play(level.solution.take(3))
+            ..hold(stand)
+            ..play(level.solution.skip(4).take(4));
+          final ducked = run.t;
+          run
+            ..play(level.solution.skip(8).take(1))
+            ..hold(pause)
+            ..play(level.solution.skip(9).take(5))
+            ..waitUntil(ducked + level.delaySeconds + 0.1)
+            ..play(level.solution.skip(15));
+          expect(run.finishedAt, works ? isNotNull : isNull, reason: run.where);
+        },
+      );
+    }
+
+    // Each wrong idea gets into the second room; one puts the lamp out too
+    // early, one is shut in before it can, one never does.
+    for (final (i, darkens) in const [true, false, false].indexed) {
+      testWithGame<LevelGame>(
+        'wrong idea ${i + 1} gets through the gate and does not finish',
+        build(level),
+        (game) async {
+          await game.ready();
+          var dark = false;
+          var through = false;
+          final run = Run(game);
+          for (final move in level.wrongIdeas[i]) {
+            run.hold(
+              move.seconds,
+              axis: move.axis,
+              jump: move.jump,
+              crouch: move.crouch,
+              each: () {
+                if (!game.lights.single.isOn) dark = true;
+                if (game.player.x > 250) through = true;
+              },
+            );
+          }
+          expect(dark, darkens, reason: run.where);
+          expect(through, isTrue, reason: run.where);
+          expect(run.finishedAt, isNull, reason: run.where);
+        },
+      );
+    }
+
+    testWithGame<LevelGame>(
+      'a short stand on the plate shuts you in with the step',
+      build(level),
+      (game) async {
+        await game.ready();
+        final run = Run(game)..play(level.wrongIdeas[1]);
+        expect(game.player.x, greaterThan(26), reason: run.where);
+        expect(game.doors.single.openFraction, 0, reason: run.where);
+      },
+    );
+  });
 }
 
 /// A room with one named lamp over a plate that holds a gate, a switch for
