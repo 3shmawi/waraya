@@ -204,31 +204,35 @@ void main() {
         'id': 'lamp',
       });
       expect(level.requires, contains('light-switch'));
-      expect(
-        levelFromJson(json, accepts: Level.benchMechanics).lights,
-        level.lights,
-      );
+      expect(levelFromJson(json).lights, level.lights);
     });
 
-    test('the bench plays it; the game refuses it by name', () {
-      expect(Level.labMechanics, contains('light-switch'));
-      expect(Level.knownMechanics, isNot(contains('light-switch')));
+    test('promoted: the game plays it, and an older build refuses it', () {
+      expect(Level.knownMechanics, contains('light-switch'));
+      expect(Level.labMechanics, isNot(contains('light-switch')));
       expect(
-        () => levelFromJson(jsonDecode(jsonEncode(level.toJson()))),
+        levelFromJson(jsonDecode(jsonEncode(level.toJson()))).id,
+        level.id,
+      );
+      // What the name is for: a build from before it reads the level's
+      // `requires` and refuses it, rather than keeping a lamp lit that the
+      // level was drawn around putting out.
+      final older = Level.knownMechanics.difference({'light-switch'});
+      expect(
+        () => levelFromJson(
+          jsonDecode(jsonEncode(level.toJson())),
+          accepts: older,
+        ),
         throwsA(
-          isA<LevelUnsupportedException>().having(
-            (e) => e.onTheBench,
-            'on the bench',
-            {'light-switch'},
-          ),
+          isA<LevelUnsupportedException>().having((e) => e.missing, 'missing', {
+            'light-switch',
+          }),
         ),
       );
     });
 
-    test('the gate refuses it as on trial, and for nothing else', () {
-      final findings = checkNumbers(Levels.youHoldTheDark);
-      expect(findings.map((f) => f.refusal), [Refusal.unsupported]);
-      expect('${findings.single}', contains('still on the bench'));
+    test('the gate takes a level that uses it, on its numbers alone', () {
+      expect(checkNumbers(Levels.youHoldTheDark), isEmpty);
     });
 
     test('a plate may name a light, but a light and a door not one name', () {
@@ -266,6 +270,41 @@ void main() {
       );
     });
 
+    test('an inverted plate under its own lamp is refused, not flickered', () {
+      final flicker = _room(
+        plates: const [
+          PlateSpec(area: Rect.fromLTRB(-400, 608, -300, 620), opens: 'gate'),
+          PlateSpec(area: Rect.fromLTRB(200, 608, 300, 620), opens: 'lamp'),
+          // Under the lamp, keeping it lit.
+          PlateSpec(
+            area: Rect.fromLTRB(-410, 608, -350, 620),
+            opens: 'lamp',
+            inverts: true,
+          ),
+        ],
+      );
+      expect(
+        checkNumbers(flicker).map((f) => '$f'),
+        contains(contains('on and off every frame')),
+      );
+      // The same plate out in the dark is a rule, not a bug.
+      final fine = _room(
+        plates: const [
+          PlateSpec(area: Rect.fromLTRB(-400, 608, -300, 620), opens: 'gate'),
+          PlateSpec(area: Rect.fromLTRB(200, 608, 300, 620), opens: 'lamp'),
+          PlateSpec(
+            area: Rect.fromLTRB(400, 608, 500, 620),
+            opens: 'lamp',
+            inverts: true,
+          ),
+        ],
+      );
+      expect(
+        checkNumbers(fine).map((f) => '$f'),
+        isNot(contains(contains('every frame'))),
+      );
+    });
+
     test('the editor keeps the name through opening and saving', () {
       for (final level in [level, ...Levels.bench]) {
         expect(EditorDoc.fromLevel(level).toLevel().lights, level.lights);
@@ -278,6 +317,8 @@ void main() {
       Levels.youHoldTheDark,
       Levels.yourPastsDark,
       Levels.oneHoldsTheDark,
+      Levels.theThirdFlip,
+      Levels.allOfItInTheDark,
     ];
 
     for (final level in levels) {
@@ -404,6 +445,118 @@ void main() {
         },
       );
     }
+  });
+
+  group('the third flip', () {
+    final level = Levels.theThirdFlip;
+
+    testWithGame<LevelGame>(
+      'one touch: out, lit by the near past, out for good by the far',
+      build(level),
+      (game) async {
+        await game.ready();
+        final lamp = game.lights.single;
+        // Off it again at once, as the level is played: a key notices a
+        // past *arriving*, so a near past still standing on it when the far
+        // one arrives is no new arrival — and no third flip.
+        final run = Run(game)..play(level.solution.take(2));
+        final thrown = run.t;
+        expect(lamp.isOn, isFalse, reason: 'you threw it');
+        run
+          ..play(level.solution.skip(2).take(2))
+          ..waitUntil(thrown + 3);
+        expect(lamp.isOn, isTrue, reason: 'the near past threw it back');
+        run.waitUntil(thrown + 5.5);
+        expect(lamp.isOn, isFalse, reason: 'the far past threw it again');
+        run.waitUntil(thrown + 20);
+        expect(lamp.isOn, isFalse, reason: 'and nobody comes after the far');
+      },
+    );
+
+    // The hole the wide lamp closes: a stair in the dark beside it, with no
+    // key at all. Searched, and short of the roof by a body.
+    for (final x in const <double>[300, 330, 347]) {
+      testWithGame<LevelGame>(
+        'a stair in the dark at $x does not reach the roof',
+        build(level),
+        (game) async {
+          await game.ready();
+          expect(highestStairClimbFrom(game, x), greaterThan(390));
+        },
+      );
+    }
+  });
+
+  group('all of it in the dark', () {
+    final level = Levels.allOfItInTheDark;
+
+    // Through the gate without the key — the first wrong idea's way — and a
+    // stair in the dark beside the roof's lamp: short, as in the level before.
+    for (final x in const <double>[400, 430, 447]) {
+      testWithGame<LevelGame>(
+        'a stair in the dark at $x does not reach the roof',
+        build(level),
+        (game) async {
+          await game.ready();
+          expect(
+            highestStairClimbFrom(
+              game,
+              x,
+              first: level.wrongIdeas.first.take(7).toList(),
+            ),
+            greaterThan(390),
+          );
+        },
+      );
+    }
+
+    // The first room's window is how long you stood on the plate; a touch on
+    // the balcony is a press, but a walk under it is not.
+    for (final (plate, held, through) in const [
+      (2.0, 1.0, true),
+      (3.0, 1.6, true),
+      (2.0, 3.5, false),
+    ]) {
+      testWithGame<LevelGame>(
+        'the first room: ${plate}s on the plate, ${held}s on the switch',
+        build(level),
+        (game) async {
+          await game.ready();
+          final run = Run(game)
+            ..play(level.solution.take(3))
+            ..walkTo(-616)
+            ..hold(0.55, axis: 1, jump: true)
+            ..walkTo(-515)
+            ..hold(plate)
+            ..walkTo(-410)
+            ..hold(0.55, axis: 1, jump: true)
+            ..walkTo(-280)
+            ..hold(held)
+            ..hold(3, axis: 1);
+          expect(game.player.x > 60, through, reason: run.where);
+        },
+      );
+    }
+
+    testWithGame<LevelGame>(
+      'walking under the plate\'s balcony presses nothing',
+      build(level),
+      (game) async {
+        await game.ready();
+        var opened = false;
+        Run(game)
+          ..play(level.solution.take(3))
+          ..walkTo(-616)
+          ..hold(
+            1.5,
+            axis: 1,
+            each: () {
+              if (game.doors.single.openFraction > 0) opened = true;
+            },
+          );
+        expect(opened, isFalse);
+      },
+    );
   });
 }
 

@@ -160,7 +160,7 @@ Phase 11 («فين الناس بتقف؟») متجاوب على المرحلة �
 |---|---|---|
 | المحرر (Phase 9) | ✅ شغال، محدش بنى بيه بإيده | `lib/editor/` |
 | `labMechanics` | ✅ شغال — الورشة بتقرا بـ`benchMechanics`، واللعبة والبوابة بيرفضوا بـ«still on the bench» | `Level.labMechanics` |
-| زرار النور (`light-switch`) | 🔵 في الورشة: الكود والمحرر وتلات مراحل («start from…» ← on trial)، مستني لعب بإيد | `LightSpec`، `Levels.bench` — `docs/phase-12-more.md` §٢.١ |
+| زرار النور (`light-switch`) | ✅ اترقّى للحملة بطلب صاحب المشروع، قبل لعب بإيد — خمس مراحل | `LightSpec`، `Level.knownMechanics` — `docs/phase-12-more.md` §٢.٢ |
 | الرباط | ⚪ خطة | `docs/phase-12-more.md` §٣ |
 | عدّاد الظل | 🔵 سويتش في اللوحة («in 1s (trial)»)، مقفول في اللعبة | `ShadowForecast` — `docs/phase-11-feel.md` §٤.٢ |
 | إطار الجهاز | ⚪ خطة (٣.٣) | — |

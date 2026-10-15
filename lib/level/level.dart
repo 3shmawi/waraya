@@ -218,6 +218,10 @@ class Level {
     'lights',
     'delays',
     'crouched-solid',
+    // Promoted from the bench with the levels that prove it
+    // (`docs/phase-12-more.md` §2.1). Nothing released had refused it, so no
+    // level a player could reach was ever played without it.
+    'light-switch',
   };
 
   /// Mechanics whose code is here but which are **still being tried on the
@@ -229,7 +233,7 @@ class Level {
   /// puts the level proving it into the campaign, with its solution, its
   /// wrong idea, and a version bump. A mechanic that fails is deleted from
   /// here and from the code, and its levels stay refused.
-  static const Set<String> labMechanics = <String>{'prelude', 'light-switch'};
+  static const Set<String> labMechanics = <String>{'prelude'};
 
   /// What the bench accepts: everything the game does, and what is on trial.
   static Set<String> get benchMechanics => {...knownMechanics, ...labMechanics};

@@ -74,7 +74,7 @@ void main() {
   test('a level newer than this build is refused by name', () async {
     final refused = <Verdict>[];
     final newer = row(Levels.standOnYourself, 'newer', (data) {
-      data['requires'] = [...data['requires']! as List, 'light-switch'];
+      data['requires'] = [...data['requires']! as List, 'leash'];
     });
     final source = SupabaseLevels(
       fetch: () async => body([newer, good]),
@@ -83,7 +83,7 @@ void main() {
 
     expect((await source.load()).map((l) => l.id), ['from-the-server']);
     expect(refused.single.refusals, {Refusal.unsupported});
-    expect(refused.single.findings.single.detail, contains('light-switch'));
+    expect(refused.single.findings.single.detail, contains('leash'));
   });
 
   group('when the server is not there', () {

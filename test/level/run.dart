@@ -121,3 +121,35 @@ double highestClimbFrom(
   }
   return best;
 }
+
+/// The highest a body gets its feet by building a stair of both pasts at [x]
+/// (`Levels.stairOfYourself`'s way) and jumping off the top of it — searched
+/// like [highestClimbFrom]: every shuffle toward the edge of the top step
+/// before the jump.
+///
+/// [first] is played before anything, to get wherever the stair is going.
+/// The delays are the levels' own two and five.
+double highestStairClimbFrom(
+  LevelGame game,
+  double x, {
+  List<Move> first = const [],
+  double toward = 1,
+}) {
+  var best = double.infinity;
+  for (var shuffle = 0; shuffle <= 34; shuffle += 2) {
+    game.reload();
+    final run = Run(game)
+      ..play(first)
+      ..walkTo(x)
+      ..hold(3.5, crouch: true) // the bottom step
+      ..hold(1.6)
+      ..hold(0.5, jump: true) // onto it
+      ..hold(1.0, crouch: true) // the second step
+      ..hold(1.0)
+      ..hold(0.7, jump: true) // onto that
+      ..hold(shuffle * Playthrough.dt, axis: toward)
+      ..hold(1.0, axis: toward, jump: true);
+    if (run.highest < best) best = run.highest;
+  }
+  return best;
+}

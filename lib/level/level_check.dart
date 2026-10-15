@@ -397,14 +397,43 @@ Iterable<Finding> _bounds(Level level) sync* {
     }
   }
   final targets = {...doorIds, ...lightIds};
+
+  // An inverted plate under the very lamp it keeps lit cannot make up its
+  // mind. Your past standing on it in the dark presses it, the lamp comes on,
+  // your past is not there, nothing presses it, the lamp goes out — every
+  // frame. A plain plate under its own lamp is fine (it simply never works
+  // for your past, which is a rule); this one is a flicker, which is a bug.
+  for (final plate in level.plates.where((plate) => plate.inverts)) {
+    // Where a body standing on it is: the plate, a body's height up, and
+    // half a body either side.
+    final body = Rect.fromLTRB(
+      plate.area.left - 22,
+      plate.area.top - bodyHeight,
+      plate.area.right + 22,
+      plate.area.bottom,
+    );
+    final lamps = level.lights.where(
+      (light) => light.id == plate.opens && light.area.overlaps(body),
+    );
+    if (lamps.isNotEmpty) {
+      yield out(
+        'an inverted plate under the lamp it keeps lit ("${plate.opens}") '
+        'would switch it on and off every frame',
+      );
+    }
+  }
   for (final plate in level.plates) {
     if (!targets.contains(plate.opens)) {
-      yield out('a plate opens "${plate.opens}", which is not a door or a light');
+      yield out(
+        'a plate opens "${plate.opens}", which is not a door or a light',
+      );
     }
   }
   for (final toggle in level.toggles) {
     if (!targets.contains(toggle.flips)) {
-      yield out('a key flips "${toggle.flips}", which is not a door or a light');
+      yield out(
+        'a key flips "${toggle.flips}", which is not a door or a light',
+      );
     }
   }
 

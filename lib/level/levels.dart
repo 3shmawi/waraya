@@ -2302,6 +2302,259 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(2820, 548, 2900, 620),
   );
 
+  /// **Phase 12, the light switch, four.** Two pasts, one key — three flips.
+  ///
+  /// A key your past walks onto is a key your past throws back. With two
+  /// pasts it is thrown back and then thrown again: you put the lamp out, the
+  /// near past lights it two seconds later, the far one puts it out three
+  /// seconds after that — and nobody comes after the far one. One touch, and
+  /// the lamp is out for good. (The same arithmetic made a door that ends
+  /// open forever, which is why "two shadows and a key" was struck for doors
+  /// in Phase 7. For a light, out for good is the point.)
+  ///
+  /// The roof needs a stair of both pasts (`stairOfYourself`), and the only
+  /// place one reaches it from is under the lamp. `yourPastsDark` taught the
+  /// step first and the key after, and that order cannot work here: the near
+  /// past relights the lamp two seconds after the key, long before a stair
+  /// that takes seven to build is standing. The key goes first — and then
+  /// there is nothing to hurry for.
+  ///
+  /// The lamp is wide on purpose. A stair in the dark beside it, with no key
+  /// at all, reaches a roof up to about 200 out (searched, in
+  /// `light_switch_test`); the lamp starts 230 out, so the dark is too far.
+  static final Level theThirdFlip = Level(
+    id: 'the-third-flip',
+    solution: const [
+      Move.left(0.9), // the wrong way, to the foot of the balcony
+      Move.left(0.55, jump: true), // up onto the key: first
+      Move(0.2),
+      Move.right(3.75), // all the way to the foot of the roof, under the lamp
+      Move(3.5, crouch: true), // duck, long: the bottom step
+      Move(1.6), // wait for the far one under you
+      Move(0.5, jump: true), // up onto it
+      Move(1.0, crouch: true), // and duck on top: the second step
+      Move(1.0), // wait for the near one on top
+      Move(0.7, jump: true), // up onto that, in the dark for good
+      Move.right(0.9, jump: true), // and onto the roof
+      Move.right(1.5),
+    ],
+    wrongIdeas: const [
+      // No key: the stair under the lit lamp, which erases both steps.
+      [
+        Move.right(2.45),
+        Move(3.5, crouch: true),
+        Move(1.6),
+        Move(0.5, jump: true),
+        Move(1.0, crouch: true),
+        Move(1.0),
+        Move(0.7, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+      // The order `yourPastsDark` taught: the step first, then the key, then
+      // back to climb. With two pasts the key is thrown back on two seconds
+      // later, and the stair takes longer than that to stand.
+      [
+        Move.right(2.45),
+        Move(3.5, crouch: true),
+        Move.left(3.4),
+        Move.left(0.55, jump: true),
+        Move(0.2),
+        Move.right(3.75),
+        Move(0.5, jump: true),
+        Move(1.0, crouch: true),
+        Move(1.0),
+        Move(0.7, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+      // The key, and then one step, in the dark: the roof is past one
+      // ducked body's reach.
+      [
+        Move.left(0.9),
+        Move.left(0.55, jump: true),
+        Move(0.2),
+        Move.right(3.75),
+        Move(1.5, crouch: true),
+        Move(1.2),
+        Move(0.5, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+    ],
+    name: 'التالتة بتطفيها',
+    teaches: 'ماضيك اتنين، والمفتاح بيتقلب تلات مرات. عدّهم.',
+    nameEn: 'The Third Flip',
+    teachesEn: 'Your past is two, so the key flips three times. Count them.',
+    delays: const [2, 5],
+    spawnX: 0,
+    floorTop: _floor,
+    blocks: [
+      _ground(-600, 1300),
+      const Rect.fromLTRB(-640, 200, -600, 620),
+      const Rect.fromLTRB(-350, 506, -250, 522),
+      const Rect.fromLTRB(600, 390, 1300, 620),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(370, 200, 600, 620), id: 'lamp')],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-340, 494, -260, 506), flips: 'lamp'),
+    ],
+    goal: const Rect.fromLTRB(800, 318, 880, 390),
+  );
+
+  /// **Phase 12, the light switch, last.** All of it in the dark.
+  ///
+  /// Two rooms, two pasts, and the lessons of the four before:
+  ///
+  /// 1. **One holds the dark, one presses** (`oneHoldsTheDark`): the gate's
+  ///    plate is under a lamp and the gate has no grace, so the near past
+  ///    holds the switch while the far past stands on the plate. The plate
+  ///    is on a balcony: on the floor, walking over it on the way to the
+  ///    switch got you through at one exact hold, and a walk is not a press.
+  /// 2. **The third flip** (`theThirdFlip`): a stair of both pasts under the
+  ///    roof's lamp, which one key puts out for good.
+  ///
+  /// The new thing is where the second room's key is: **in the first room**.
+  /// The gate shuts behind you, so the key has to be thrown before you can
+  /// see what it is for — and throwing it early is exactly what the third
+  /// flip rewards. Forget it and you reach a lit roof with no way back.
+  static final Level allOfItInTheDark = Level(
+    id: 'all-of-it-in-the-dark',
+    solution: const [
+      Move.left(2.35), // the wrong way, to the foot of the far balcony
+      Move.left(0.55, jump: true), // up onto the next room's key
+      Move(0.2),
+      Move.right(0.5), // off the key's balcony
+      Move(0.25),
+      Move.right(0.55, jump: true), // up onto the plate under the first lamp
+      Move(2.0), // stand on it, long: the far past will
+      Move.right(0.5),
+      Move.right(0.55, jump: true), // up onto the switch
+      Move(1.6), // stand on it: the near past will
+      Move.right(1.4), // to the gate: open, both of them in place
+      Move.right(2.8), // through it, and on to the foot of the roof
+      Move(3.5, crouch: true), // duck, long: the bottom step
+      Move(1.6),
+      Move(0.5, jump: true),
+      Move(1.0, crouch: true), // the second step
+      Move(1.0),
+      Move(0.7, jump: true),
+      Move.right(0.9, jump: true), // onto the roof
+      Move.right(1.5),
+    ],
+    wrongIdeas: const [
+      // Straight to the plate, leaving the next room's key where it is. The
+      // gate shuts behind you, and the roof's lamp is lit for good.
+      [
+        Move.left(1.3),
+        Move.left(0.55, jump: true),
+        Move(2.0),
+        Move.right(0.5),
+        Move.right(0.55, jump: true),
+        Move(1.6),
+        Move.right(1.4),
+        Move.right(2.8),
+        Move(3.5, crouch: true),
+        Move(1.6),
+        Move(0.5, jump: true),
+        Move(1.0, crouch: true),
+        Move(1.0),
+        Move(0.7, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+      // One past's way with the first room: hold the switch yourself until
+      // the gate opens, then run for it. Step off and the lamp is lit, the far
+      // past on the plate is gone, and the gate has no grace.
+      [
+        Move.left(2.35),
+        Move.left(0.55, jump: true),
+        Move(0.2),
+        Move.right(0.5),
+        Move(0.25),
+        Move.right(0.55, jump: true),
+        Move(2.0),
+        Move.right(0.5),
+        Move.right(0.55, jump: true),
+        Move(4.0),
+        Move.right(1.4),
+        Move.right(2.8),
+        Move(3.5, crouch: true),
+        Move(1.6),
+        Move(0.5, jump: true),
+        Move(1.0, crouch: true),
+        Move(1.0),
+        Move(0.7, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+      // The switch first and then the plate: the far past holds the dark and
+      // the near one presses — but the plate is further from the gate than
+      // two seconds, and the near past has stepped off it by then.
+      [
+        Move.left(2.35),
+        Move.left(0.55, jump: true),
+        Move(0.2),
+        Move.right(0.5),
+        Move(0.25),
+        Move.right(0.95),
+        Move.right(0.55, jump: true),
+        Move(1.6),
+        Move.left(0.35),
+        Move.left(0.55, jump: true),
+        Move(2.0),
+        Move.right(0.5),
+        Move.right(3.8),
+        Move(3.5, crouch: true),
+        Move(1.6),
+        Move(0.5, jump: true),
+        Move(1.0, crouch: true),
+        Move(1.0),
+        Move(0.7, jump: true),
+        Move.right(0.9, jump: true),
+        Move.right(1.5),
+      ],
+    ],
+    name: 'كله في الضلمة',
+    teaches: 'مفتاح الأوضة الجاية هنا. واحد يطفي وواحد يدوس.',
+    nameEn: 'All of It in the Dark',
+    teachesEn:
+        'The next room\'s key is in this one. One holds the dark, one '
+        'presses.',
+    delays: const [2, 5],
+    spawnX: -120,
+    floorTop: _floor,
+    blocks: [
+      _ground(-900, 1500),
+      const Rect.fromLTRB(-940, 200, -900, 620),
+      // The next room's key, up out of the way.
+      const Rect.fromLTRB(-800, 506, -700, 522),
+      // The plate's balcony, under the first lamp, so the plate is stood on
+      // on purpose: a walk past it is not a press. On the floor, walking over
+      // it on the way to the switch was a way through at one exact hold.
+      const Rect.fromLTRB(-560, 506, -460, 522),
+      // The switch's balcony.
+      const Rect.fromLTRB(-330, 506, -230, 522),
+      // The roof: 230, two steps and not one.
+      const Rect.fromLTRB(700, 390, 1500, 620),
+    ],
+    lights: const [
+      LightSpec(Rect.fromLTRB(-580, 200, -440, 620), id: 'plate-lamp'),
+      LightSpec(Rect.fromLTRB(470, 200, 700, 620), id: 'roof-lamp'),
+    ],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-790, 494, -710, 506), flips: 'roof-lamp'),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-550, 494, -470, 506), opens: 'gate'),
+      PlateSpec(area: Rect.fromLTRB(-320, 494, -240, 506), opens: 'plate-lamp'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(30, 260, 56, 620)),
+    ],
+    goal: const Rect.fromLTRB(1000, 318, 1080, 390),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -2325,6 +2578,11 @@ abstract final class Levels {
     theStepThatShuts,
     stairInTheDark,
     allOfItAgain,
+    youHoldTheDark,
+    yourPastsDark,
+    oneHoldsTheDark,
+    theThirdFlip,
+    allOfItInTheDark,
   ];
 
   /// The levels whose intended solution **is** one of the cheap runs
@@ -2416,7 +2674,7 @@ abstract final class Levels {
   /// here; `step_edge_test.dart` holds that.
   static const Set<String> showsSteps = {'stand-on-yourself'};
 
-  /// **On the bench: the light switch, one.** You are the helper.
+  /// **Phase 12, the light switch, one.** You are the helper.
   ///
   /// The plate that holds the gate is under a lamp, and your past in a lamp
   /// is nothing — so for eleven levels a plate under a light was a plate only
@@ -2484,7 +2742,7 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(650, 548, 730, 620),
   );
 
-  /// **On the bench: the light switch, two.** A key puts the lamp out for
+  /// **Phase 12, the light switch, two.** A key puts the lamp out for
   /// exactly as long as your past takes to reach it — and that is the
   /// stretch of your past from **before** you threw it.
   ///
@@ -2579,7 +2837,7 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(1000, 358, 1080, 430),
   );
 
-  /// **On the bench: the light switch, three.** Two pasts, two jobs.
+  /// **Phase 12, the light switch, three.** Two pasts, two jobs.
   ///
   /// The plate is under a lamp and the gate has no grace, so somebody has to
   /// be standing on the switch at the moment you walk through — and you are at
@@ -2658,12 +2916,7 @@ abstract final class Levels {
 
   /// Levels on the bench and not in the campaign: they use something still
   /// on trial. The editor's start menu offers them.
-  static final List<Level> bench = [
-    thatsYou,
-    youHoldTheDark,
-    yourPastsDark,
-    oneHoldsTheDark,
-  ];
+  static final List<Level> bench = [thatsYou];
 
   static final Level lab = Level(
     id: 'lab',

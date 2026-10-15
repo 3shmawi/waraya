@@ -33,6 +33,7 @@ void main() {
         if (level.toggles.isNotEmpty) 'toggles',
         if (level.plates.any((plate) => plate.inverts)) 'inverted-plates',
         if (level.lights.isNotEmpty) 'lights',
+        if (level.lights.any((light) => light.id != null)) 'light-switch',
         if (level.delays.length > 1) 'delays',
         if (level.solidWhen != ShadowSolidity.always) 'crouched-solid',
       };
@@ -51,6 +52,7 @@ void main() {
       'toggles': 'close-what-you-opened',
       'lights': 'your-shadow-is-not-here',
       'delays': 'two-not-one',
+      'light-switch': 'you-hold-the-dark',
     }.entries) {
       expect(
         Levels.campaign.firstWhere((l) => l.requires.contains(mechanic)).id,
@@ -98,6 +100,7 @@ void main() {
       'lights',
       'delays',
       'crouched-solid',
+      'light-switch',
     });
     expect(levelFromJson(jsonOf(sample, requires: const [])).id, sample.id);
     expect(
