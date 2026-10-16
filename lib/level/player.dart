@@ -44,6 +44,8 @@ class Player extends PositionComponent {
     required double spawnX,
     required double floorTop,
     this.color = Palette.bodyColor,
+    this.leash,
+    this.leashAnchors,
   }) : _spawn = Vector2(spawnX, floorTop),
        super(
          size: Vector2(44, 96),
@@ -57,6 +59,18 @@ class Player extends PositionComponent {
   final Vector2 _spawn;
 
   final InputController input;
+
+  /// How far this body can get from the pasts that hold it (`Level.leash`),
+  /// or null for no leash. See [_holdToLeash].
+  final double? leash;
+
+  /// The middles of the pasts holding the body this frame: the ones that
+  /// have arrived and are out of the light. Read fresh, like [solids].
+  final List<Offset> Function()? leashAnchors;
+
+  /// True while the leash is all that is holding the body up.
+  bool get isHanging => _hanging;
+  bool _hanging = false;
 
   /// What the body is drawn in. A level's look decides it: legibly dark on the
   /// bench, as black as the scene gets in the lit environment.
@@ -158,6 +172,7 @@ class Player extends PositionComponent {
     _stridePhase = 0;
     _walking = false;
     _jumpedSinceCapture = false;
+    _hanging = false;
   }
 
   @override
@@ -168,6 +183,7 @@ class Player extends PositionComponent {
     _updateCrouch(dt, world);
 
     final wasGrounded = isGrounded;
+    final before = bounds.center;
     locomotion.step(
       dt,
       intent: input.intent,
@@ -193,6 +209,8 @@ class Player extends PositionComponent {
       position.x += step;
       _resolveHorizontal(world, step);
     }
+    _hanging = false;
+    _holdStepToLeash(before);
     if (walked != 0) {
       _stridePhase =
           (_stridePhase +
@@ -201,8 +219,123 @@ class Player extends PositionComponent {
     }
 
     final previousFeet = y;
+    final beforeFall = bounds.center;
     position.y += locomotion.verticalVelocity * dt;
     _resolveVertical(world, previousFeet, wasGrounded);
+    _holdFallToLeash(beforeFall, world, dt);
+  }
+
+  /// Stops a step across where it would take the body further from a past
+  /// than the leash allows (`Level.leash`).
+  ///
+  /// The leash is a wall that goes where your past goes, round it at the
+  /// leash's length. A step into that wall stops at it, the way a step into
+  /// a block does, and that is all: it only ever takes back part of the step
+  /// the body itself just made, so it can stop you and never moves you. And
+  /// it allows whatever distance there already was — a past that walked
+  /// away on its own leaves you where you are, until you walk back or it
+  /// comes back.
+  ///
+  /// Checked for the step across and the fall separately, like the walls
+  /// are. Checked as one move, walking in and falling out cancelled each
+  /// other and the body hung frozen with the way in an arm's length off.
+  void _holdStepToLeash(Offset before) {
+    final cut = _cutToLeash(before);
+    if (cut == null) return;
+    position.x -= cut.dx;
+    locomotion.stopHorizontally();
+  }
+
+  /// The fall against the same wall: a body falling into it slides down it,
+  /// the way it would down a slope, and comes to rest at the bottom of it —
+  /// under its past, a leash's length down. That is hanging: no ground, so
+  /// no jump, until it is standing on something again.
+  ///
+  /// Sliding and not stopping, because stopping is a floor. The first
+  /// version stopped the fall dead, and a body held at the end of its leash
+  /// just kept walking out over a pit at the height it left the edge: the
+  /// step across filled the leash, so the fall had nowhere to go. A wall
+  /// you are pressed against holds you up only as far as it is under you.
+  ///
+  /// The slide is along the wall, not into it, so the leash still never
+  /// takes you closer to your past than you were going: it is the wall's
+  /// shape, the same as the corner of a block turning a fall into a step.
+  /// And never into a block: where the slide would put the body inside one,
+  /// the fall is only stopped.
+  void _holdFallToLeash(Offset before, Solids world, double dt) {
+    final length = leash;
+    final anchors = leashAnchors?.call();
+    if (length == null || anchors == null || anchors.isEmpty) return;
+    final after = bounds.center;
+    final fall = after.dy - before.dy;
+    if (fall == 0) return;
+
+    final cut = _cutToLeash(before);
+    if (cut == null) return;
+    if (fall < 0) {
+      // Rising into it: the head meets the wall, like a ceiling.
+      position.y -= cut.dy;
+      locomotion.stopRising();
+      return;
+    }
+
+    var to = after;
+    for (final anchor in anchors) {
+      final allowed = max(length, (before - anchor).distance);
+      final out = to - anchor;
+      if (out.distance > allowed) to = anchor + out * (allowed / out.distance);
+    }
+    final shift = to - after;
+    final slides =
+        to.dy >= before.dy &&
+        anchors.every(
+          (anchor) =>
+              (to - anchor).distance <=
+              max(length, (before - anchor).distance) + 1e-6,
+        ) &&
+        !world.blocking.any(bounds.shift(shift).overlaps);
+    if (slides) {
+      position.x += shift.dx;
+      position.y += shift.dy;
+    } else {
+      position.y -= cut.dy;
+    }
+    final fell = bounds.center.dy - before.dy;
+    locomotion.verticalVelocity = dt > 0 ? max(0, fell / dt) : 0;
+    isGrounded = false;
+    isOnShadow = false;
+    _hanging = true;
+  }
+
+  /// How much of the move from [before] to where the body is now has to be
+  /// taken back to keep it within the leash of every past holding it, or
+  /// null if none.
+  Offset? _cutToLeash(Offset before) {
+    final length = leash;
+    final anchors = leashAnchors?.call();
+    if (length == null || anchors == null || anchors.isEmpty) return null;
+    final after = bounds.center;
+    final move = after - before;
+    if (move == Offset.zero) return null;
+
+    var keep = 1.0;
+    for (final anchor in anchors) {
+      final allowed = max(length, (before - anchor).distance);
+      if ((after - anchor).distance <= allowed) continue;
+      keep = min(keep, _reach(before - anchor, move, allowed));
+    }
+    return keep >= 1 ? null : move * (1 - keep);
+  }
+
+  /// How much of [move], from [start] (both relative to the anchor), keeps
+  /// within [radius]: the larger root of |start + t·move| = radius, in 0..1.
+  /// [start] is inside or on the circle, so there is always one.
+  static double _reach(Offset start, Offset move, double radius) {
+    final a = move.dx * move.dx + move.dy * move.dy;
+    final b = 2 * (start.dx * move.dx + start.dy * move.dy);
+    final c = start.dx * start.dx + start.dy * start.dy - radius * radius;
+    final root = sqrt(max(0, b * b - 4 * a * c));
+    return ((-b + root) / (2 * a)).clamp(0.0, 1.0);
   }
 
   /// Folds and unfolds the body, and refuses to unfold into a ceiling.

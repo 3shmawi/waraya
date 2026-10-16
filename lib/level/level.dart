@@ -37,7 +37,12 @@ class Level {
     this.solution = const [],
     this.wrongIdeas = const [],
     this.prelude = const [],
+    this.leash,
   }) : assert(
+         leash == null || leash > 0,
+         'a leash with no length holds you to the spot, which is not a level',
+       ),
+       assert(
          (delaySeconds == null) != (delays == null),
          'a level sets either delaySeconds or delays, never both',
        ),
@@ -184,6 +189,29 @@ class Level {
   /// level that makes no sense to a build that drops the showing.
   final List<Move> prelude;
 
+  /// How far you can get from your past, if this level holds you to it at
+  /// all (`docs/phase-12-more.md` §3). Null — every level but the bench's —
+  /// is no leash.
+  ///
+  /// It **stops, it never pulls**: a step that would take you further than
+  /// this from a past that is here is cut short, and nothing else happens.
+  /// A past that walks away from you on its own leaves you where you are;
+  /// you just cannot add to the distance. That is what keeps it out of the
+  /// loop the pulling version fell into (`phase-7-hard-levels.md` §14): your
+  /// past is you D seconds ago, and a force from it would be recorded and
+  /// replayed and pull differently every time.
+  ///
+  /// Measured in a straight line between the middles of the two bodies, so
+  /// it holds you up as well as back: step off a ledge your past is standing
+  /// on, and you slide down the end of the leash to hang under it, until it
+  /// steps off after you. And you cannot jump further from it than this
+  /// either.
+  ///
+  /// A past that has not arrived yet holds you from where it will arrive
+  /// from: the start, where you stood D seconds ago. A past in the light
+  /// does not hold you at all — it is not there.
+  final double? leash;
+
   /// Whether this level can be checked by somebody who did not write it.
   ///
   /// A level with no recorded solution cannot be shown to be finishable, and
@@ -233,7 +261,7 @@ class Level {
   /// puts the level proving it into the campaign, with its solution, its
   /// wrong idea, and a version bump. A mechanic that fails is deleted from
   /// here and from the code, and its levels stay refused.
-  static const Set<String> labMechanics = <String>{'prelude'};
+  static const Set<String> labMechanics = <String>{'prelude', 'leash'};
 
   /// What the bench accepts: everything the game does, and what is on trial.
   static Set<String> get benchMechanics => {...knownMechanics, ...labMechanics};
@@ -272,6 +300,9 @@ class Level {
     // finishes without the player ever ducking.
     if (solidWhen != ShadowSolidity.always) 'crouched-solid',
     if (prelude.isNotEmpty) 'prelude',
+    // A build that drops it plays the level loose, and a leash level loose
+    // is a walk to the goal.
+    if (leash != null) 'leash',
   };
 }
 
@@ -543,6 +574,7 @@ extension LevelJson on Level {
     ],
     if (prelude.isNotEmpty)
       'prelude': [for (final move in prelude) _moveToJson(move)],
+    if (leash != null) 'leash': leash,
     'goal': _rectToJson(goal),
     'blocks': blocks.map(_rectToJson).toList(),
     // A bare rectangle, as every light was, unless it has a name.
@@ -689,6 +721,7 @@ Level levelFromJson(Object? source, {Set<String>? accepts}) {
           _moveList(idea, 'wrongIdeas[$i]'),
       ],
       prelude: _moveList(json['prelude'], 'prelude'),
+      leash: json['leash'] == null ? null : _asDouble(json['leash'], 'leash'),
       blocks: _rectList(json['blocks'], 'blocks'),
       lights: [
         for (final (i, entry) in _asList(json['lights'], 'lights').indexed)

@@ -4275,9 +4275,112 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(400, 548, 480, 620),
   );
 
+  /// **The leash, one** (`docs/phase-12-more.md` §3): on the bench.
+  ///
+  /// You cannot get further than [Level.leash] from your past, and that
+  /// holds you up as well as back. So the edge that would kill you is a way
+  /// down: step off it with your past still on the ledge and you hang, a
+  /// leash's length under it, by the face of the ledge — and under the ledge
+  /// there is a way in, which is where the end is.
+  ///
+  /// The way in is only from the pit, and a fall goes past it far too fast
+  /// to turn in (`leash_test.dart` tries every frame with the leash taken
+  /// off). And you only have until your past steps off after you: then
+  /// there is nothing up there holding you, and the rope goes down with you.
+  ///
+  /// The end is to the right of the start, under the ledge, so the sweep's
+  /// «hold the way out» walks off the edge and keeps pushing out over the
+  /// pit, where there is nothing.
+  static final Level hangOnYourPast = Level(
+    id: 'hang-on-your-past',
+    solution: const [
+      Move.right(2.75), // to the edge your past lets you reach, and off it
+      Move.left(3), // hanging: in under the ledge, and along to the end
+    ],
+    wrongIdeas: const [
+      // For the far side: off the edge and keep going.
+      [Move.right(14)],
+      // Hang too long, and your past comes off the ledge after you.
+      [Move.right(4), Move.left(8)],
+    ],
+    name: 'اتعلّق في ماضيك',
+    teaches: 'ماضيك ماسكك: مبتبعدش عنه، ولا لتحت.',
+    nameEn: 'Hang on Your Past',
+    teachesEn: 'Your past holds you: you cannot get far from it, not even down.',
+    delaySeconds: 1.5,
+    leash: 200,
+    spawnX: -300,
+    floorTop: _floor,
+    blocks: [
+      // The ledge, with a way in under it: a slab, the opening, its floor.
+      const Rect.fromLTRB(-1000, 620, 0, 712),
+      const Rect.fromLTRB(-1000, 818, 0, 2200),
+      const Rect.fromLTRB(-1000, 712, -560, 818),
+      const Rect.fromLTRB(-1040, 200, -1000, 2200),
+      // The far side, too far to jump.
+      const Rect.fromLTRB(600, 620, 1500, 2200),
+    ],
+    goal: const Rect.fromLTRB(-200, 746, -120, 818),
+  );
+
+  /// **The leash, two**: your past in the light holds nothing.
+  ///
+  /// The gap is a running jump, and the leash is shorter than it: with your
+  /// past anywhere in the dark the jump is cut off in the air and you hang
+  /// under the edge until your past comes off it after you. Waiting at the
+  /// edge for it to catch up only shortens the rope you jump on. The lamp is
+  /// behind you, at the end you came from: lead your past into it, and while
+  /// it stands there nothing is holding you.
+  ///
+  /// The numbers are the puzzle. The gap (150) leaves room for a jump from
+  /// anywhere in the last 45 of the edge; the leash (90) is short enough
+  /// that hanging off a past at the very edge reaches 111, short of the 128
+  /// the far side needs. The lamp is far enough back that the sweep's
+  /// «touch what is behind you» does not reach it on a leash, and close
+  /// enough that a past standing in it covers the run from there and the
+  /// jump. And a past only stands in it as long as you did: in and straight
+  /// out is a moment of light, not a run.
+  static final Level theLightLetsGo = Level(
+    id: 'the-light-lets-go',
+    solution: const [
+      Move.left(8), // into the lamp, at the leash's pace, and stand there
+      Move.right(2), // run while your past stands in the light
+      Move.right(0.8, jump: true), // and jump: nothing is holding you
+      Move.right(6),
+    ],
+    wrongIdeas: const [
+      // Straight for the gap.
+      [Move.right(3), Move.right(0.8, jump: true), Move.right(6)],
+      // Wait at the edge for your past, and jump with it right behind you.
+      [Move.right(1), Move(4), Move.right(0.8, jump: true), Move.right(6)],
+      // Into the light and straight out.
+      [
+        Move.left(4),
+        Move.right(3.4),
+        Move.right(0.8, jump: true),
+        Move.right(6),
+      ],
+    ],
+    name: 'النور بيفكّك',
+    teaches: 'ماضيك في النور مبيمسكش. وصّله للنور، واجري.',
+    nameEn: 'The Light Lets Go',
+    teachesEn: 'Your past in the light holds nothing. Lead it there, then run.',
+    delaySeconds: 3,
+    leash: 90,
+    spawnX: -100,
+    floorTop: _floor,
+    blocks: [
+      const Rect.fromLTRB(-440, 620, 0, 2200),
+      const Rect.fromLTRB(-480, 200, -440, 2200),
+      const Rect.fromLTRB(150, 620, 1200, 2200),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(-400, 200, -300, 620))],
+    goal: const Rect.fromLTRB(400, 548, 480, 620),
+  );
+
   /// Levels on the bench and not in the campaign: they use something still
   /// on trial. The editor's start menu offers them.
-  static final List<Level> bench = [thatsYou];
+  static final List<Level> bench = [thatsYou, hangOnYourPast, theLightLetsGo];
 
   static final Level lab = Level(
     id: 'lab',

@@ -30,6 +30,7 @@ import 'lang.dart';
 import 'level.dart';
 import 'levels.dart';
 import 'player.dart';
+import 'leash_line.dart';
 import 'prelude.dart';
 import 'props.dart';
 
@@ -396,6 +397,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       spawnX: level.spawnX,
       floorTop: level.floorTop,
       color: _lit ? SilhouettePalette.bodyColor : Palette.bodyColor,
+      leash: level.leash,
+      leashAnchors: _leashEnds,
     );
 
     prelude = level.prelude.isEmpty
@@ -434,6 +437,13 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
         look: look,
       ),
       ...shadows,
+      if (level.leash case final length?)
+        LeashLine(
+          length: length,
+          player: () => player,
+          ends: () => _leashEnds(drawn: true),
+          color: _lit ? SilhouettePalette.shadowColor : Palette.shadowColor,
+        ),
       player,
     ]);
 
@@ -735,6 +745,38 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// clear of the beam, not the body's middle.
   ///
   /// Only a light that is on: a switched-off lamp erases nobody.
+  /// Where the pasts holding you are (`Level.leash`): every one that is
+  /// here and out of the light.
+  ///
+  /// And one that has not arrived yet is where it is going to arrive from —
+  /// you, D seconds ago, which before D seconds is standing at the start.
+  /// The first version let the leash off until the past appeared, and a
+  /// short level was a sprint: run, and be across before there is anybody
+  /// to hold you. The rope is tied to the start until your past picks it up.
+  ///
+  /// [drawn] is for the line, which follows a past where it is drawn rather
+  /// than where it is on the tick.
+  List<Offset> _leashEnds({bool drawn = false}) => [
+    for (final past in shadows)
+      if (past.isActive)
+        ...[
+          if (!past.inLight)
+            drawn
+                ? past.bounds.center + past.renderOffset
+                : past.bounds.center,
+        ]
+      else if (!_standsInLight(_start))
+        _start.center,
+  ];
+
+  /// The body standing at the start, where every past begins.
+  Rect get _start => Rect.fromLTWH(
+    level.spawnX - 22,
+    level.floorTop - 96,
+    44,
+    96,
+  );
+
   bool _standsInLight(Rect body) =>
       lights.any((light) => light.isOn && light.area.overlaps(body));
 

@@ -105,6 +105,7 @@ class EditorDoc {
     this.solution = const [],
     this.wrongIdeas = const [],
     this.prelude = const [],
+    this.leash,
   });
 
   factory EditorDoc.fromLevel(Level level) => EditorDoc(
@@ -122,6 +123,7 @@ class EditorDoc {
     solution: level.solution,
     wrongIdeas: level.wrongIdeas,
     prelude: level.prelude,
+    leash: level.leash,
     pieces: [
       for (final rect in level.blocks) Piece(PieceKind.block, rect),
       for (final light in level.lights)
@@ -185,6 +187,10 @@ class EditorDoc {
   /// Carried through untouched so opening and saving a level never drops it.
   List<Move> prelude;
 
+  /// The leash (`Level.leash`, on trial), carried through the same way. No
+  /// knob for it yet: a level gets one in its data.
+  double? leash;
+
   final List<Piece> pieces;
 
   /// The level this is, as the game and the gate will see it.
@@ -205,6 +211,7 @@ class EditorDoc {
       solution: solution,
       wrongIdeas: wrongIdeas,
       prelude: prelude,
+      leash: leash,
       // Exactly one: the editor neither adds nor removes it ([canRemove]).
       goal: of(PieceKind.goal).first.rect,
       blocks: [for (final p in of(PieceKind.block)) p.rect],
@@ -243,6 +250,7 @@ class EditorDoc {
     solution: solution,
     wrongIdeas: [...wrongIdeas],
     prelude: prelude,
+    leash: leash,
     pieces: [for (final p in pieces) p.copy()],
   );
 
