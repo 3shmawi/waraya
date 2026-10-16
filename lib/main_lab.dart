@@ -10,6 +10,7 @@ import 'level/level_upload.dart';
 import 'level/levels.dart';
 import 'level/supabase_backend.dart';
 import 'licenses.dart';
+import 'ui/ready/game_ready.dart';
 
 /// The tuning bench — the shadow, on grey boxes — and the level editor.
 ///
@@ -54,6 +55,10 @@ void main() async {
       levels: authoring == null ? null : await authoring.load(),
     ),
   );
+  // Lifts the web page's splash. The game sends this when its level is up;
+  // the bench never did, so on the web it sat under the splash for the whole
+  // 25 seconds the splash waits before giving up on being told.
+  WidgetsBinding.instance.addPostFrameCallback((_) => announceGameReady());
 }
 
 /// Where the bench reads levels from, or null for the one written in Dart.

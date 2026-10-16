@@ -58,4 +58,24 @@ void main() {
     );
     expect(find.text('levels/two.json is not valid JSON'), findsOneWidget);
   });
+
+  testWidgets('folded on a phone, open on a desk, and either way a tap away', (
+    tester,
+  ) async {
+    // A phone on its side: 844 by 390.
+    tester.view.physicalSize = const Size(1688, 780);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(panel());
+    expect(find.text('shadow is solid'), findsNothing);
+    await tester.tap(find.byIcon(Icons.expand_more));
+    await tester.pump();
+    expect(find.text('shadow is solid'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpWidget(panel(status: 'desk'));
+    expect(find.text('shadow is solid'), findsOneWidget);
+  });
 }

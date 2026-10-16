@@ -50,7 +50,10 @@ class LabControls extends StatefulWidget {
 }
 
 class _LabControlsState extends State<LabControls> {
-  bool _expanded = true;
+  /// Open on a desk, folded on a phone: unfolded it is half of a phone's
+  /// screen, and on a phone the bench is mostly for playing a level.
+  bool? _open;
+  bool get _expanded => _open ?? MediaQuery.sizeOf(context).shortestSide >= 600;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +76,18 @@ class _LabControlsState extends State<LabControls> {
                     children: [
                       _header(),
                       if (widget.status != null) _status(widget.status!),
-                      if (_expanded) ..._body(),
+                      // Scrolls rather than running off a phone held
+                      // sideways, which is shorter than the panel.
+                      if (_expanded)
+                        Flexible(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: _body(),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -131,7 +145,7 @@ class _LabControlsState extends State<LabControls> {
       ),
       IconButton(
         tooltip: _expanded ? 'collapse' : 'expand',
-        onPressed: () => setState(() => _expanded = !_expanded),
+        onPressed: () => setState(() => _open = !_expanded),
         icon: Icon(
           _expanded ? Icons.expand_less : Icons.expand_more,
           size: 18,
