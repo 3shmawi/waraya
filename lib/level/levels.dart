@@ -3645,6 +3645,267 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(880, 358, 960, 430),
   );
 
+  /// **Phase 12, the light switch, the chain's key.** `theThirdFlip` as the
+  /// first link of `oneHoldsTheDark`.
+  ///
+  /// The gate's plate is under a lamp a switch puts out, and the switch is
+  /// under a lamp of its own, which a key puts out: out, on again when the
+  /// near past arrives on the key, and out for good when the far one does.
+  /// The dark that comes back for good is over what you did after the key —
+  /// so the key comes first, though the plate is on the way to it, and then
+  /// `oneHoldsTheDark`: the plate for the far past, the switch for the near.
+  ///
+  /// The walk from the switch to the gate is nearly two seconds, so a short
+  /// stand on the switch is all it needs; a long one spends the far past's
+  /// time on the plate, and holding it yourself until the gate opens is how
+  /// to find it shut.
+  static final Level theChainsKey = Level(
+    id: 'the-chains-key',
+    solution: const [
+      Move.left(2.75), // the wrong way, past the plate, to the key
+      Move(0.45),
+      Move.left(0.6, jump: true), // up onto it: the switch's lamp goes out,
+      Move(0.3), // on again at two seconds, and out for good at six
+      Move.right(0.5),
+      Move(0.35),
+      Move.left(0.1),
+      Move(0.1),
+      Move.right(0.6, jump: true), // up onto the gate's plate
+      Move(2.1), // the far past will stand here — after the key
+      Move.right(0.95),
+      Move(0.45),
+      Move.right(0.6, jump: true), // up onto the switch
+      Move(0.6), // the near past will stand here, in the dark the key left
+      Move.right(1.5), // to the gate: open
+      Move(0.1),
+      Move.right(3),
+    ],
+    wrongIdeas: const [
+      // `oneHoldsTheDark`'s answer, without the key: the switch is under a
+      // lamp of its own, and the near past on it is erased.
+      [
+        Move.left(1.85),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(2.1),
+        Move.right(1.8),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(1.7),
+        Move.right(1.5),
+        Move(6.8),
+        Move.right(3),
+      ],
+      // The plate on the way, then the key: the dark that comes back for
+      // good comes back over what you did after the key, and the plate was
+      // before it.
+      [
+        Move.left(1.85),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(2.1),
+        Move.left(0.45),
+        Move(0.35),
+        Move.right(0.1),
+        Move(0.15),
+        Move.left(0.6, jump: true),
+        Move(0.3),
+        Move.right(1.9),
+        Move(0.4),
+        Move.right(0.6, jump: true),
+        Move(1.7),
+        Move.right(1.5),
+        Move(6.8),
+        Move.right(3),
+      ],
+      // The right order, and then hold the switch yourself until the gate
+      // opens: it does, under you — and when you run for it, the far past
+      // has long stepped off the plate.
+      [
+        Move.left(2.75),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(0.3),
+        Move.right(0.5),
+        Move(0.35),
+        Move.left(0.1),
+        Move(0.1),
+        Move.right(0.6, jump: true),
+        Move(2.1),
+        Move.right(0.95),
+        Move(0.45),
+        Move.right(0.6, jump: true),
+        Move(4.1),
+        Move.right(1.5),
+        Move(6.8),
+        Move.right(3),
+      ],
+    ],
+    name: 'مفتاح السلسلة',
+    teaches: 'المفتاح الأول: بيطفي على المطفي للأبد، بس بعد ست ثواني.',
+    nameEn: 'The Chain\'s Key',
+    teachesEn:
+        'The key first: it puts the switch\'s lamp out for good — later.',
+    delays: const [2, 6],
+    spawnX: 100,
+    floorTop: _floor,
+    blocks: [
+      _ground(-800, 600),
+      const Rect.fromLTRB(-840, 200, -800, 620),
+      // The key to the switch's lamp, past the plate.
+      const Rect.fromLTRB(-650, 506, -550, 522),
+      // The gate's plate, under its lamp.
+      const Rect.fromLTRB(-450, 506, -350, 522),
+      // The switch for that lamp, under a lamp of its own.
+      const Rect.fromLTRB(-150, 506, -50, 522),
+    ],
+    lights: const [
+      LightSpec(Rect.fromLTRB(-470, 200, -330, 620), id: 'plate-lamp'),
+      LightSpec(Rect.fromLTRB(-180, 200, -20, 620), id: 'switch-lamp'),
+    ],
+    toggles: const [
+      ToggleSpec(
+        area: Rect.fromLTRB(-640, 494, -560, 506),
+        flips: 'switch-lamp',
+      ),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-440, 494, -360, 506), opens: 'gate'),
+      PlateSpec(area: Rect.fromLTRB(-140, 494, -60, 506), opens: 'plate-lamp'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(250, 150, 276, 620)),
+    ],
+    goal: const Rect.fromLTRB(400, 548, 480, 620),
+  );
+
+  /// **Phase 12, the light switch, twice.** One stand on a plate opens its
+  /// gate two times: when the near past is on it, and when the far one is.
+  ///
+  /// The way out's plate is under a lamp, and the key that puts it out is on
+  /// the far side of the middle gate. So: the middle gate's plate, through on
+  /// the near past's opening, the key, back to a shut gate, and through again
+  /// on the far past's. The key's dark comes back for good six seconds on,
+  /// over what you did after it — the way out's plate, now, and the near
+  /// past on it while you are at the gate.
+  ///
+  /// The grace is short so the two openings are two: with a long one they
+  /// ran together and the gate was simply open. The far past's opening ends
+  /// six seconds and the grace after you step off the plate, however long
+  /// you stood, so a stop by the key spends the same time either way.
+  static final Level theGateOpensTwice = Level(
+    id: 'the-gate-opens-twice',
+    solution: const [
+      Move.right(0.25), // to the foot of the middle gate's plate
+      Move(0.45),
+      Move.right(0.6, jump: true), // up onto it
+      Move(1.15), // one stand: two openings, two and six seconds on
+      Move.right(0.75),
+      Move(0.25),
+      Move.right(0.85), // through, on the near past's opening
+      Move(0.45),
+      Move.right(0.6, jump: true), // up onto the key: the way out's lamp goes
+      Move(0.3), // out, on again at two, and out for good at six
+      Move.left(0.85), // back to the middle gate: shut
+      Move(0.9), // and open again, on the far past's
+      Move.left(2.35), // through, and back to the way out's plate
+      Move(0.15),
+      Move.left(0.05),
+      Move(0.4),
+      Move.left(0.6, jump: true), // up onto it, in the dark the key left
+      Move(1.1),
+      Move.left(0.95), // to the way out: the near past is on its plate
+      Move(0.15),
+      Move.left(3),
+    ],
+    wrongIdeas: const [
+      // The middle gate both ways, and the key forgotten: the way out's
+      // plate is under a lamp, and the near past on it is erased.
+      [
+        Move.right(0.25),
+        Move(0.45),
+        Move.right(0.6, jump: true),
+        Move(1.65),
+        Move.right(0.75),
+        Move(0.15),
+        Move.right(0.4),
+        Move(0.15),
+        Move.left(2.3),
+        Move(0.55),
+        Move.left(0.6, jump: true),
+        Move(1.1),
+        Move.left(6),
+        Move(3),
+      ],
+      // The way out's plate first, as it is closest, then the gate and the
+      // key: the dark comes back for good over what you do after the key.
+      [
+        Move.left(0.5),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(1.1),
+        Move.right(1.15),
+        Move(0.45),
+        Move.right(0.6, jump: true),
+        Move(1.65),
+        Move.right(0.75),
+        Move(0.15),
+        Move.right(0.85),
+        Move(0.45),
+        Move.right(0.6, jump: true),
+        Move(0.3),
+        Move.left(0.85),
+        Move(0.5),
+        Move.left(6.6),
+        Move(3),
+      ],
+      // Straight for the way out: its plate, and the gate.
+      [
+        Move.left(0.5),
+        Move(0.45),
+        Move.left(0.6, jump: true),
+        Move(1.1),
+        Move.left(6),
+        Move(3),
+      ],
+    ],
+    name: 'الباب بيفتح مرتين',
+    teaches: 'وقفة واحدة على الزرار: القريب يفتحلك رايح، والبعيد راجع.',
+    nameEn: 'The Gate Opens Twice',
+    teachesEn:
+        'One stand on the plate: the near past opens it going, the far back.',
+    delays: const [2, 6],
+    spawnX: -350,
+    floorTop: _floor,
+    blocks: [
+      _ground(-1000, 500),
+      const Rect.fromLTRB(540, 200, 580, 620),
+      // The way out's plate, under a lamp only the key puts out.
+      const Rect.fromLTRB(-600, 506, -500, 522),
+      // The middle gate's plate.
+      const Rect.fromLTRB(-250, 506, -150, 522),
+      // The key, on the far side of the middle gate.
+      const Rect.fromLTRB(200, 506, 300, 522),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(-630, 200, -470, 620), id: 'lamp')],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(210, 494, 290, 506), flips: 'lamp'),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-590, 494, -510, 506), opens: 'out'),
+      PlateSpec(area: Rect.fromLTRB(-240, 494, -160, 506), opens: 'middle'),
+    ],
+    doors: const [
+      DoorSpec(id: 'out', closed: Rect.fromLTRB(-800, 150, -774, 620)),
+      DoorSpec(
+        id: 'middle',
+        closed: Rect.fromLTRB(0, 150, 26, 620),
+        lingerSeconds: 0.5,
+      ),
+    ],
+    goal: const Rect.fromLTRB(-950, 548, -870, 620),
+  );
+
   /// In teaching order.
   static final List<Level> campaign = [
     pressItEarly,
@@ -3680,6 +3941,8 @@ abstract final class Levels {
     theFarOneTwice,
     youHoldTheLast,
     aChainThroughTheGate,
+    theChainsKey,
+    theGateOpensTwice,
     allOfItInTheDark,
   ];
 

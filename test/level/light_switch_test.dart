@@ -1558,6 +1558,257 @@ void main() {
       });
     }
   });
+
+  group('the chain\'s key', () {
+    final level = Levels.theChainsKey;
+
+    LightZone lamp(LevelGame game, String id) =>
+        game.lights.singleWhere((light) => light.spec.id == id);
+
+    testWithGame<LevelGame>(
+      'the key puts the switch\'s lamp out, on, and out for good',
+      build(level),
+      (game) async {
+        await game.ready();
+        final switchLamp = lamp(game, 'switch-lamp');
+        double? thrown;
+        final run = Run(game);
+        for (final move in level.solution.take(5)) {
+          run.hold(
+            move.seconds,
+            axis: move.axis,
+            jump: move.jump,
+            crouch: move.crouch,
+            each: () {
+              if (!switchLamp.isOn) thrown ??= run.t;
+            },
+          );
+        }
+        expect(thrown, isNotNull, reason: 'you threw it');
+        run.waitUntil(thrown! + 3);
+        expect(switchLamp.isOn, isTrue, reason: 'the near past threw it back');
+        run.waitUntil(thrown! + 7);
+        expect(switchLamp.isOn, isFalse, reason: 'the far past, for good');
+        run.waitUntil(thrown! + 25);
+        expect(switchLamp.isOn, isFalse);
+      },
+    );
+
+    // The far past's dark on the plate runs from the plate to six seconds
+    // after it; the near past is on the switch only as long as you were.
+    // So a stop fits before the switch, and not at the gate.
+    for (final (after, pause, works) in const [
+      (10, 1.5, true), // off the plate, before the switch
+      (14, 0.4, true), // a moment at the gate
+      (15, 1.0, false), // a second at the gate: the near past has left
+    ]) {
+      testWithGame<LevelGame>(
+        'a ${pause}s stop after move $after '
+        '${works ? 'still' : 'no longer'} gets through',
+        build(level),
+        (game) async {
+          await game.ready();
+          final run = Run(game)
+            ..play(level.solution.take(after))
+            ..hold(pause)
+            ..play(level.solution.skip(after));
+          expect(run.finishedAt, works ? isNotNull : isNull, reason: run.where);
+        },
+      );
+    }
+
+    // Each gets the gate open while it stands on the switch itself — the
+    // far past is on the plate then — and finds it shut when it gets there.
+    for (final (i, keyThrown) in const [
+      false, // no key: the switch's lamp never goes out
+      true, // the key after the plate: the dark comes back too late
+      true, // held yourself, long: the far past is off the plate by then
+    ].indexed) {
+      testWithGame<LevelGame>(
+        'wrong idea ${i + 1} reaches a shut gate',
+        build(level),
+        (game) async {
+          await game.ready();
+          var thrown = false;
+          var shutWhenThere = false;
+          final run = Run(game);
+          for (final move in level.wrongIdeas[i]) {
+            run.hold(
+              move.seconds,
+              axis: move.axis,
+              jump: move.jump,
+              crouch: move.crouch,
+              each: () {
+                if (!lamp(game, 'switch-lamp').isOn) thrown = true;
+                if (game.player.x > 200 &&
+                    game.doors.single.openFraction < 0.05) {
+                  shutWhenThere = true;
+                }
+              },
+            );
+          }
+          expect(thrown, keyThrown, reason: run.where);
+          expect(shutWhenThere, isTrue, reason: run.where);
+          expect(run.finishedAt, isNull, reason: run.where);
+        },
+      );
+    }
+  });
+
+  group('the gate opens twice', () {
+    final level = Levels.theGateOpensTwice;
+
+    testWithGame<LevelGame>(
+      'one stand on the plate opens the middle gate twice, and shuts between',
+      build(level),
+      (game) async {
+        await game.ready();
+        final middle = game.doors.last;
+        // Off the plate — the opening under your own weight shuts as you
+        // step off — and stand short of the gate, watching it.
+        final run = Run(game)..play(level.solution.take(4));
+        var openings = 0;
+        var wasOpen = true;
+        void watch() {
+          final open = middle.openFraction > 0.5;
+          if (open && !wasOpen) openings++;
+          wasOpen = open;
+        }
+
+        run
+          ..hold(0.6, axis: 1, each: watch)
+          ..hold(9, each: watch);
+        expect(openings, 2, reason: run.where);
+      },
+    );
+
+    // The far past's opening ends six seconds and the grace after you step
+    // off the plate, however long you stood — the six-second rule again — so
+    // a stop by the key spends it, and standing longer does not buy it back.
+    for (final (stand, pause, works) in const [
+      (1.0, 0.0, true),
+      (1.0, 1.5, true),
+      (1.0, 3.0, false),
+      (2.5, 3.0, false),
+    ]) {
+      testWithGame<LevelGame>(
+        '${stand}s on the plate and a ${pause}s stop by the key '
+        '${works ? 'still' : 'no longer'} gets back',
+        build(level),
+        (game) async {
+          await game.ready();
+          final run = Run(game)
+            ..play(level.solution.take(3))
+            ..hold(stand)
+            ..play(level.solution.skip(4).take(6))
+            ..hold(pause)
+            ..play(level.solution.skip(10).take(1))
+            ..walkTo(60);
+          // Through on whichever opening is next, if there is one.
+          var through = false;
+          run.hold(
+            4,
+            axis: -1,
+            each: () {
+              if (game.player.x < -30) through = true;
+            },
+          );
+          expect(through, works, reason: run.where);
+        },
+      );
+    }
+
+    for (final (i, (crossed, keyThrown)) in const [
+      (true, false), // through and back, and the key forgotten
+      (true, true), // the way out's plate before the key
+      (false, false), // straight for the way out
+    ].indexed) {
+      testWithGame<LevelGame>(
+        'wrong idea ${i + 1} reaches the way out, shut',
+        build(level),
+        (game) async {
+          await game.ready();
+          var wentThrough = false;
+          var thrown = false;
+          final run = Run(game);
+          for (final move in level.wrongIdeas[i]) {
+            run.hold(
+              move.seconds,
+              axis: move.axis,
+              jump: move.jump,
+              crouch: move.crouch,
+              each: () {
+                if (game.player.x > 40) wentThrough = true;
+                if (!game.lights.single.isOn) thrown = true;
+              },
+            );
+          }
+          expect(wentThrough, crossed, reason: run.where);
+          expect(thrown, keyThrown, reason: run.where);
+          expect(game.player.x, greaterThan(-774), reason: run.where);
+          expect(run.finishedAt, isNull, reason: run.where);
+        },
+      );
+    }
+
+    // A stair of both pasts by each gate: searched, each builds, none gets
+    // past one shut.
+    for (final (x, door, toward) in const [
+      (-700.0, 0, -1.0), // the way out, from inside
+      (-60.0, 1, 1.0), // the middle gate, from the first side
+      (60.0, 1, -1.0), // and from the key's side
+    ]) {
+      testWithGame<LevelGame>(
+        'a stair at $x gets past no shut gate',
+        build(level),
+        (game) async {
+          await game.ready();
+          final gate = level.doors[door].closed;
+          var highest = double.infinity;
+          var past = false;
+          for (var shuffle = 0; shuffle <= 34; shuffle += 2) {
+            game.reload();
+            final run = Run(game);
+            // To the key's side, for the one built there.
+            if (x > 26) run.play(level.solution.take(7));
+            run.walkTo(x);
+            void hold(
+              double seconds, {
+              double axis = 0,
+              bool jump = false,
+              bool crouch = false,
+            }) => run.hold(
+              seconds,
+              axis: axis,
+              jump: jump,
+              crouch: crouch,
+              each: () {
+                final player = game.player;
+                if (player.y < highest) highest = player.y;
+                final beyond = toward > 0
+                    ? player.x > gate.right + 22
+                    : player.x < gate.left - 22;
+                if (beyond && game.doors[door].openFraction < 0.05) {
+                  past = true;
+                }
+              },
+            );
+            hold(4.5, crouch: true);
+            hold(1.6);
+            hold(0.5, jump: true);
+            hold(1.0, crouch: true);
+            hold(1.0);
+            hold(0.7, jump: true);
+            hold(shuffle * Playthrough.dt, axis: toward);
+            hold(1.0, axis: toward, jump: true);
+            hold(0.6, axis: toward);
+          }
+          expect(highest, lessThan(370), reason: 'it builds');
+          expect(past, isFalse);
+        },
+      );
+    }
+  });
 }
 
 /// A room with one named lamp over a plate that holds a gate, a switch for
