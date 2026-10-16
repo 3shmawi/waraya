@@ -66,7 +66,11 @@
     html[data-lang="en"] #splash [lang="ar"],
     html:not([data-lang="en"]) #splash [lang="en"] { display: none !important; }
 
-    #splash svg { width: 92px; height: 92px; filter: drop-shadow(0 6px 18px rgba(20, 10, 0, .28)); }
+    /* The ending's panel, the size the ending draws it (lib/ui/campaign_end.dart). */
+    #splash canvas {
+      width: 208px; height: 128px;
+      filter: drop-shadow(0 6px 18px rgba(20, 10, 0, .28));
+    }
 
     #splash h1 {
       margin: 0;
@@ -147,9 +151,9 @@
         padding: max(16px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
                  max(16px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
       }
-      #splash svg {
+      #splash canvas {
         grid-area: mark; justify-self: center; align-self: end;
-        width: clamp(56px, 22vh, 92px); height: clamp(56px, 22vh, 92px);
+        height: clamp(60px, 26vh, 128px); width: auto; aspect-ratio: 208 / 128;
       }
       #splash h1 { grid-area: name; align-self: start; font-size: clamp(30px, 12vh, 48px); }
       #splash .pitch { grid-area: pitch; align-self: end; margin: 0; font-size: clamp(14px, 4.6vh, 18px); }
@@ -157,56 +161,7 @@
       #splash .bar { grid-area: bar; justify-self: center; margin-top: 6px; }
     }
 
-    /* The mark, alive, and doing what the game does: you walk across, and
-       your past walks the very same walk — every step and swing — 0.85s
-       and 1.7s later. Each past is the same animation with a delay, which
-       is the mechanic, not a picture of it; before its delay a past waits
-       off the edge, the way a shadow does not exist until the buffer has
-       filled. Pure CSS on the SVG, and still for anyone who asked for less
-       motion. */
-    /* Every delay is 1.5s earlier than the past it draws, so you are
-       already part-way across when the splash appears; the gaps between
-       the three — the delays that are the game — are unchanged. */
-    #splash .walker {
-      animation: cross 4.4s linear infinite backwards;
-      animation-delay: var(--lag);
-    }
-    #splash .bob { animation: bob .26s ease-in-out infinite alternate backwards; animation-delay: var(--lag); }
-    #splash .leg, #splash .arm {
-      animation-duration: .52s;
-      animation-timing-function: ease-in-out;
-      animation-iteration-count: infinite;
-      animation-direction: alternate;
-      animation-fill-mode: backwards;
-      animation-delay: var(--lag);
-    }
-    #splash .leg { transform-origin: 0px 52.2px; }
-    #splash .arm { transform-origin: -4.6px 34.3px; }
-    #splash .leg.a { animation-name: swing; }
-    #splash .leg.b { animation-name: swing-back; }
-    #splash .arm.a { animation-name: swing-back; }
-    #splash .arm.b { animation-name: swing; }
-    @keyframes cross {
-      from { transform: translateX(122px); }
-      to   { transform: translateX(-24px); }
-    }
-    @keyframes bob {
-      from { transform: translateY(0); }
-      to   { transform: translateY(-1.4px); }
-    }
-    @keyframes swing {
-      from { transform: rotate(20deg); }
-      to   { transform: rotate(-20deg); }
-    }
-    @keyframes swing-back {
-      from { transform: rotate(-20deg); }
-      to   { transform: rotate(20deg); }
-    }
-
     @media (prefers-reduced-motion: reduce) {
-      #splash .walker, #splash .bob, #splash .leg, #splash .arm { animation: none; }
-      /* Standing still, the mark as it is everywhere else. */
-      #splash .walker { transform: translateX(var(--rest)); }
       #splash .bar i { animation: none; width: 100%; opacity: .5; }
       #splash { transition: none; }
     }
@@ -232,46 +187,7 @@
     })();
   </script>
   <div id="splash">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
-      <!-- You, and your past: the same walk, legs and all, the near one a
-           beat behind and the far one two — and neither there at all until
-           its delay has passed, as in the game. Drawn furthest first. -->
-      <g class="walker far" style="--lag: 0.2s; --rest: 70px" color="#DCE4EE" opacity="0.30">
-        <g class="bob" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <path class="leg b" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
-          <path class="arm b" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
-          <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
-          <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/>
-          <circle cx="-6.1" cy="28.4" r="4.3" stroke="none"/>
-          <path class="leg a" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
-          <path class="arm a" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
-        </g>
-      </g>
-      <g class="walker near" style="--lag: -0.65s; --rest: 58px" color="#DCE4EE" opacity="0.55">
-        <g class="bob" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <path class="leg b" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
-          <path class="arm b" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
-          <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
-          <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/>
-          <circle cx="-6.1" cy="28.4" r="4.3" stroke="none"/>
-          <path class="leg a" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
-          <path class="arm a" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
-        </g>
-      </g>
-      <g class="walker you" style="--lag: -1.5s; --rest: 44px" color="#07050A" opacity="1">
-        <g class="bob" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <path class="leg b" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
-          <path class="arm b" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
-          <path d="M-4.5 53.3 L4.5 51.1 L1.2 32.8 L-10.4 35.8 Z" stroke-width="1.2"/>
-          <path d="M-5.1 32.1 L-6.1 28.4" stroke-width="3.4"/>
-          <circle cx="-6.1" cy="28.4" r="4.3" stroke="none"/>
-          <path class="leg a" d="M0 52.2 L1.5 65 L0 78" fill="none" stroke-width="3.8"/>
-          <path class="arm a" d="M-4.6 34.3 L-4 43 L-3 50.5" fill="none" stroke-width="3.2"/>
-        </g>
-      </g>
-      <rect x="0" y="78" width="100" height="22" fill="#0E0A10"/>
-      <rect x="0" y="78" width="100" height="1.6" fill="#D9A25C"/>
-    </svg>
+    <canvas id="mark" width="208" height="128" aria-hidden="true"></canvas>
 
     <h1>ورايا</h1>
     <p class="pitch" lang="ar">
@@ -309,6 +225,158 @@
     <div class="bar"><i></i></div>
   </div>
 
+  <script>
+    // The mark the ending opens with (lib/ui/game_mark.dart, GameMark.panel
+    // crossing): you cross the panel, and your past crosses it on the very
+    // same steps 0.85s and 1.7s behind, each absent until its delay has
+    // passed. The bodies are the game's own Figure (lib/game/character/
+    // figure.dart), every number copied, so the first thing the game shows
+    // is the last thing it shows. Here and not in Flutter because this has
+    // to be on screen before Flutter is. Still for anyone who asked for less
+    // motion: the panel as it stands, the ending's still frame.
+    (function () {
+      var canvas = document.getElementById('mark');
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      var W = 208, H = 128;
+      var PI = Math.PI;
+      var sky = [[0, '#F7C032'], [0.35, '#F1AD0C'], [0.62, '#E59D00'], [0.82, '#DE9600'], [1, '#D28C02']];
+      var BODY = '#07050A', SHADOW = '220,228,238';
+      var ALPHA = [0.45, 0.72, 1];          // oldest first: pastFades reversed
+      var LAGS = [1.7, 0.85, 0];            // GameMark.crossLags
+      var AT = [0.78, 0.55, 0.32];          // GameMark.panel, standing
+      var CROSS = 4.4, FROM = 1.22, TO = -0.24;
+      var STRIDE = 0.20;
+
+      function line(a, b, w) {
+        ctx.lineWidth = w;
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      }
+      function leg(h, hip, foot, front) {
+        var thigh = 0.235 * h, shin = 0.225 * h;
+        var dx = foot[0] - hip[0], dy = foot[1] - hip[1];
+        var limit = thigh + shin - 0.012 * h;
+        var dist = Math.hypot(dx, dy);
+        var ankle = dist > limit ? [hip[0] + dx * limit / dist, hip[1] + dy * limit / dist] : foot;
+        var reach = Math.min(Math.max(dist, 0.001), limit);
+        var cosA = Math.min(1, Math.max(-1, (thigh * thigh + reach * reach - shin * shin) / (2 * thigh * reach)));
+        var k = Math.atan2(dy, dx) - Math.acos(cosA);
+        var knee = [hip[0] + Math.cos(k) * thigh, hip[1] + Math.sin(k) * thigh];
+        var w = (front ? 0.062 : 0.055) * h;
+        line(hip, knee, w);
+        line(knee, ankle, w);
+        line(ankle, [ankle[0] + 0.06 * h, ankle[1]], 0.042 * h);
+      }
+      function arm(h, shoulder, angle) {
+        var amp = 0.95;
+        var bend = Math.min(1.8, Math.max(0.05, 0.95 - 0.65 * (angle / amp)));
+        var a = PI / 2 + angle;
+        var elbow = [shoulder[0] + Math.cos(a) * 0.175 * h, shoulder[1] + Math.sin(a) * 0.175 * h];
+        var b = a - bend;
+        var hand = [elbow[0] + Math.cos(b) * 0.165 * h, elbow[1] + Math.sin(b) * 0.165 * h];
+        line(shoulder, elbow, 0.048 * h);
+        line(elbow, hand, 0.048 * h);
+      }
+      function limbs(h, hip, shoulder, phase, front) {
+        var p = front ? phase : phase + PI;
+        var swing = Math.max(0, Math.sin(p)) * (1 + 0.3 * Math.cos(p));
+        leg(h, hip, [-STRIDE * h * Math.cos(p), -0.15 * h * swing], front);
+        arm(h, shoulder, 0.95 * Math.sin(front ? phase + PI : phase));
+      }
+      // Figure.render, running, facing left.
+      function figure(h, colour, phase) {
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.strokeStyle = colour; ctx.fillStyle = colour;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        var tilt = 0.25;
+        var hip = [0, -0.46 * h];
+        var torso = 0.33 * h, neck = 0.37 * h, head = 0.44 * h;
+        var shoulder = [hip[0] + Math.sin(tilt) * torso, hip[1] - Math.cos(tilt) * torso];
+        ctx.translate(0, -0.065 * h * (1 + Math.cos(2 * phase)) / 2);
+        limbs(h, hip, shoulder, phase, false);
+        ctx.save();
+        ctx.translate(hip[0], hip[1]);
+        ctx.rotate(tilt);
+        ctx.beginPath();
+        ctx.moveTo(-0.070 * h, 0);
+        ctx.quadraticCurveTo(-0.088 * h, -torso / 2, -0.098 * h, -torso);
+        ctx.lineTo(0.098 * h, -torso);
+        ctx.quadraticCurveTo(0.088 * h, -torso / 2, 0.070 * h, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.lineWidth = 0.05 * h; ctx.stroke();
+        line([0, -torso], [0, -neck], 0.055 * h);
+        ctx.beginPath(); ctx.arc(0.012 * h, -head, 0.072 * h, 0, 2 * PI); ctx.fill();
+        ctx.restore();
+        limbs(h, hip, shoulder, phase, true);
+        ctx.restore();
+      }
+      function colourOf(i) {
+        return i === 2 ? BODY : 'rgba(' + SHADOW + ',' + ALPHA[i] + ')';
+      }
+      function rounded(r) {
+        ctx.beginPath();
+        ctx.moveTo(r, 0); ctx.arcTo(W, 0, W, H, r); ctx.arcTo(W, H, 0, H, r);
+        ctx.arcTo(0, H, 0, 0, r); ctx.arcTo(0, 0, W, 0, r); ctx.closePath();
+      }
+      function draw(seconds) {
+        var ground = H * 0.80, h = H * 0.55, r = H * 0.18;
+        ctx.clearRect(0, 0, W, H);
+        ctx.save();
+        rounded(r); ctx.clip();
+        var g = ctx.createLinearGradient(0, 0, 0, ground);
+        for (var s = 0; s < sky.length; s++) g.addColorStop(sky[s][0], sky[s][1]);
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        for (var i = 0; i < 3; i++) {
+          var x, phase;
+          if (seconds == null) {
+            x = AT[i];
+            phase = -(2 - i) * PI;
+          } else {
+            var walked = seconds - LAGS[i];
+            if (walked < 0) continue;     // your past does not exist yet
+            x = FROM + (TO - FROM) * ((walked % CROSS) / CROSS);
+            phase = -x * W / (STRIDE * h);
+          }
+          ctx.save();
+          ctx.translate(W * x, ground);
+          figure(h, colourOf(i), phase);
+          ctx.restore();
+        }
+        ctx.fillStyle = '#0E0A10'; ctx.fillRect(0, ground, W, H - ground);
+        ctx.fillStyle = '#D9A25C'; ctx.fillRect(0, ground, W, H * 0.016);
+        ctx.restore();
+        rounded(r);
+        ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,231,176,0.2)'; ctx.stroke();
+      }
+
+      var scale = Math.min(window.devicePixelRatio || 1, 3);
+      function fit() {
+        var px = canvas.clientHeight ? canvas.clientHeight / H : 1;
+        canvas.width = Math.round(W * px * scale);
+        canvas.height = Math.round(H * px * scale);
+        ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+      }
+      fit();
+      window.addEventListener('resize', fit);
+
+      var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (still) {
+        draw(null);
+        window.addEventListener('resize', function () { draw(null); });
+        return;
+      }
+      var start = null;
+      function frame(now) {
+        if (!document.getElementById('mark')) return;   // the splash is gone
+        if (start === null) start = now;
+        draw((now - start) / 1000);
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    })();
+  </script>
   <script>
     // The game fires `waraya-ready` once the level is loaded and drawn
     // (lib/ui/ready/game_ready.dart). Not `flutter-first-frame`: that is the

@@ -67,6 +67,18 @@ LevelSource? get _authoring {
       : FileLevels(path, accepts: accepts);
 }
 
+/// The level a link to the bench names — `/lab/?level=hang-on-your-past` —
+/// or null. The levels on trial are only here, and the editor's menu that
+/// lists them is a desktop tool; a link is how one gets to a phone.
+Level? _linked(List<Level> disk) {
+  final id = Uri.base.queryParameters['level'];
+  if (id == null || id.isEmpty) return null;
+  for (final level in [...disk, ...Levels.bench, ...Levels.campaign]) {
+    if (level.id == id) return level;
+  }
+  return null;
+}
+
 class ShadowLabApp extends StatelessWidget {
   const ShadowLabApp({super.key, this.authoring, this.levels, this.upload});
 
@@ -87,6 +99,7 @@ class ShadowLabApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final authoring = this.authoring;
     final disk = levels ?? const <Level>[];
+    final linked = _linked(disk);
     return MaterialApp(
       title: 'waraya · shadow lab',
       debugShowCheckedModeBanner: false,
@@ -104,7 +117,8 @@ class ShadowLabApp extends StatelessWidget {
       ),
       home: Scaffold(
         body: EditorScreen(
-          startFrom: disk.isEmpty ? Levels.lab : disk.first,
+          startFrom: linked ?? (disk.isEmpty ? Levels.lab : disk.first),
+          startPlaying: linked != null,
           extraLevels: disk,
           upload: upload,
           audio: FlameAudioOut(),

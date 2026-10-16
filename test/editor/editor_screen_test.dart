@@ -66,6 +66,36 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
+  testWidgets('a link to a level on the bench opens it playing, on a phone', (
+    tester,
+  ) async {
+    // A phone on its side: the toolbar used to be kept clear of 504 units of
+    // readout and title, which left it no width at all.
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(brightness: Brightness.dark),
+        home: Scaffold(
+          body: EditorScreen(
+            startFrom: Levels.hangOnYourPast,
+            startPlaying: true,
+          ),
+        ),
+      ),
+    );
+    await settle(tester);
+    final game = tester
+        .widget<GameWidget<EditorGame>>(find.byType(GameWidget<EditorGame>))
+        .game!;
+    expect(game.mode, EditorMode.playing);
+    expect(game.level.id, 'hang-on-your-past');
+    expect(find.byTooltip('start from…'), findsOneWidget);
+    expect(tester.getSize(find.byTooltip('edit (Tab)')).width, greaterThan(0));
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('Tab plays it and Tab brings you back', (tester) async {
     final game = await open(tester);
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);

@@ -37,6 +37,7 @@ class EditorScreen extends StatefulWidget {
     this.onReread,
     this.saveFolder,
     this.audio,
+    this.startPlaying = false,
   });
 
   /// What is on the bench when it opens.
@@ -58,6 +59,11 @@ class EditorScreen extends StatefulWidget {
 
   /// Silent when null — the tests.
   final AudioOut? audio;
+
+  /// Opens in [startFrom] playing rather than editing — a link to one level
+  /// on the bench (`/lab/?level=<id>`), to be played on a phone where the
+  /// editor's panels have no room.
+  final bool startPlaying;
 
   @override
   State<EditorScreen> createState() => _EditorScreenState();
@@ -96,6 +102,11 @@ class _EditorScreenState extends State<EditorScreen> {
     _editor.addListener(_changed);
     _game.camera.viewfinder.add(EditorOverlay(game: _game, editor: _editor));
     _recheck();
+    if (widget.startPlaying) {
+      _game.loaded.then((_) {
+        if (mounted) _play();
+      });
+    }
   }
 
   @override
@@ -444,6 +455,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 760;
     return Focus(
       onKeyEvent: _key,
       child: Stack(
@@ -475,7 +487,13 @@ class _EditorScreenState extends State<EditorScreen> {
           ),
           // Clear of the game's own readout on the left and the level's name on
           // the right, both of which stay up while editing.
-          Positioned(left: 264, top: 8, right: 240, child: _toolbar()),
+          //
+          // A phone has no room for either, and with them kept clear the
+          // toolbar had no width at all and the bench had no buttons.
+          if (narrow)
+            Positioned(left: 8, top: 8, right: 8, child: _toolbar())
+          else
+            Positioned(left: 264, top: 8, right: 240, child: _toolbar()),
           if (_editing)
             Positioned(
               right: 8,
