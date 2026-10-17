@@ -4294,7 +4294,7 @@ abstract final class Levels {
   static final Level hangOnYourPast = Level(
     id: 'hang-on-your-past',
     solution: const [
-      Move.right(4), // to the edge, at the leash's pace, and off it
+      Move.right(2.75), // to the edge, at the leash's pace, and off it
       Move.left(3), // hanging: in under the ledge, and along to the end
     ],
     wrongIdeas: const [
@@ -4311,7 +4311,7 @@ abstract final class Levels {
     teachesEn: 'Your past holds you: you cannot get far from it, not even down.',
     delaySeconds: 1.5,
     leash: 200,
-    spawnX: -300,
+    spawnX: -200,
     floorTop: _floor,
     blocks: [
       // The ledge, with a way in under it: a slab, the opening, its floor.
@@ -4335,49 +4335,54 @@ abstract final class Levels {
   /// it stands there nothing is holding you.
   ///
   /// The numbers are the puzzle. The gap (150) leaves room for a jump from
-  /// anywhere in the last 45 of the edge; the leash (90) is short enough
-  /// that hanging off a past at the very edge reaches 111, short of the 128
-  /// the far side needs. The lamp is far enough back that the sweep's
-  /// «touch what is behind you» does not reach it on a leash, and close
-  /// enough that a past standing in it covers the run from there and the
-  /// jump. And a past only stands in it as long as you did: in and straight
-  /// out is a moment of light, not a run.
+  /// anywhere in the last 45 of the edge; the leash (100) is short enough
+  /// that hanging off a past at the very edge reaches 121, short of the 128
+  /// the far side needs.
+  ///
+  /// And they are the pace. In the dark you can never be more than a leash
+  /// ahead of where you were D seconds ago, so the leash over the delay is
+  /// the fastest you can go there: at 90 over 3 it was a 30-a-second crawl,
+  /// reported from playing as too slow. So the delay is 2, the lamp is a
+  /// step behind the start rather than across the level, and the end is
+  /// just past the gap: the dark is never walked far.
   static final Level theLightLetsGo = Level(
     id: 'the-light-lets-go',
     solution: const [
-      Move.left(10), // into the lamp, at the leash's pace, and stand there
-      Move.right(1.95), // run while your past stands in the light
+      Move.left(2), // back into the lamp: your past will follow you in
+      Move.right(1.2), // run while it stands in the light
       Move.right(0.8, jump: true), // and jump: nothing is holding you
-      Move.right(6),
+      Move.right(5),
     ],
     wrongIdeas: const [
       // Straight for the gap.
       [Move.right(3), Move.right(0.8, jump: true), Move.right(6)],
       // Wait at the edge for your past, and jump with it right behind you.
       [Move.right(1), Move(4), Move.right(0.8, jump: true), Move.right(6)],
-      // Into the light and straight out.
+      // Into the light, and then wait at the edge: by the jump your past
+      // has walked out of it after you.
       [
-        Move.left(4),
-        Move.right(3.4),
+        Move.left(2),
+        Move.right(1.2),
+        Move(2.5),
         Move.right(0.8, jump: true),
-        Move.right(6),
+        Move.right(5),
       ],
     ],
     name: 'النور بيفكّك',
     teaches: 'ماضيك في النور مبيمسكش. وصّله للنور، واجري.',
     nameEn: 'The Light Lets Go',
     teachesEn: 'Your past in the light holds nothing. Lead it there, then run.',
-    delaySeconds: 3,
-    leash: 90,
+    delaySeconds: 2,
+    leash: 100,
     spawnX: -100,
     floorTop: _floor,
     blocks: [
-      const Rect.fromLTRB(-440, 620, 0, 2200),
-      const Rect.fromLTRB(-480, 200, -440, 2200),
+      const Rect.fromLTRB(-340, 620, 0, 2200),
+      const Rect.fromLTRB(-380, 200, -340, 2200),
       const Rect.fromLTRB(150, 620, 1200, 2200),
     ],
-    lights: const [LightSpec(Rect.fromLTRB(-400, 200, -300, 620))],
-    goal: const Rect.fromLTRB(400, 548, 480, 620),
+    lights: const [LightSpec(Rect.fromLTRB(-300, 200, -200, 620))],
+    goal: const Rect.fromLTRB(220, 548, 300, 620),
   );
 
   /// Levels on the bench and not in the campaign: they use something still

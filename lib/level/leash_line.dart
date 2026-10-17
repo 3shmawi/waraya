@@ -49,15 +49,39 @@ class LeashLine extends Component {
     return (1.2 + 1.3 * taut) / (1 + 2.5 * stretched);
   }
 
+  /// How far the line shakes either side at [reach], in world units: not
+  /// at all up to the end, and more the further past it.
+  ///
+  /// Thinning alone did not read as stretched, reported from playing. A
+  /// string pulled tighter than it goes hums, and that does.
+  static double strainAt(double reach) =>
+      min(8.0, 60 * max(0.0, reach - 1));
+
+  /// Seconds this has been drawing. The hum is paint, so it runs on the
+  /// frame clock and nothing reads it.
+  double _time = 0;
+
+  @override
+  void update(double dt) {
+    _time += dt;
+  }
+
   @override
   void render(Canvas canvas) {
     final from = player().bounds.center;
     for (final to in ends()) {
       final reach = (to - from).distance / length;
       final taut = reach.clamp(0.0, 1.0);
+      final strain = strainAt(reach);
       _paint
-        ..color = color.withValues(alpha: 0.12 + 0.6 * taut * taut)
-        ..strokeWidth = widthAt(reach);
+        ..color = color.withValues(
+          alpha: strain > 0 ? 0.85 : 0.12 + 0.6 * taut * taut,
+        )
+        ..strokeWidth = max(1.0, widthAt(reach));
+      if (strain > 0) {
+        canvas.drawPath(_humming(from, to, strain), _paint);
+        continue;
+      }
       // Slack sags: a leash that is not yet holding hangs below the line
       // between you, by less the tighter it gets.
       final sag = (1 - taut) * 40;
@@ -67,5 +91,21 @@ class LeashLine extends Component {
         ..quadraticBezierTo(middle.dx, middle.dy, to.dx, to.dy);
       canvas.drawPath(path, _paint);
     }
+  }
+
+  /// The line from [from] to [to], shaking across itself: two humps, fixed
+  /// at both ends, swinging fast.
+  Path _humming(Offset from, Offset to, double strain) {
+    final along = to - from;
+    final across = Offset(-along.dy, along.dx) / max(along.distance, 1e-6);
+    final swing = strain * sin(_time * 55);
+    final path = Path()..moveTo(from.dx, from.dy);
+    const steps = 24;
+    for (var i = 1; i <= steps; i++) {
+      final u = i / steps;
+      final point = from + along * u + across * (swing * sin(2 * pi * u));
+      path.lineTo(point.dx, point.dy);
+    }
+    return path;
   }
 }

@@ -174,6 +174,22 @@ void main() {
       expect(LeashLine.widthAt(2), lessThan(LeashLine.widthAt(1.4)));
     });
 
+    test('and hums past it', () {
+      expect(LeashLine.strainAt(1), 0);
+      expect(LeashLine.strainAt(1.1), greaterThan(0));
+      expect(LeashLine.strainAt(1.5), greaterThan(LeashLine.strainAt(1.1)));
+    });
+
+    // In the dark you can never be more than a leash ahead of where you were
+    // D seconds ago, so leash ÷ delay is the fastest you go there. At 30 a
+    // second «النور بيفكّك» was a crawl, reported from playing.
+    test('no level with a leash crawls', () {
+      for (final level in Levels.bench.where((l) => l.leash != null)) {
+        final pace = level.leash! / level.delays.last;
+        expect(pace, greaterThanOrEqualTo(50), reason: level.id);
+      }
+    });
+
     test('no level in the campaign has one', () {
       expect(Levels.campaign.where((level) => level.leash != null), isEmpty);
     });
