@@ -207,9 +207,12 @@ class Level {
   /// steps off after you. And you cannot jump further from it than this
   /// either.
   ///
-  /// A past that has not arrived yet holds you from where it will arrive
-  /// from: the start, where you stood D seconds ago. A past in the light
-  /// does not hold you at all — it is not there.
+  /// Every past is there from the first tick, standing at the start —
+  /// where you stood D seconds ago — until the delay has passed. A past in
+  /// the light does not hold you at all: it is not there.
+  ///
+  /// Soft at the end: the further from a past you get, the slower a step
+  /// away from it goes, to nothing at the leash's length.
   final double? leash;
 
   /// Whether this level can be checked by somebody who did not write it.

@@ -61,6 +61,21 @@ class ShadowRecorder {
     }
   }
 
+  /// Fills the history with [pose] held for the whole delay: the shadow is
+  /// there from the first tick, standing where [pose] is, and starts
+  /// replaying what was recorded once the delay has passed.
+  ///
+  /// For a level where your past has to be *somewhere* from the start (the
+  /// leash, `Level.leash`): it is you D seconds ago, and D seconds before the
+  /// level began you were standing at its start.
+  void prefill(PoseSnapshot pose) {
+    _buffer.clear();
+    for (var i = 0; i < delayTicks; i++) {
+      _buffer.addLast(pose);
+    }
+    _current = pose;
+  }
+
   /// Wipes the history. Used on scene reload — a shadow that outlived the
   /// reset would replay a life the player no longer had.
   void clear() {

@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/level/level.dart';
+import 'package:waraya/level/leash_line.dart';
 import 'package:waraya/level/level_check.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
@@ -73,13 +74,41 @@ void main() {
     );
 
     testWithGame<LevelGame>(
-      'before your past arrives it holds you from the start',
+      'your past is there from the start, standing, and holds you',
       () => build(flat(leash: 50, delay: 2)),
       (game) async {
         await game.ready();
+        final past = game.shadows.single;
+        // Before a single tick: someone at the other end of the rope.
+        expect(past.isActive, isTrue);
+        expect(past.x, game.level.spawnX);
         Run(game).hold(1.9, axis: 1);
-        expect(game.shadows.single.isActive, isFalse);
-        expect(game.player.x, inInclusiveRange(40, 50.01));
+        expect(past.x, game.level.spawnX, reason: 'it waits out the delay');
+        expect(game.player.x, inInclusiveRange(45, 50.01));
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'the end is soft: a slow walk behind your past, not a stop and a wait',
+      () => build(flat(leash: 90, delay: 3)),
+      (game) async {
+        await game.ready();
+        final run = Run(game)..hold(6, axis: 1);
+        // Once it is walking after you, you never stand still for long: the
+        // hard end had you stopped for over two seconds in every three.
+        var still = 0, longest = 0;
+        var last = game.player.x;
+        run.hold(
+          6,
+          axis: 1,
+          each: () {
+            still = game.player.x - last < 0.05 ? still + 1 : 0;
+            longest = max(longest, still);
+            last = game.player.x;
+          },
+        );
+        expect(longest * Playthrough.dt, lessThan(0.3));
+        expect(fromPast(game), lessThanOrEqualTo(90.01));
       },
     );
 
@@ -130,14 +159,20 @@ void main() {
       () => build(Levels.hangOnYourPast),
       (game) async {
         await game.ready();
-        final run = Run(game)..hold(2.75, axis: 1);
+        final run = Run(game);
         var hung = false;
-        run.hold(0.4, each: () => hung |= game.player.isHanging);
+        run.hold(4, axis: 1, each: () => hung |= game.player.isHanging);
         expect(hung, isTrue, reason: run.where);
         expect(game.player.y, greaterThan(620));
         expect(game.reloads, 0);
       },
     );
+
+    test('the line tightens up to the end and thins past it', () {
+      expect(LeashLine.widthAt(0.5), lessThan(LeashLine.widthAt(1)));
+      expect(LeashLine.widthAt(1.4), lessThan(LeashLine.widthAt(1)));
+      expect(LeashLine.widthAt(2), lessThan(LeashLine.widthAt(1.4)));
+    });
 
     test('no level in the campaign has one', () {
       expect(Levels.campaign.where((level) => level.leash != null), isEmpty);

@@ -199,18 +199,20 @@ class Player extends PositionComponent {
       _jumpedSinceCapture = true;
     }
 
-    final walked = locomotion.horizontalVelocity * dt;
-    _walking = walked.abs() > 0.01;
-    if (_walking) facing = walked.sign;
+    final pushed = locomotion.horizontalVelocity * dt;
+    if (pushed.abs() > 0.01) facing = pushed.sign;
 
-    final step = walked + carryX;
+    final step = pushed + carryX;
     carryX = 0;
     if (step != 0) {
       position.x += step;
       _resolveHorizontal(world, step);
     }
     _hanging = false;
-    _holdStepToLeash(before);
+    // The legs go at the pace the leash lets the body go, not the pace the
+    // stick asks for: full speed on the spot reads as a body skating.
+    final walked = pushed * _holdStepToLeash(before);
+    _walking = walked.abs() > 0.01;
     if (walked != 0) {
       _stridePhase =
           (_stridePhase +
@@ -225,26 +227,59 @@ class Player extends PositionComponent {
     _holdFallToLeash(beforeFall, world, dt);
   }
 
-  /// Stops a step across where it would take the body further from a past
-  /// than the leash allows (`Level.leash`).
+  /// Slows a step across as it nears the end of the leash, and stops it
+  /// there (`Level.leash`). Gives back how much of the step was kept, 0 to 1.
   ///
   /// The leash is a wall that goes where your past goes, round it at the
   /// leash's length. A step into that wall stops at it, the way a step into
-  /// a block does, and that is all: it only ever takes back part of the step
-  /// the body itself just made, so it can stop you and never moves you. And
-  /// it allows whatever distance there already was — a past that walked
-  /// away on its own leaves you where you are, until you walk back or it
-  /// comes back.
+  /// a block does: it only ever takes back part of the step the body itself
+  /// just made, so it can stop you and never moves you. And it allows
+  /// whatever distance there already was — a past that walked away on its
+  /// own leaves you where you are, until you walk back or it comes back.
+  ///
+  /// **Soft at the end.** Over the last [_easeShare] of the leash a step
+  /// that takes you further from a past is cut down the closer you are, to
+  /// nothing at the end. The first version let you run at full speed into
+  /// the end and stop dead, and then stand there until your past caught up:
+  /// in the dark that was a walk, a stop, a wait of most of D, and a walk —
+  /// reported from playing as being stuck. Eased, the same rope turns that
+  /// into one slow, steady walk behind your past with the line taut, and the
+  /// furthest you can get is still the leash's length.
   ///
   /// Checked for the step across and the fall separately, like the walls
   /// are. Checked as one move, walking in and falling out cancelled each
   /// other and the body hung frozen with the way in an arm's length off.
-  void _holdStepToLeash(Offset before) {
+  double _holdStepToLeash(Offset before) {
+    final length = leash;
+    final anchors = leashAnchors?.call();
+    if (length == null || anchors == null || anchors.isEmpty) return 1;
+    final after = bounds.center;
+    final across = after.dx - before.dx;
+    if (across == 0) return 1;
+
+    var keep = 1.0;
+    final ease = length * _easeShare;
+    for (final anchor in anchors) {
+      final from = (before - anchor).distance;
+      // Towards it, or round it: nothing to hold.
+      if ((after - anchor).distance <= from) continue;
+      keep = min(keep, ((length - from) / ease).clamp(0.0, 1.0));
+    }
+    if (keep < 1) position.x -= across * (1 - keep);
+
+    // And never past the end, whatever the easing left of the step.
     final cut = _cutToLeash(before);
-    if (cut == null) return;
-    position.x -= cut.dx;
-    locomotion.stopHorizontally();
+    if (cut != null) {
+      position.x -= cut.dx;
+      locomotion.stopHorizontally();
+      keep = across == 0 ? 0 : (bounds.center.dx - before.dx) / across;
+    }
+    return keep.clamp(0.0, 1.0);
   }
+
+  /// How much of the leash, at its end, slows you down. See
+  /// [_holdStepToLeash].
+  static const double _easeShare = 1.0;
 
   /// The fall against the same wall: a body falling into it slides down it,
   /// the way it would down a slope, and comes to rest at the bottom of it —

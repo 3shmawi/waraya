@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -33,14 +34,30 @@ class LeashLine extends Component {
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round;
 
+  /// How thick the line is drawn at [reach] — the distance over the
+  /// leash's length.
+  ///
+  /// Thicker as it tightens, up to the end. Past the end, which only a past
+  /// walking away on its own can do, it thins the way a stretched band does,
+  /// until your past comes back. It does not drag you after it: you would be
+  /// recorded being dragged, and your past would replay the dragging, and
+  /// drag you again — turn round at the end of the leash and you could never
+  /// walk back (`docs/phase-12-more.md` §3.1).
+  static double widthAt(double reach) {
+    final taut = reach.clamp(0.0, 1.0);
+    final stretched = max(0.0, reach - 1);
+    return (1.2 + 1.3 * taut) / (1 + 2.5 * stretched);
+  }
+
   @override
   void render(Canvas canvas) {
     final from = player().bounds.center;
     for (final to in ends()) {
-      final taut = ((to - from).distance / length).clamp(0.0, 1.0);
+      final reach = (to - from).distance / length;
+      final taut = reach.clamp(0.0, 1.0);
       _paint
         ..color = color.withValues(alpha: 0.12 + 0.6 * taut * taut)
-        ..strokeWidth = 1.2 + 1.3 * taut;
+        ..strokeWidth = widthAt(reach);
       // Slack sags: a leash that is not yet holding hangs below the line
       // between you, by less the tighter it gets.
       final sag = (1 - taut) * 40;

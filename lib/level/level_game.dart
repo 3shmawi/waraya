@@ -21,6 +21,7 @@ import '../lab/lab_settings.dart';
 import '../shadow/fixed_ticker.dart';
 import '../shadow/shadow_figure.dart';
 import '../shadow/shadow_recorder.dart';
+import '../shadow/snapshot.dart';
 import '../ui/level_fade.dart';
 import '../ui/level_hud.dart';
 import '../ui/level_title.dart';
@@ -447,6 +448,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       player,
     ]);
 
+    _waitAtStart();
     aimCamera();
     // Whatever put this level up — the level before it finishing, or the menu
     // — the new one arrives out of the dark rather than appearing in it.
@@ -746,36 +748,40 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   ///
   /// Only a light that is on: a switched-off lamp erases nobody.
   /// Where the pasts holding you are (`Level.leash`): every one that is
-  /// here and out of the light.
-  ///
-  /// And one that has not arrived yet is where it is going to arrive from —
-  /// you, D seconds ago, which before D seconds is standing at the start.
-  /// The first version let the leash off until the past appeared, and a
-  /// short level was a sprint: run, and be across before there is anybody
-  /// to hold you. The rope is tied to the start until your past picks it up.
+  /// out of the light. In a leash level every past is there from the start
+  /// ([_waitAtStart]), so there is always a body at the end of the rope.
   ///
   /// [drawn] is for the line, which follows a past where it is drawn rather
   /// than where it is on the tick.
   List<Offset> _leashEnds({bool drawn = false}) => [
-    for (final past in shadows)
-      if (past.isActive)
-        ...[
-          if (!past.inLight)
-            drawn
-                ? past.bounds.center + past.renderOffset
-                : past.bounds.center,
-        ]
-      else if (!_standsInLight(_start))
-        _start.center,
+    for (final past in liveShadows)
+      drawn ? past.bounds.center + past.renderOffset : past.bounds.center,
   ];
 
-  /// The body standing at the start, where every past begins.
-  Rect get _start => Rect.fromLTWH(
-    level.spawnX - 22,
-    level.floorTop - 96,
-    44,
-    96,
-  );
+  /// In a leash level, puts every past at the start, standing, from the
+  /// first tick, until the delay has passed and it starts walking after you.
+  ///
+  /// The first version left the past out until it arrived and tied the rope
+  /// to the empty spot where it would: the line ran from you to nothing.
+  /// Reported from playing. It is the same rule either way — your past is
+  /// you D seconds ago, and before the level you stood at its start — now
+  /// with someone there to hold the other end.
+  void _waitAtStart() {
+    if (level.leash == null) return;
+    final standing = PoseSnapshot(
+      x: level.spawnX,
+      y: level.floorTop,
+      facing: 1,
+      state: PoseState.idle,
+      stridePhase: 0,
+    );
+    for (final (i, line) in recorders.indexed) {
+      line.prefill(standing);
+      shadows[i]
+        ..apply(standing)
+        ..inLight = _standsInLight(shadows[i].bounds);
+    }
+  }
 
   bool _standsInLight(Rect body) =>
       lights.any((light) => light.isOn && light.area.overlaps(body));
@@ -985,6 +991,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       ghost.inLight = false;
     }
     player.resetToSpawn();
+    _waitAtStart();
     prelude?.restart();
     for (final door in doors) {
       door.reset();

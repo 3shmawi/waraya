@@ -4294,14 +4294,16 @@ abstract final class Levels {
   static final Level hangOnYourPast = Level(
     id: 'hang-on-your-past',
     solution: const [
-      Move.right(2.75), // to the edge your past lets you reach, and off it
+      Move.right(4), // to the edge, at the leash's pace, and off it
       Move.left(3), // hanging: in under the ledge, and along to the end
     ],
     wrongIdeas: const [
       // For the far side: off the edge and keep going.
       [Move.right(14)],
+      // To the edge, and back off it: the way down is over it.
+      [Move.right(2), Move(2), Move.left(8)],
       // Hang too long, and your past comes off the ledge after you.
-      [Move.right(4), Move.left(8)],
+      [Move.right(6), Move.left(8)],
     ],
     name: 'اتعلّق في ماضيك',
     teaches: 'ماضيك ماسكك: مبتبعدش عنه، ولا لتحت.',
@@ -4343,8 +4345,8 @@ abstract final class Levels {
   static final Level theLightLetsGo = Level(
     id: 'the-light-lets-go',
     solution: const [
-      Move.left(8), // into the lamp, at the leash's pace, and stand there
-      Move.right(2), // run while your past stands in the light
+      Move.left(10), // into the lamp, at the leash's pace, and stand there
+      Move.right(1.95), // run while your past stands in the light
       Move.right(0.8, jump: true), // and jump: nothing is holding you
       Move.right(6),
     ],
