@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../lab/lab_scene.dart';
 import 'level.dart';
+import 'mirror_levels.dart';
 import 'playthrough.dart';
 
 /// The puzzles.
@@ -4501,6 +4502,7 @@ abstract final class Levels {
     putOutItsLight,
     theMirrorBringsYouBack,
     yourPastGoesAgain,
+    ...MirrorLevels.all,
   ];
 
   static final Level lab = Level(

@@ -8,6 +8,7 @@ import 'package:waraya/level/level.dart';
 import 'package:waraya/level/level_check.dart';
 import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
+import 'package:waraya/level/mirror_levels.dart';
 import 'package:waraya/level/playthrough.dart';
 
 import 'run.dart';
@@ -291,4 +292,104 @@ void main() {
       );
     });
   }
+
+  group('the harder ones: sweeps', () {
+    /// Plays each of [runs] from a fresh level and names the ones that
+    /// finish.
+    Future<Set<String>> finishing(
+      LevelGame game,
+      Map<String, List<Move>> runs,
+    ) async {
+      await game.ready();
+      final done = <String>{};
+      for (final entry in runs.entries) {
+        game.reload();
+        final run = start(game)..play(entry.value, stopWhenComplete: true);
+        if (run.finishedAt != null) done.add(entry.key);
+      }
+      return done;
+    }
+
+    // Down, a wait short of the key, then onto it and stay: not a knife
+    // edge — a second and more of waits work, and none at all does not.
+    testWithGame<LevelGame>(
+      'open-it-late: any wait down there over a second, and only that',
+      () => build(MirrorLevels.openItLate),
+      (game) async {
+        final runs = {
+          for (final wait in [0.0, 0.3, 1.5, 2.0, 2.5])
+            '$wait': [
+              const Move.right(1.75),
+              Move(wait),
+              const Move.right(0.6),
+              // Stand until the mirror takes you back, then go.
+              Move(6.0 - 1.75 - wait - 0.6),
+              const Move.left(6),
+            ],
+        };
+        expect(await finishing(game, runs), {'1.5', '2.0', '2.5'});
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'all-of-it-in-the-mirror: the same window, with the lamp after',
+      () => build(MirrorLevels.allOfItInTheMirror),
+      (game) async {
+        final runs = {
+          for (final wait in [0.0, 0.5, 1.6, 2.0, 2.4])
+            '$wait': [
+              const Move.right(1.75),
+              Move(wait),
+              const Move.right(1.9),
+              Move(6.9 - 1.75 - wait - 1.9),
+              const Move.left(7),
+            ],
+        };
+        expect(await finishing(game, runs), {'1.6', '2.0', '2.4'});
+      },
+    );
+
+    testWithGame<LevelGame>(
+      "the-mirror-in-the-light: any while on the door's button, then the lamp's",
+      () => build(MirrorLevels.theMirrorInTheLight),
+      (game) async {
+        final runs = {
+          for (final stand in [1.4, 1.85, 2.2])
+            '$stand': [
+              const Move.right(2.15),
+              Move(stand),
+              const Move.right(1.1),
+              const Move(2),
+              const Move.left(6),
+            ],
+        };
+        expect(await finishing(game, runs), {'1.4', '1.85', '2.2'});
+      },
+    );
+
+    // Every order that does the far button before going through: none of
+    // them gets you the right side of the first door while your past is on
+    // the far button.
+    testWithGame<LevelGame>(
+      'from-behind-the-door: the far button first never works',
+      () => build(MirrorLevels.fromBehindTheDoor),
+      (game) async {
+        final runs = {
+          for (final far in [0.5, 2.0, 4.0])
+            for (final near in [1.0, 3.0, 5.0])
+              for (final wait in [1.0, 3.0, 5.5])
+                '$far/$near/$wait': [
+                  const Move.left(1.6),
+                  Move(far),
+                  const Move.right(2.75),
+                  Move(near),
+                  const Move.right(0.6),
+                  Move(wait),
+                  const Move.right(8),
+                ],
+        };
+        expect(await finishing(game, runs), isEmpty);
+      },
+    );
+  });
 }
