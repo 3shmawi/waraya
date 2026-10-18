@@ -226,10 +226,204 @@ abstract final class MirrorLevels {
     goal: const Rect.fromLTRB(-500, 328, -420, 400),
   );
 
+  /// **Two of you, two returns.** With two pasts the mirror takes you back
+  /// twice — once when the near one gets there, once when the far one does —
+  /// and the mirror is under a lamp, so each return happens only if that
+  /// past arrives in the dark.
+  ///
+  /// The near one gets there far too soon: if it takes you back, you are up
+  /// top before anything is done. So the lamp has to be on for the near one
+  /// and out for the far one: be on the lamp's button when the far one is
+  /// due, and anywhere else when the near one is. And the door's button down
+  /// there is a long way from the door, so it is held after you are back up
+  /// by the far past — the one that brought you.
+  static final Level twoOfYouTwoReturns = Level(
+    id: 'two-of-you-two-returns',
+    solution: const [
+      Move.right(1.75), // over the mirror, off the edge, short of the lamp's
+      Move.right(1.42), // over it — not on it when the near past is due
+      Move(2.1), // on the door's button, long: the far past will hold it
+      Move.left(0.9), // back to the lamp's, and stand
+      Move(2.3), // until the far past is on the mirror, in the dark
+      Move.left(8), // and the long way to the door
+    ],
+    wrongIdeas: const [
+      // Down onto the lamp's button and stand: the near past takes you back
+      // before anything is done.
+      [Move.right(2.15), Move(6), Move.left(8)],
+      // The first mirror level's answer: the door's button until it takes
+      // you back. With the lamp on, it never does.
+      [Move.right(3.25), Move(8), Move.left(8)],
+    ],
+    name: 'اتنين ورجعتين',
+    teaches: 'ماضيك القريب بيرجّعك بدري. خلّي النور يستناه.',
+    nameEn: 'Two of You, Two Returns',
+    teachesEn:
+        'The near past brings you back too soon. Let the light wait '
+        'for it.',
+    delays: const [2.5, 7],
+    spawnX: 0,
+    floorTop: 400,
+    blocks: [
+      const Rect.fromLTRB(-900, 400, 300, 2200),
+      const Rect.fromLTRB(300, 620, 1000, 2200),
+      const Rect.fromLTRB(-940, 140, -900, 2200),
+      const Rect.fromLTRB(1000, 140, 1040, 2200),
+    ],
+    mirrors: const [Rect.fromLTRB(150, 388, 210, 400)],
+    lights: const [LightSpec(Rect.fromLTRB(110, 150, 250, 400), id: 'lamp')],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(460, 608, 520, 620), opens: 'lamp'),
+      // Narrow, so a past walking over it does not open the door far
+      // enough to get through (§9.3): it has to stand.
+      PlateSpec(area: Rect.fromLTRB(690, 608, 730, 620), opens: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-560, 150, -534, 400)),
+    ],
+    goal: const Rect.fromLTRB(-720, 328, -640, 400),
+  );
+
+  /// **A step, then a mirror.** The way out is up on a ledge you can only
+  /// climb by leaving yourself as a step, ducked at its foot — and its door's
+  /// button is down on the ground, a long way off.
+  ///
+  /// So you would have to climb twice, and your one past cannot be the step
+  /// and the button at once. The mirror on the ledge is the second climb:
+  /// stand on it, go down to the button, and it puts you back up there
+  /// while your past walks down after you and stands on the button.
+  static final Level aStepThenAMirror = Level(
+    id: 'a-step-then-a-mirror',
+    solution: const [
+      Move.right(0.85), // to the foot of the ledge
+      Move(4.0, crouch: true), // duck: the step you are leaving
+      Move.left(0.9), // out of your own way
+      Move(0.15),
+      Move.right(0.4), // run at it
+      Move.right(0.55, jump: true), // onto its head
+      Move.right(0.6, jump: true), // and up onto the ledge
+      Move.right(0.4), // onto the mirror
+      Move.left(2.35), // off the ledge and away to the button
+      Move(1.8), // and stand, until it takes you back up
+      Move.right(6), // along the ledge, through, as your past stands there
+    ],
+    wrongIdeas: const [
+      // The button first, then the climb: by the time you are up, your past
+      // has long left the button.
+      [
+        Move.left(1.0),
+        Move(1.5),
+        Move.right(2.1),
+        Move(4.0, crouch: true),
+        Move.left(0.9),
+        Move(0.15),
+        Move.right(0.4),
+        Move.right(0.55, jump: true),
+        Move.right(0.6, jump: true),
+        Move.right(6),
+      ],
+      // Up, and straight on to the door: nobody is on its button.
+      [
+        Move.right(0.85),
+        Move(4.0, crouch: true),
+        Move.left(0.9),
+        Move(0.15),
+        Move.right(0.4),
+        Move.right(0.55, jump: true),
+        Move.right(0.6, jump: true),
+        Move.right(8),
+      ],
+    ],
+    name: 'سلّمة ومراية',
+    teaches: 'طلعت مرة على نفسك. المراية هي الطلعة التانية.',
+    nameEn: 'A Step, Then a Mirror',
+    teachesEn: 'You climbed yourself once. The mirror is the second climb.',
+    delaySeconds: 4,
+    spawnX: -400,
+    floorTop: 620,
+    blocks: [
+      const Rect.fromLTRB(-1500, 620, 400, 2200),
+      const Rect.fromLTRB(-200, 430, 400, 2200),
+      const Rect.fromLTRB(-1040, 140, -1000, 620),
+      const Rect.fromLTRB(400, 140, 440, 2200),
+    ],
+    mirrors: const [Rect.fromLTRB(-120, 418, -60, 430)],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-630, 608, -570, 620), opens: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(240, 180, 266, 430)),
+    ],
+    goal: const Rect.fromLTRB(300, 358, 380, 430),
+  );
+
+  /// **Two mirrors.** One up top, one down in the pit, and each takes you
+  /// back to itself.
+  ///
+  /// The door is down at the far end of the pit, and the key that opens it
+  /// is up top, behind where you start — too far from the door to open it
+  /// and get there before your past flips it shut again. So you have to be
+  /// up top to open it and down by the door a moment later. Stand on the top
+  /// mirror, then go down and stand on the bottom one: the first takes you
+  /// up to the key, and the second brings you back down beside the door.
+  static final Level twoMirrors = Level(
+    id: 'two-mirrors',
+    solution: const [
+      Move.right(2.2), // over the top mirror and down
+      Move.right(0.95), // onto the bottom one, and stand
+      Move(1.7), // until the top one takes you up
+      Move.left(0.5), // towards the key, but not onto it yet
+      Move(0.6),
+      Move.left(0.5), // onto it, late
+      Move(1.0), // until the bottom one takes you down
+      Move.right(6), // to the door, before your past flips it back
+    ],
+    wrongIdeas: const [
+      // The key, then run for the door: too far.
+      [Move.left(0.6), Move(0.2), Move.right(9)],
+      // Only the top mirror: up again, key, and the long way down.
+      [
+        Move.right(2.2),
+        Move(2.5),
+        Move.left(0.5),
+        Move(0.9),
+        Move.left(0.4),
+        Move.right(9),
+      ],
+    ],
+    name: 'مرايتين',
+    teaches: 'مراية فوق ومراية تحت: كل واحدة بترجّعك ليها.',
+    nameEn: 'Two Mirrors',
+    teachesEn: 'One mirror up top, one below: each brings you back to itself.',
+    delaySeconds: 4,
+    spawnX: 0,
+    floorTop: 400,
+    blocks: [
+      const Rect.fromLTRB(-500, 400, 300, 2200),
+      const Rect.fromLTRB(300, 620, 1200, 2200),
+      const Rect.fromLTRB(-540, 140, -500, 2200),
+      const Rect.fromLTRB(1200, 140, 1240, 2200),
+    ],
+    mirrors: const [
+      Rect.fromLTRB(100, 388, 160, 400),
+      Rect.fromLTRB(600, 608, 660, 620),
+    ],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-150, 388, -70, 400), flips: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(1000, 360, 1026, 620)),
+    ],
+    goal: const Rect.fromLTRB(1080, 548, 1160, 620),
+  );
+
   static final List<Level> all = [
     theMirrorInTheLight,
     fromBehindTheDoor,
     openItLate,
     allOfItInTheMirror,
+    twoOfYouTwoReturns,
+    aStepThenAMirror,
+    twoMirrors,
   ];
 }

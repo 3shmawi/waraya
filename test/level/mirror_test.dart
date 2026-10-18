@@ -367,6 +367,73 @@ void main() {
       },
     );
 
+    testWithGame<LevelGame>(
+      "two-of-you-two-returns: any while on the door's button that fits",
+      () => build(MirrorLevels.twoOfYouTwoReturns),
+      (game) async {
+        final runs = {
+          // Shorter than that and the far past lets go of the button before
+          // you are at the door: it holds it as long as you did.
+          for (final stand in [1.8, 2.1, 2.4])
+            '$stand': [
+              const Move.right(1.75),
+              const Move.right(1.42),
+              Move(stand),
+              const Move.left(0.9),
+              Move(4.4 - stand),
+              const Move.left(8),
+            ],
+        };
+        expect(await finishing(game, runs), {'1.8', '2.1', '2.4'});
+      },
+    );
+
+    // The button first, for as long as you like, then the climb: your past
+    // is off the button before you are up.
+    testWithGame<LevelGame>(
+      'a-step-then-a-mirror: the button before the climb never works',
+      () => build(MirrorLevels.aStepThenAMirror),
+      (game) async {
+        final runs = {
+          for (final stand in [0.5, 1.5, 3.0, 5.0])
+            '$stand': [
+              const Move.left(1.0),
+              Move(stand),
+              const Move.right(2.1),
+              const Move(4.0, crouch: true),
+              const Move.left(0.9),
+              const Move(0.15),
+              const Move.right(0.4),
+              const Move.right(0.55, jump: true),
+              const Move.right(0.6, jump: true),
+              const Move.right(6),
+            ],
+        };
+        expect(await finishing(game, runs), isEmpty);
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'two-mirrors: the key any time in the window before the drop',
+      () => build(MirrorLevels.twoMirrors),
+      (game) async {
+        final runs = {
+          for (final wait in [0.2, 0.6, 1.0])
+            '$wait': [
+              const Move.right(2.2),
+              const Move.right(0.95),
+              const Move(1.7),
+              const Move.left(0.5),
+              Move(wait),
+              const Move.left(0.5),
+              Move(1.6 - wait),
+              const Move.right(6),
+            ],
+        };
+        expect(await finishing(game, runs), {'0.2', '0.6', '1.0'});
+      },
+    );
+
     // Every order that does the far button before going through: none of
     // them gets you the right side of the first door while your past is on
     // the far button.
