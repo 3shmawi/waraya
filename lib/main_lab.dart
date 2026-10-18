@@ -94,10 +94,17 @@ String? get _linkedId {
 /// level added since it was built, most likely: GitHub Pages serves the
 /// last build for some minutes after a new one goes up. Without this the
 /// bench opened its own scene, in the editor, and the link looked broken.
+///
+/// A plain reload is not enough, reported from waiting: the page itself is
+/// asked for again, but the browser keeps the game's own files for up to
+/// ten minutes and runs the old build from them. A hard reload asks for
+/// those too.
 String? _missing(Level? linked) {
   final id = _linkedId;
   if (id == null || linked != null) return null;
-  return 'no level "$id" in this build — if it is new, reload in a few minutes';
+  return 'no level "$id" in this build — if it is new, it can take ten '
+      'minutes to arrive; then hard-reload (Ctrl+Shift+R, or Cmd+Shift+R on a '
+      'Mac)';
 }
 
 class ShadowLabApp extends StatelessWidget {
