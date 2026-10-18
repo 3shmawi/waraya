@@ -305,17 +305,32 @@ class Player extends PositionComponent {
     final fall = after.dy - before.dy;
     if (fall == 0) return;
 
-    final cut = _cutToLeash(before);
-    if (cut == null) return;
     if (fall < 0) {
       // Rising into it: the head meets the wall, like a ceiling.
+      final cut = _cutToLeash(before);
+      if (cut == null) return;
       position.y -= cut.dy;
       locomotion.stopRising();
       return;
     }
 
+    // Only a leash that has you at its end, or inside it, holds a fall. One
+    // already further out than its length is a past that walked off on its
+    // own (or came out of the light far away), and it has never pulled, so
+    // it does not hold you up either: held there, a body falling down a wall
+    // stopped dead in mid-air the moment its past stepped out of a lamp, and
+    // was let down the wall a little at a time — past a way in that a fall
+    // is meant to be far too fast to turn into.
+    final holding = [
+      for (final anchor in anchors)
+        if ((before - anchor).distance <= length + 0.5) anchor,
+    ];
+    if (holding.isEmpty) return;
+    final cut = _cutToLeash(before, holding);
+    if (cut == null) return;
+
     var to = after;
-    for (final anchor in anchors) {
+    for (final anchor in holding) {
       final allowed = max(length, (before - anchor).distance);
       final out = to - anchor;
       if (out.distance > allowed) to = anchor + out * (allowed / out.distance);
@@ -323,7 +338,7 @@ class Player extends PositionComponent {
     final shift = to - after;
     final slides =
         to.dy >= before.dy &&
-        anchors.every(
+        holding.every(
           (anchor) =>
               (to - anchor).distance <=
               max(length, (before - anchor).distance) + 1e-6,
@@ -345,9 +360,9 @@ class Player extends PositionComponent {
   /// How much of the move from [before] to where the body is now has to be
   /// taken back to keep it within the leash of every past holding it, or
   /// null if none.
-  Offset? _cutToLeash(Offset before) {
+  Offset? _cutToLeash(Offset before, [List<Offset>? only]) {
     final length = leash;
-    final anchors = leashAnchors?.call();
+    final anchors = only ?? leashAnchors?.call();
     if (length == null || anchors == null || anchors.isEmpty) return null;
     final after = bounds.center;
     final move = after - before;

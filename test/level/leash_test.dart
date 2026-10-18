@@ -228,7 +228,7 @@ void main() {
     });
   });
 
-  for (final level in [Levels.hangOnYourPast, Levels.theLightLetsGo]) {
+  for (final level in Levels.bench.where((l) => l.leash != null)) {
     group(level.id, () {
       testWithGame<LevelGame>('solved', () => build(level), (game) async {
         await game.ready();
@@ -287,6 +287,31 @@ void main() {
           if (run.finishedAt != null || game.player.y == 818) {
             inside.add('out $out, wait $wait');
           }
+        }
+      }
+      expect(inside, isEmpty);
+    },
+  );
+
+  // A jump that falls short goes down the lower roof's face, past the way in
+  // under it, and pushing into the face all the way down does not turn it in.
+  testWithGame<LevelGame>(
+    'light-then-dark: a short jump falls past the way in',
+    () => build(Levels.lightThenDark),
+    (game) async {
+      await game.ready();
+      final inside = <String>[];
+      for (var frames = 40; frames < 78; frames++) {
+        game.reload();
+        final run = start(game)
+          ..play([
+            const Move.left(2.5),
+            Move.right(frames / 60),
+            const Move.right(0.8, jump: true),
+            const Move.right(3),
+          ], stopWhenComplete: true);
+        if (run.finishedAt != null || game.player.y == 822) {
+          inside.add('run-up $frames');
         }
       }
       expect(inside, isEmpty);

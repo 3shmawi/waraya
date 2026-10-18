@@ -4385,9 +4385,140 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(220, 548, 300, 620),
   );
 
+  /// **The leash, three**: the light cuts the rope — when you need it too.
+  ///
+  /// «اتعلّق في ماضيك» again, with a lamp over the walk to the edge. Step
+  /// off the way you did there and your past is behind you in the lamp: it
+  /// holds nothing, and you fall. The plate at the edge puts the lamp out —
+  /// while somebody stands on it. So stand on it until your past is on it
+  /// too, then step off: it holds you from the dark you made for it, and
+  /// the lamp stays out as long as it stands there.
+  ///
+  /// The plate is at the very edge and outside the lamp, so the past that
+  /// holds you is not in it: a plate under its own lamp cannot put it out
+  /// (`light-switch`), and here it would not need to. Walking over the plate
+  /// is not standing on it: the past crosses it too, a moment later, and is
+  /// back in the light by the time you step off.
+  static final Level putOutItsLight = Level(
+    id: 'put-out-its-light',
+    solution: const [
+      Move.right(2.5), // to the plate at the edge: the lamp goes out
+      Move(1.5), // stand there until your past is on it too
+      Move.right(0.4), // off: it holds you, in the dark
+      Move.left(8), // in under the ledge, and along to the end
+    ],
+    wrongIdeas: const [
+      // The way that worked in «اتعلّق في ماضيك»: your past is in the light.
+      [Move.right(2.75), Move.left(8)],
+      // On the plate, but not long enough for your past to get there.
+      [Move.right(2.5), Move(0.3), Move.right(0.4), Move.left(8)],
+      // For the far side.
+      [Move.right(14)],
+    ],
+    name: 'اطفيله النور',
+    teaches: 'النور بيقطع الحبل: اطفيه لماضيك قبل ما تنزل.',
+    nameEn: 'Put Out Its Light',
+    teachesEn: 'The light cuts the rope: put it out for your past before you drop.',
+    delaySeconds: 1.5,
+    leash: 200,
+    spawnX: -300,
+    floorTop: _floor,
+    blocks: [
+      const Rect.fromLTRB(-1000, 620, 0, 712),
+      const Rect.fromLTRB(-1000, 818, 0, 2200),
+      const Rect.fromLTRB(-1000, 712, -560, 818),
+      const Rect.fromLTRB(-1040, 200, -1000, 2200),
+      const Rect.fromLTRB(600, 620, 1500, 2200),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(-220, 200, -70, 620), id: 'lamp')],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-40, 608, 0, 620), opens: 'lamp'),
+    ],
+    goal: const Rect.fromLTRB(-200, 746, -120, 818),
+  );
+
+  /// **The leash, four**: the light to jump, the dark to drop.
+  ///
+  /// «النور بيفكّك» and «اتعلّق في ماضيك» back to back, on two roofs. The
+  /// jump down to the lower roof is longer than the leash, so your past has
+  /// to be in the lamp behind you when you take it. And the way in is under
+  /// the edge you land on, facing the gap you just crossed: turn round and
+  /// step back off it, and your past — out of the lamp now, and landed
+  /// behind you — holds you while you swing in. Turn round before it has
+  /// landed and it is still lit, or still in the air over the gap a leash
+  /// away, and you fall.
+  ///
+  /// A jump that falls short goes down the face past the way in far too
+  /// fast to turn into it (`leash_test.dart` tries the take-offs).
+  static final Level lightThenDark = Level(
+    id: 'light-then-dark',
+    solution: const [
+      Move.left(2.5), // back into the lamp: your past will follow you in
+      Move.right(1.3), // run while it stands in the light
+      Move.right(0.8, jump: true), // and jump: nothing is holding you
+      Move(2.8), // landed: wait for your past to land behind you
+      Move.left(0.35), // and step back off the edge you landed on
+      Move.right(6), // hanging: in under it, and along to the end
+    ],
+    wrongIdeas: const [
+      // Straight for the gap.
+      [Move.right(0.8), Move.right(0.8, jump: true), Move.right(4)],
+      // Wait at the edge for your past, and jump with it right behind you.
+      [Move.right(0.4), Move(3), Move.right(0.8, jump: true), Move.right(4)],
+      // Across, and back off before your past has landed: it is still in
+      // the light, or in the air over the gap a leash away.
+      [
+        Move.left(2.5),
+        Move.right(1.3),
+        Move.right(0.8, jump: true),
+        Move(1.5),
+        Move.left(0.35),
+        Move.right(6),
+      ],
+      // Across, and on along the lower roof: the way in is behind you.
+      [
+        Move.left(2.5),
+        Move.right(1.3),
+        Move.right(0.8, jump: true),
+        Move.right(8),
+      ],
+    ],
+    name: 'نور وبعدين ضلمة',
+    teaches: 'النور بيفكّك عشان تنط، والضلمة بتمسكك عشان تنزل.',
+    nameEn: 'Light, Then Dark',
+    teachesEn: 'The light lets you go to jump; the dark holds you to drop.',
+    delaySeconds: 2.5,
+    leash: 200,
+    spawnX: -60,
+    floorTop: 420,
+    blocks: [
+      // The roof you start on.
+      const Rect.fromLTRB(-440, 420, 0, 2200),
+      const Rect.fromLTRB(-480, 200, -440, 2200),
+      // The lower roof, with a way in under its near end. Its floor starts
+      // a step in from the face: a fall down the face passes the mouth in
+      // one frame and cannot cover the step, a hang under the edge is over
+      // it.
+      // A little lower than a leash under the edge, so a hang comes down
+      // onto it rather than into the side of it.
+      const Rect.fromLTRB(200, 620, 700, 712),
+      const Rect.fromLTRB(220, 822, 700, 2200),
+      const Rect.fromLTRB(440, 712, 700, 822),
+      const Rect.fromLTRB(700, 200, 740, 2200),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(-280, 200, -180, 420))],
+    goal: const Rect.fromLTRB(300, 750, 380, 822),
+  );
+
   /// Levels on the bench and not in the campaign: they use something still
   /// on trial. The editor's start menu offers them.
-  static final List<Level> bench = [thatsYou, hangOnYourPast, theLightLetsGo];
+  static final List<Level> bench = [
+    thatsYou,
+    hangOnYourPast,
+    theLightLetsGo,
+    putOutItsLight,
+    lightThenDark,
+  ];
 
   static final Level lab = Level(
     id: 'lab',
