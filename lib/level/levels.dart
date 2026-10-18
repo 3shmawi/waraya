@@ -4510,6 +4510,125 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(300, 750, 380, 822),
   );
 
+  /// **The leash, five**: the dark to drop, the light to jump.
+  ///
+  /// «نور وبعدين ضلمة» the other way round. Off the high roof first, with
+  /// your past on it: it holds you, and you swing in under the roof onto the
+  /// floor below. Out from under it, a long jump down across a gap — longer
+  /// than the leash — and your past is behind you in the dark.
+  ///
+  /// The lamp is over a step on the way, and only over the step: walking
+  /// past it, or hopping over it, lights your past for a moment and the jump
+  /// is cut. Stand on the step and your past stands in the light as long as
+  /// you did — long enough to run for the edge and jump. And a step is
+  /// jumped onto, so you wait at its foot for your past to come close enough
+  /// to jump away from.
+  static final Level darkThenLight = Level(
+    id: 'dark-then-light',
+    solution: const [
+      Move.right(1.5), // off the high roof: your past holds you
+      Move.left(7), // in under it, and out to the step
+      Move.left(0.5, jump: true), // up, into the light
+      Move(1.5), // stand: your past will stand here too
+      Move.left(1), // off, and run for the edge
+      Move.left(0.8, jump: true), // and jump: nothing is holding you
+      Move.left(5),
+    ],
+    wrongIdeas: const [
+      // Straight on to the edge and jump: your past is in the dark.
+      [Move.right(1.5), Move.left(9), Move.left(0.8, jump: true), Move.left(5)],
+      // Off the high roof the other way, out over the gap.
+      [Move.right(14)],
+    ],
+    name: 'ضلمة وبعدين نور',
+    teaches: 'الضلمة بتمسكك عشان تنزل، والنور بيفكّك عشان تنط.',
+    nameEn: 'Dark, Then Light',
+    teachesEn: 'The dark holds you to drop; the light lets you go to jump.',
+    delaySeconds: 2,
+    leash: 200,
+    spawnX: -130,
+    floorTop: 220,
+    blocks: [
+      // The high roof, over the way in, and its back wall up out of reach.
+      const Rect.fromLTRB(-250, 220, 0, 312),
+      const Rect.fromLTRB(-290, 0, -250, 312),
+      // The floor under it, out to an edge, with a step on the way.
+      const Rect.fromLTRB(-560, 422, 0, 2200),
+      const Rect.fromLTRB(-420, 372, -360, 422),
+      // The low roof across the gap.
+      const Rect.fromLTRB(-1210, 622, -760, 2200),
+      const Rect.fromLTRB(-1250, 200, -1210, 2200),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(-420, 200, -360, 300))],
+    goal: const Rect.fromLTRB(-880, 550, -800, 622),
+  );
+
+  /// **The leash, six**: a key your past cannot turn back.
+  ///
+  /// The lamp over the walk to the edge again, and no plate at the edge.
+  /// The key that puts it out is on a shelf behind the start, under a lamp
+  /// of its own that nothing puts out. A key is flipped back by your past
+  /// when it gets there (`toggles`) — but a past in the light presses
+  /// nothing, so this one never is. Put the lamp out there, and it stays out
+  /// for your past to hold you in.
+  ///
+  /// The shelf is jumped onto, and the sweep never jumps backwards, so the
+  /// cheap runs never get to it. Up on the shelf and not on the key is not
+  /// enough: a key takes a third of a body to press, like a plate.
+  static final Level aKeyInTheLight = Level(
+    id: 'a-key-in-the-light',
+    solution: const [
+      Move.left(1.5), // back to the shelf
+      Move(1), // let your past come close enough to jump away from
+      Move.left(0.6, jump: true), // up
+      Move.left(0.3), // onto the key: the edge's lamp goes out
+      Move(0.3),
+      Move.right(4.25), // to the edge, through the dark, and off
+      Move.left(8), // hanging: in under the ledge, and along to the end
+    ],
+    wrongIdeas: const [
+      // Straight off the edge: your past is in the lamp.
+      [Move.right(2.75), Move.left(8)],
+      // Up on the shelf, and not on the key.
+      [
+        Move.left(1.5),
+        Move(1),
+        Move.left(0.6, jump: true),
+        Move(0.3),
+        Move.right(3.5),
+        Move.left(8),
+      ],
+      // For the far side.
+      [Move.right(14)],
+    ],
+    name: 'مفتاح في النور',
+    teaches: 'ماضيك في النور مبيقلبش المفتاح: اللي تطفيه هناك يفضل مطفي.',
+    nameEn: 'A Key in the Light',
+    teachesEn:
+        "Your past in the light can't flip the key back: what you put out there stays out.",
+    delaySeconds: 1.5,
+    leash: 200,
+    spawnX: -300,
+    floorTop: _floor,
+    blocks: [
+      const Rect.fromLTRB(-1000, 620, 0, 712),
+      const Rect.fromLTRB(-1000, 818, 0, 2200),
+      const Rect.fromLTRB(-1000, 712, -560, 818),
+      const Rect.fromLTRB(-1040, 200, -1000, 2200),
+      const Rect.fromLTRB(600, 620, 1500, 2200),
+      // The shelf with the key, under its own lamp.
+      const Rect.fromLTRB(-560, 520, -460, 620),
+    ],
+    lights: const [
+      LightSpec(Rect.fromLTRB(-220, 200, -70, 620), id: 'lamp'),
+      LightSpec(Rect.fromLTRB(-560, 200, -460, 520)),
+    ],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-530, 508, -490, 520), flips: 'lamp'),
+    ],
+    goal: const Rect.fromLTRB(-200, 746, -120, 818),
+  );
+
   /// Levels on the bench and not in the campaign: they use something still
   /// on trial. The editor's start menu offers them.
   static final List<Level> bench = [
@@ -4518,6 +4637,8 @@ abstract final class Levels {
     theLightLetsGo,
     putOutItsLight,
     lightThenDark,
+    darkThenLight,
+    aKeyInTheLight,
   ];
 
   static final Level lab = Level(

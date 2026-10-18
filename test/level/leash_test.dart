@@ -317,4 +317,57 @@ void main() {
       expect(inside, isEmpty);
     },
   );
+
+  // The lamp in dark-then-light is over a step on the way, so walking out
+  // to the edge — over the step or round it — lights your past for a moment,
+  // not for a run and a jump.
+  testWithGame<LevelGame>(
+    'dark-then-light: passing the lamp on the way is not standing in it',
+    () => build(Levels.darkThenLight),
+    (game) async {
+      await game.ready();
+      final beaten = <String>[];
+      for (var tenths = 60; tenths <= 110; tenths += 2) {
+        for (final hop in [false, true]) {
+          game.reload();
+          final run = start(game)
+            ..play([
+              const Move.right(1.5),
+              Move.left(tenths / 10, jump: hop),
+              const Move.left(0.8, jump: true),
+              const Move.left(5),
+            ], stopWhenComplete: true);
+          if (run.finishedAt != null) beaten.add('${tenths / 10}s, hop $hop');
+        }
+      }
+      expect(beaten, isEmpty);
+    },
+  );
+
+  // And its way in under the high roof is for the leash, like the first.
+  final looseHigh = levelFromJson(
+    Levels.darkThenLight.toJson()
+      ..remove('leash')
+      ..remove('requires'),
+  );
+  testWithGame<LevelGame>(
+    'dark-then-light: without the leash a fall goes past the way in',
+    () => build(looseHigh),
+    (game) async {
+      await game.ready();
+      final inside = <String>[];
+      for (var out = 0; out < 24; out++) {
+        for (var wait = 0; wait < 30; wait++) {
+          game.reload();
+          Run(game)
+            ..walkTo(-10)
+            ..hold(out / 60, axis: 1)
+            ..hold(wait / 60)
+            ..hold(2, axis: -1);
+          if (game.player.y == 422) inside.add('out $out, wait $wait');
+        }
+      }
+      expect(inside, isEmpty);
+    },
+  );
 }

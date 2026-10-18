@@ -121,6 +121,10 @@ void main() {
 
       await tester.tap(find.byTooltip('start from…'));
       await settle(tester);
+      // The bench's levels come first, and there are enough of them now
+      // that the campaign starts below the fold.
+      await tester.ensureVisible(find.textContaining('two-not-one'));
+      await settle(tester);
       await tester.tap(find.textContaining('two-not-one'));
       await settle(tester);
       expect(game.level.id, 'two-not-one-copy');
