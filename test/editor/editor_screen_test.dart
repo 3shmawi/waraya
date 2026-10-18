@@ -96,6 +96,28 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
+  testWidgets('a link to a level this build does not have says so', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(brightness: Brightness.dark),
+        home: Scaffold(
+          body: EditorScreen(
+            startFrom: Levels.lab,
+            notice: 'no level "brand-new" in this build',
+          ),
+        ),
+      ),
+    );
+    await settle(tester);
+    expect(find.textContaining('no level "brand-new"'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('Tab plays it and Tab brings you back', (tester) async {
     final game = await open(tester);
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);

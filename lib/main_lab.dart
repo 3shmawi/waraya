@@ -76,12 +76,28 @@ LevelSource? get _authoring {
 /// or null. The levels on trial are only here, and the editor's menu that
 /// lists them is a desktop tool; a link is how one gets to a phone.
 Level? _linked(List<Level> disk) {
-  final id = Uri.base.queryParameters['level'];
-  if (id == null || id.isEmpty) return null;
+  final id = _linkedId;
+  if (id == null) return null;
   for (final level in [...disk, ...Levels.bench, ...Levels.campaign]) {
     if (level.id == id) return level;
   }
   return null;
+}
+
+/// The level id a link to the bench asks for, or null.
+String? get _linkedId {
+  final id = Uri.base.queryParameters['level'];
+  return id == null || id.isEmpty ? null : id;
+}
+
+/// What to say when a link asks for a level this build does not have — a
+/// level added since it was built, most likely: GitHub Pages serves the
+/// last build for some minutes after a new one goes up. Without this the
+/// bench opened its own scene, in the editor, and the link looked broken.
+String? _missing(Level? linked) {
+  final id = _linkedId;
+  if (id == null || linked != null) return null;
+  return 'no level "$id" in this build — if it is new, reload in a few minutes';
 }
 
 class ShadowLabApp extends StatelessWidget {
@@ -124,6 +140,7 @@ class ShadowLabApp extends StatelessWidget {
         body: EditorScreen(
           startFrom: linked ?? (disk.isEmpty ? Levels.lab : disk.first),
           startPlaying: linked != null,
+          notice: _missing(linked),
           extraLevels: disk,
           upload: upload,
           audio: FlameAudioOut(),

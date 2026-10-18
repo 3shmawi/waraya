@@ -38,6 +38,7 @@ class EditorScreen extends StatefulWidget {
     this.saveFolder,
     this.audio,
     this.startPlaying = false,
+    this.notice,
   });
 
   /// What is on the bench when it opens.
@@ -65,6 +66,10 @@ class EditorScreen extends StatefulWidget {
   /// editor's panels have no room.
   final bool startPlaying;
 
+  /// A line to open with in the status — what a link asked for and could
+  /// not get, say. Null for none.
+  final String? notice;
+
   @override
   State<EditorScreen> createState() => _EditorScreenState();
 }
@@ -81,7 +86,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   late List<Level> _extra = widget.extraLevels;
   int _builtRevision = 0;
-  String? _status;
+  late String? _status = widget.notice;
 
   /// The cheap half of the gate, redone on every change.
   List<Finding> _numbers = const [];
