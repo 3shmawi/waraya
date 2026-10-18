@@ -295,28 +295,34 @@ void main() {
 
   // A jump that falls short goes down the lower roof's face, past the way in
   // under it, and pushing into the face all the way down does not turn it in.
-  testWithGame<LevelGame>(
-    'light-then-dark: a short jump falls past the way in',
-    () => build(Levels.lightThenDark),
-    (game) async {
-      await game.ready();
-      final inside = <String>[];
-      for (var frames = 40; frames < 78; frames++) {
-        game.reload();
-        final run = start(game)
-          ..play([
-            const Move.left(2.5),
-            Move.right(frames / 60),
-            const Move.right(0.8, jump: true),
-            const Move.right(3),
-          ], stopWhenComplete: true);
-        if (run.finishedAt != null || game.player.y == 822) {
-          inside.add('run-up $frames');
+  for (final (level, floor) in [
+    (Levels.lightThenDark, 822.0),
+    (Levels.bothThenTheDark, 874.0),
+  ]) {
+    testWithGame<LevelGame>(
+      '${level.id}: a short jump falls past the way in',
+      () => build(level),
+      (game) async {
+        await game.ready();
+        final firstLeft = level.solution.first;
+        final inside = <String>[];
+        for (var frames = 40; frames < 100; frames++) {
+          game.reload();
+          final run = start(game)
+            ..play([
+              firstLeft,
+              Move.right(frames / 60),
+              const Move.right(0.8, jump: true),
+              const Move.right(3),
+            ], stopWhenComplete: true);
+          if (run.finishedAt != null || game.player.y == floor) {
+            inside.add('run-up $frames');
+          }
         }
-      }
-      expect(inside, isEmpty);
-    },
-  );
+        expect(inside, isEmpty);
+      },
+    );
+  }
 
   // The lamp in dark-then-light is over a step on the way, so walking out
   // to the edge — over the step or round it — lights your past for a moment,
@@ -370,4 +376,33 @@ void main() {
       expect(inside, isEmpty);
     },
   );
+
+  // Both pasts have to be in the light at the jump: no stand short of the
+  // far one getting there, with any run-up, makes it across.
+  for (final level in [Levels.bothInTheLight, Levels.bothThenTheDark]) {
+    testWithGame<LevelGame>(
+      '${level.id}: one past\'s worth of light is not enough',
+      () => build(level),
+      (game) async {
+        await game.ready();
+        final across = <String>[];
+        for (final stand in [1.0, 1.5, 2.0, 2.5]) {
+          for (var frames = 60; frames <= 120; frames += 3) {
+            game.reload();
+            start(game).play([
+              Move.left(stand),
+              Move.right(frames / 60),
+              const Move.right(0.8, jump: true),
+              const Move(0.5),
+            ]);
+            // On the lower roof, alive, is across.
+            if (game.player.x > 200 && game.player.y == 620) {
+              across.add('stand $stand, run ${frames / 60}');
+            }
+          }
+        }
+        expect(across, isEmpty);
+      },
+    );
+  }
 }

@@ -4629,6 +4629,130 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(-200, 746, -120, 818),
   );
 
+  /// **The leash, seven — hard**: both pasts hold you, so both have to be
+  /// in the light.
+  ///
+  /// «النور بيفكّك» with two pasts, two and a half and four seconds back.
+  /// The long jump down is cut by any past in the dark, so at the moment you
+  /// jump both have to be standing in the lamp behind you. That is two
+  /// things at once, and they pull opposite ways. Stand in the light long
+  /// enough for the far one to get there — about four seconds after you did
+  /// — and then go, because the near one walks out of it two and a half
+  /// seconds after you do: the run to the edge and the jump have to fit in
+  /// that. Stand too short and the far one is still in the dark; stop at the
+  /// edge to line the jump up and the near one is.
+  ///
+  /// The lamp lights the whole back of the roof, up to the wall: walk to
+  /// the wall and your pasts walk there too, still lit. A lamp that ended
+  /// short of the wall let them walk out of the far side of it.
+  static final Level bothInTheLight = Level(
+    id: 'both-in-the-light',
+    solution: const [
+      Move.left(4), // back into the light, and stand: the far one is coming
+      Move.right(1.5), // now run, while the near one is still in it
+      Move.right(0.8, jump: true), // and jump: nothing is holding you
+      Move.right(4),
+    ],
+    wrongIdeas: const [
+      // Long enough in the light for one past, which is what «النور بيفكّك»
+      // needed: the far one is still in the dark.
+      [Move.left(2), Move.right(1.5), Move.right(0.8, jump: true), Move.right(4)],
+      // Long enough, then a moment at the edge: the near one is out.
+      [
+        Move.left(4),
+        Move.right(1.45),
+        Move(1),
+        Move.right(0.8, jump: true),
+        Move.right(4),
+      ],
+      // Straight for the gap.
+      [Move.right(0.8), Move.right(0.8, jump: true), Move.right(4)],
+    ],
+    name: 'الاتنين في النور',
+    teaches: 'الاتنين ماسكينك: استنى البعيد يدخل النور، واجري قبل القريب ما يطلع.',
+    nameEn: 'Both in the Light',
+    teachesEn:
+        'Both hold you: wait for the far one to step into the light, and run before the near one steps out.',
+    delays: const [2.5, 4],
+    leash: 250,
+    spawnX: -60,
+    floorTop: 420,
+    blocks: [
+      const Rect.fromLTRB(-440, 420, 0, 2200),
+      const Rect.fromLTRB(-480, 200, -440, 2200),
+      const Rect.fromLTRB(210, 620, 900, 2200),
+      const Rect.fromLTRB(900, 200, 940, 2200),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(-440, 200, -180, 420))],
+    goal: const Rect.fromLTRB(270, 548, 350, 620),
+  );
+
+  /// **The leash, eight — hard**: both in the light to jump, and then the
+  /// dark to drop.
+  ///
+  /// «الاتنين في النور», and the way in is under the edge you land on,
+  /// facing the gap, as in «نور وبعدين ضلمة». Step back off that edge before
+  /// a past has landed beside you and there is nothing within a leash of
+  /// you to hold you — they are still up on the roof, or in the air over
+  /// the gap — and you fall. Wait for the near one, and it holds you while
+  /// the far one comes down after it.
+  ///
+  /// With a leash of 250 the way in is 250 down. Its floor starts a step in
+  /// from the face, and a little lower than a hang, as in «نور وبعدين ضلمة»:
+  /// a short jump falls down the face past it, a hang comes down onto it.
+  static final Level bothThenTheDark = Level(
+    id: 'both-then-the-dark',
+    solution: const [
+      Move.left(4), // back into the light, and stand: the far one is coming
+      Move.right(1.6), // now run, while the near one is still in it
+      Move.right(0.8, jump: true), // and jump
+      Move(3), // landed: wait for your past to land behind you
+      Move.left(0.35), // and step back off the edge you landed on
+      Move.right(8), // hanging: in under it, and along to the end
+    ],
+    wrongIdeas: const [
+      // One past's worth of light.
+      [Move.left(2), Move.right(1.5), Move.right(0.8, jump: true), Move.right(4)],
+      // Across, and back off before anything has landed beside you.
+      [
+        Move.left(4),
+        Move.right(1.6),
+        Move.right(0.8, jump: true),
+        Move(1.5),
+        Move.left(0.35),
+        Move.right(8),
+      ],
+      // Across, and on along the lower roof: the way in is behind you.
+      [
+        Move.left(4),
+        Move.right(1.6),
+        Move.right(0.8, jump: true),
+        Move.right(8),
+      ],
+    ],
+    name: 'الاتنين وبعدين الضلمة',
+    teaches: 'الاتنين في النور عشان تنط، واستنى ماضيك ينزل جنبك عشان تتدلّى.',
+    nameEn: 'Both, Then the Dark',
+    teachesEn:
+        'Both in the light to jump; wait for your past to land beside you to drop.',
+    delays: const [2.5, 4],
+    leash: 250,
+    spawnX: -60,
+    floorTop: 420,
+    blocks: [
+      // The roof you start on.
+      const Rect.fromLTRB(-440, 420, 0, 2200),
+      const Rect.fromLTRB(-480, 200, -440, 2200),
+      // The lower roof, with a way in under its near end.
+      const Rect.fromLTRB(210, 620, 800, 764),
+      const Rect.fromLTRB(220, 874, 800, 2200),
+      const Rect.fromLTRB(460, 764, 800, 874),
+      const Rect.fromLTRB(800, 200, 840, 2200),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(-440, 200, -180, 420))],
+    goal: const Rect.fromLTRB(320, 802, 400, 874),
+  );
+
   /// Levels on the bench and not in the campaign: they use something still
   /// on trial. The editor's start menu offers them.
   static final List<Level> bench = [
@@ -4639,6 +4763,8 @@ abstract final class Levels {
     lightThenDark,
     darkThenLight,
     aKeyInTheLight,
+    bothInTheLight,
+    bothThenTheDark,
   ];
 
   static final Level lab = Level(
