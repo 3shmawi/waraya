@@ -29,6 +29,7 @@ class UpdateCard extends StatelessWidget {
     required Update update,
     required VoidCallback onTake,
     required VoidCallback onLater,
+    bool taking = false,
   }) {
     final w = Words(lang);
     final published = update.published;
@@ -44,8 +45,14 @@ class UpdateCard extends StatelessWidget {
           : notes.isNotEmpty
           ? notes
           : w.smallChanges,
-      action: update.route == UpdateRoute.reload ? w.refresh : w.download,
-      onAction: onTake,
+      // Taking it on the web is a fetch of the whole game before the reload,
+      // seconds on a phone. Said, so the button is not tapped again and again.
+      action: taking
+          ? w.updating
+          : update.route == UpdateRoute.reload
+          ? w.refresh
+          : w.download,
+      onAction: taking ? () {} : onTake,
       // Forced: no "later" — the only way on is the update.
       onDismiss: update.isForced ? null : onLater,
     );

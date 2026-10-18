@@ -261,9 +261,16 @@ class _WarayaLevelsState extends State<WarayaLevels>
     if (found.isForced) _hold('forced-update');
   }
 
-  void _takeUpdate() {
+  /// True from the tap until the page goes away — or, off the web, until
+  /// the download page has been opened.
+  bool _taking = false;
+
+  Future<void> _takeUpdate() async {
     final update = _update;
-    if (update != null) applyUpdate(update);
+    if (update == null || _taking) return;
+    setState(() => _taking = true);
+    await applyUpdate(update);
+    if (mounted) setState(() => _taking = false);
   }
 
   /// The other language, chosen outright — and kept, so the landing page
@@ -408,6 +415,7 @@ class _WarayaLevelsState extends State<WarayaLevels>
           lang: lang,
           update: update,
           onTake: _takeUpdate,
+          taking: _taking,
           onLater: () => setState(() => _updateWaved = true),
         ),
       ];
@@ -425,6 +433,7 @@ class _WarayaLevelsState extends State<WarayaLevels>
           lang: lang,
           update: update,
           onTake: _takeUpdate,
+          taking: _taking,
           onLater: () {},
         ),
       ],
