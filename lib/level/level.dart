@@ -38,6 +38,7 @@ class Level {
     this.wrongIdeas = const [],
     this.prelude = const [],
     this.leash,
+    this.mirrors = const [],
   }) : assert(
          leash == null || leash > 0,
          'a leash with no length holds you to the spot, which is not a level',
@@ -215,6 +216,25 @@ class Level {
   /// away from it goes, to nothing at the leash's length.
   final double? leash;
 
+  /// Mirrors (`docs/phase-12-more.md` §9), on the bench: floor slabs, as
+  /// drawn. Empty — every level but the bench's — is none.
+  ///
+  /// **When your past arrives on one, you are where it is.** Wherever you
+  /// were, you are put on the mirror, in your past's place, and it walks on
+  /// along your old path to where you were. A swap, spread over D seconds.
+  ///
+  /// It moves *you*, not your past, and that is the whole of the design. Your
+  /// past can only ever be somewhere you have been — the rule every level
+  /// leans on — so a mirror that threw it to where you stand now would put it
+  /// somewhere you never were. Moving you keeps the sentence: you decided D
+  /// seconds ago, by standing here, that you would be back here now.
+  ///
+  /// On the edge, like a key: arriving, not standing. A past that got onto
+  /// the mirror *by* a mirror does not arrive — otherwise every return would
+  /// be recorded and replayed as another, D seconds later, for ever. A past
+  /// in the light is not there and moves nobody.
+  final List<Rect> mirrors;
+
   /// Whether this level can be checked by somebody who did not write it.
   ///
   /// A level with no recorded solution cannot be shown to be finishable, and
@@ -264,7 +284,11 @@ class Level {
   /// puts the level proving it into the campaign, with its solution, its
   /// wrong idea, and a version bump. A mechanic that fails is deleted from
   /// here and from the code, and its levels stay refused.
-  static const Set<String> labMechanics = <String>{'prelude', 'leash'};
+  static const Set<String> labMechanics = <String>{
+    'prelude',
+    'leash',
+    'mirror',
+  };
 
   /// What the bench accepts: everything the game does, and what is on trial.
   static Set<String> get benchMechanics => {...knownMechanics, ...labMechanics};
@@ -306,6 +330,9 @@ class Level {
     // A build that drops it plays the level loose, and a leash level loose
     // is a walk to the goal.
     if (leash != null) 'leash',
+    // Dropped, a mirror is a slab that does nothing: the level puts you down
+    // somewhere with no way back out, and looks like a level while it does.
+    if (mirrors.isNotEmpty) 'mirror',
   };
 }
 
@@ -578,6 +605,7 @@ extension LevelJson on Level {
     if (prelude.isNotEmpty)
       'prelude': [for (final move in prelude) _moveToJson(move)],
     if (leash != null) 'leash': leash,
+    if (mirrors.isNotEmpty) 'mirrors': mirrors.map(_rectToJson).toList(),
     'goal': _rectToJson(goal),
     'blocks': blocks.map(_rectToJson).toList(),
     // A bare rectangle, as every light was, unless it has a name.
@@ -725,6 +753,7 @@ Level levelFromJson(Object? source, {Set<String>? accepts}) {
       ],
       prelude: _moveList(json['prelude'], 'prelude'),
       leash: json['leash'] == null ? null : _asDouble(json['leash'], 'leash'),
+      mirrors: _rectList(json['mirrors'], 'mirrors'),
       blocks: _rectList(json['blocks'], 'blocks'),
       lights: [
         for (final (i, entry) in _asList(json['lights'], 'lights').indexed)

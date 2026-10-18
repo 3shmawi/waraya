@@ -121,28 +121,159 @@ class PressurePlate extends PositionComponent {
     pressedByShadow = false;
   }
 
+  /// Which of the level's doors and lights this one belongs to, drawn as a
+  /// small shape on it and on its door ([PairMark]). Null when the level has
+  /// only one thing to open: then there is nothing to tell apart.
+  int? mark;
+
+  /// How far the button's cap stands proud of its housing when nobody is on
+  /// it. Pressed, it sinks flush.
+  static const double capRise = 7;
+
   @override
   void render(Canvas canvas) {
-    final rect = isPressed ? spec.area.translate(0, 6) : spec.area;
-    // An inverted plate reads as the same slab with its two states swapped
-    // round, because that is what it is. Lit up under a body means "this one
-    // is doing its thing"; on this plate its thing is holding the door shut.
+    final housing = spec.area;
+    // A button, not a slab: a housing that stays put and a cap on top of it
+    // that goes down under a body. The old plate was a dark strip that sank
+    // into the floor, and in the lit scene a dark strip on a dark floor was
+    // nothing at all. Asked for: every thing in a level should say what it is
+    // by its shape.
+    final inset = min(housing.width * 0.16, 14.0);
+    final rise = isPressed ? 3.0 : capRise;
+    final cap = Rect.fromLTRB(
+      housing.left + inset,
+      housing.top - rise,
+      housing.right - inset,
+      housing.top + 1,
+    );
+    // An inverted plate's "doing its thing" is holding the door shut, so it
+    // lights while nobody is on it — the same swap the slab always had.
     final lively = inverts ? !isPressed : isPressed;
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..color = _lit
-            ? (lively ? SilhouettePalette.plateDown : SilhouettePalette.plateUp)
-            : (lively ? Palette.plateDown : Palette.plateUp),
+    final capShape = RRect.fromRectAndCorners(
+      cap,
+      topLeft: const Radius.circular(4),
+      topRight: const Radius.circular(4),
     );
-    if (_lit) return;
+    canvas.drawRRect(capShape, Paint()..color = _capColor(lively));
+    // Against a sunset, an unlit cap is a dark bump on a dark housing; the
+    // backlight catching its edge is what keeps it there.
+    if (_lit && !lively) {
+      canvas.drawRRect(
+        capShape,
+        Paint()
+          ..color = SilhouettePalette.blockTop
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+    }
+    canvas.drawRect(housing, Paint()..color = _housingColor);
+    if (inverts) _hazard(canvas, housing);
+    // The lit lip every standable thing has, here so the housing does not
+    // vanish into the floor it sits on.
     canvas.drawRect(
-      rect,
-      Paint()
-        ..color = Palette.blockEdge
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
+      Rect.fromLTWH(housing.left, housing.top, housing.width, 2),
+      Paint()..color = _lit ? SilhouettePalette.blockTop : Palette.blockTop,
     );
+    PairMark.draw(
+      canvas,
+      mark,
+      Offset(housing.center.dx, housing.center.dy + 1),
+      lit: lively,
+      look: look,
+    );
+  }
+
+  Color get _housingColor =>
+      _lit ? const Color(0xFF1C1418) : const Color(0xFF3E3E3E);
+
+  Color _capColor(bool lively) => _lit
+      ? (lively ? const Color(0xFFFFC46A) : const Color(0xFF2A1E18))
+      : (lively ? const Color(0xFFE0533D) : const Color(0xFF9C3A2C));
+
+  /// Warning stripes on the housing of a plate that holds its door **shut**,
+  /// so it does not read as one more button to stand on. The same shape as
+  /// every other plate, because it is one; striped, because standing on it is
+  /// the mistake.
+  void _hazard(Canvas canvas, Rect housing) {
+    canvas.save();
+    canvas.clipRect(housing);
+    final stripe = Paint()
+      ..color = _lit ? const Color(0xFFD9A25C) : const Color(0xFFE8C23A)
+      ..strokeWidth = 4;
+    for (var x = housing.left - housing.height; x < housing.right; x += 12) {
+      canvas.drawLine(
+        Offset(x, housing.bottom),
+        Offset(x + housing.height, housing.top),
+        stripe,
+      );
+    }
+    canvas.restore();
+  }
+}
+
+/// The small shape that says which button opens which door.
+///
+/// One per door or named light, in the level's order — a circle, a triangle,
+/// a square, a diamond, a cross — drawn on the thing that opens it and on the
+/// thing it opens. Lit while it is doing its thing, outlined while it is not,
+/// so stepping on a button lights the same shape on the door across the room.
+/// Only in a level with more than one: with one door there is nothing to
+/// pair.
+abstract final class PairMark {
+  static const double size = 10;
+
+  static void draw(
+    Canvas canvas,
+    int? mark,
+    Offset center, {
+    required bool lit,
+    required LevelLook look,
+    double size = PairMark.size,
+  }) {
+    if (mark == null) return;
+    final silhouette = look == LevelLook.silhouette;
+    final color = silhouette
+        ? const Color(0xFFFFE7B0)
+        : const Color(0xFFF4F4F4);
+    final paint = Paint()
+      ..color = lit ? color : color.withValues(alpha: 0.75)
+      ..style = lit ? PaintingStyle.fill : PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeJoin = StrokeJoin.round;
+    final r = size / 2;
+    final c = center;
+    switch (mark % 5) {
+      case 0:
+        canvas.drawCircle(c, r, paint);
+      case 1:
+        canvas.drawPath(
+          Path()
+            ..moveTo(c.dx, c.dy - r)
+            ..lineTo(c.dx + r, c.dy + r * 0.8)
+            ..lineTo(c.dx - r, c.dy + r * 0.8)
+            ..close(),
+          paint,
+        );
+      case 2:
+        canvas.drawRect(Rect.fromCircle(center: c, radius: r * 0.85), paint);
+      case 3:
+        canvas.drawPath(
+          Path()
+            ..moveTo(c.dx, c.dy - r)
+            ..lineTo(c.dx + r, c.dy)
+            ..lineTo(c.dx, c.dy + r)
+            ..lineTo(c.dx - r, c.dy)
+            ..close(),
+          paint,
+        );
+      default:
+        final cross = Paint()
+          ..color = paint.color
+          ..strokeWidth = 2.4
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(c + Offset(-r, -r), c + Offset(r, r), cross);
+        canvas.drawLine(c + Offset(r, -r), c + Offset(-r, r), cross);
+    }
   }
 }
 
@@ -293,6 +424,10 @@ class LightZone extends PositionComponent {
   static const double _lampDepth = 13;
   static const double _lampInset = 0.16;
 
+  /// Which shape the buttons that put this light out carry ([PairMark]).
+  /// Only a light with a name has one.
+  int? mark;
+
   @override
   void render(Canvas canvas) {
     final lamp = Rect.fromLTRB(
@@ -329,6 +464,15 @@ class LightZone extends PositionComponent {
           const Color(0xFFFFE7B0),
           _glow,
         )!,
+    );
+
+    PairMark.draw(
+      canvas,
+      mark,
+      Offset(lamp.center.dx, lamp.center.dy - 1),
+      lit: !isOn,
+      look: look,
+      size: 8,
     );
 
     if (_glow > 0) {
@@ -429,45 +573,64 @@ class Toggle extends PositionComponent {
     _shadowOn = false;
   }
 
+  /// Which door or light this flips, as a shape. See [PairMark].
+  int? mark;
+
   /// How far the lever leans, so which way it is thrown reads at a glance
   /// from across the level.
   static const double _lean = 26;
+  static const double _reach = 34;
 
   @override
   void render(Canvas canvas) {
     final base = spec.area;
-    canvas.drawRect(
-      base,
-      Paint()
-        ..color = _lit
-            ? (flipped
-                  ? SilhouettePalette.plateDown
-                  : SilhouettePalette.plateUp)
-            : (flipped ? Palette.plateDown : Palette.plateUp),
+    // A lever on a housing: the housing is the plate's, so the two read as
+    // the same family, and the stick with a knob on it is what says this one
+    // is thrown rather than pressed. A plate sinks; a key has nothing to sink
+    // and leans instead — one way thrown, the other way not.
+    final pivot = Offset(base.center.dx, base.top);
+    final knob = Offset(
+      pivot.dx + (flipped ? _lean : -_lean),
+      base.top - _reach,
     );
-    // The lever. A plate says what it is by sinking; a key has nothing to sink
-    // and has to say it some other way, so it leans — one way thrown, the
-    // other way not.
-    final foot = Offset(base.center.dx, base.top);
+    final stick = _lit
+        ? (flipped ? const Color(0xFFFFC46A) : SilhouettePalette.blockTop)
+        : (flipped ? const Color(0xFFE0533D) : const Color(0xFF4A4A4A));
     canvas.drawLine(
-      foot,
-      Offset(foot.dx + (flipped ? _lean : -_lean), base.top - 34),
+      pivot,
+      knob,
       Paint()
-        ..color = _lit
-            ? (flipped
-                  ? SilhouettePalette.plateDown
-                  : SilhouettePalette.blockTop)
-            : Palette.blockEdge
-        ..strokeWidth = 5
+        ..color = stick
+        ..strokeWidth = 4
         ..strokeCap = StrokeCap.round,
     );
-    if (_lit) return;
+    canvas.drawCircle(knob, 6, Paint()..color = stick);
+    // The hub it turns on: half a disc sitting on the housing.
+    canvas.drawArc(
+      Rect.fromCircle(center: pivot, radius: 9),
+      pi,
+      pi,
+      true,
+      Paint()..color = _lit ? const Color(0xFF1C1418) : const Color(0xFF3E3E3E),
+    );
     canvas.drawRect(
       base,
-      Paint()
-        ..color = Palette.blockEdge
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
+      Paint()..color = _lit ? const Color(0xFF1C1418) : const Color(0xFF3E3E3E),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(base.left, base.top, base.width, 2),
+      Paint()..color = _lit ? SilhouettePalette.blockTop : Palette.blockTop,
+    );
+    // Off-centre, clear of the hub, on the side the lever is not leaning to.
+    PairMark.draw(
+      canvas,
+      mark,
+      Offset(
+        base.center.dx + (flipped ? -1 : 1) * min(base.width / 2 - 8, 24),
+        base.center.dy + 1,
+      ),
+      lit: flipped,
+      look: look,
     );
   }
 }
@@ -574,6 +737,12 @@ class Door extends PositionComponent {
   static const double _headOverhang = 9;
   static const double _headDepth = 20;
 
+  /// How far apart the shutter's slats are.
+  static const double _slat = 14;
+
+  /// Which shape the buttons that open this one carry. See [PairMark].
+  int? mark;
+
   @override
   void render(Canvas canvas) {
     final lit = look == LevelLook.silhouette;
@@ -600,6 +769,13 @@ class Door extends PositionComponent {
       Rect.fromLTWH(head.left, head.top, head.width, lit ? 3 : 2),
       edge,
     );
+    PairMark.draw(
+      canvas,
+      mark,
+      head.center + const Offset(0, 1),
+      lit: wantsOpen,
+      look: look,
+    );
 
     // The slab, clipped to the opening, so it slides up into the head rather
     // than past it. The collision box is [bounds] and is unchanged: what is
@@ -608,6 +784,18 @@ class Door extends PositionComponent {
     canvas.save();
     canvas.clipRect(opening);
     canvas.drawRect(bounds, fill);
+    // Slats, like the steel shutter on every shop front: what makes a shut
+    // door a door and not one more wall. The two were the same dark bar.
+    final slat = Paint()
+      ..color = lit ? const Color(0xFF3A2C30) : const Color(0xFF7A7A7A)
+      ..strokeWidth = 2;
+    for (var y = bounds.top + _slat; y < bounds.bottom - 2; y += _slat) {
+      canvas.drawLine(
+        Offset(bounds.left + 3, y),
+        Offset(bounds.right - 3, y),
+        slat,
+      );
+    }
     canvas.drawRect(
       bounds,
       Paint()
@@ -709,6 +897,34 @@ class Goal extends PositionComponent {
           ..lineTo(area.right, area.bottom),
         Paint()
           ..color = SilhouettePalette.goalReached
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3,
+      );
+      return;
+    }
+    if (endsLevel) {
+      // The way out is a lit doorway on the bench too. A pale outlined square
+      // was the same shape as a marker and nearly the same as a block; a
+      // doorway with light coming out of it is somewhere to walk into.
+      canvas.drawRect(
+        area,
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(0, area.top),
+            Offset(0, area.bottom),
+            reached
+                ? const [Color(0xFF2B2B2B), Color(0xFF2B2B2B)]
+                : const [Color(0x33FFFFFF), Color(0xEEFFFFFF)],
+          ),
+      );
+      canvas.drawPath(
+        Path()
+          ..moveTo(area.left, area.bottom)
+          ..lineTo(area.left, area.top)
+          ..lineTo(area.right, area.top)
+          ..lineTo(area.right, area.bottom),
+        Paint()
+          ..color = Palette.goalReached
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3,
       );

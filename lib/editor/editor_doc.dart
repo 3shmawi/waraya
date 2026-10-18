@@ -14,7 +14,10 @@ enum PieceKind {
   door('door', 26, 260),
   light('light', 200, 360),
   goal('goal', 80, 72),
-  marker('marker', 70, 72);
+  marker('marker', 70, 72),
+
+  /// On the bench (`Level.mirrors`): the slab its glass stands on.
+  mirror('mirror', 60, 12);
 
   const PieceKind(this.label, this.width, this.height);
 
@@ -129,6 +132,7 @@ class EditorDoc {
       for (final light in level.lights)
         Piece(PieceKind.light, light.area, lightId: light.id ?? ''),
       for (final rect in level.markers) Piece(PieceKind.marker, rect),
+      for (final rect in level.mirrors) Piece(PieceKind.mirror, rect),
       for (final plate in level.plates)
         Piece(
           PieceKind.plate,
@@ -220,6 +224,7 @@ class EditorDoc {
           LightSpec(p.rect, id: p.lightId.isEmpty ? null : p.lightId),
       ],
       markers: [for (final p in of(PieceKind.marker)) p.rect],
+      mirrors: [for (final p in of(PieceKind.mirror)) p.rect],
       plates: [
         for (final p in of(PieceKind.plate))
           PlateSpec(area: p.rect, opens: p.link, inverts: p.inverts),

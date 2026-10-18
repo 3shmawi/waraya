@@ -4308,7 +4308,8 @@ abstract final class Levels {
     name: 'اتعلّق في ماضيك',
     teaches: 'ماضيك ماسكك: مبتبعدش عنه، ولا لتحت.',
     nameEn: 'Hang on Your Past',
-    teachesEn: 'Your past holds you: you cannot get far from it, not even down.',
+    teachesEn:
+        'Your past holds you: you cannot get far from it, not even down.',
     delaySeconds: 1.5,
     leash: 200,
     spawnX: -200,
@@ -4358,7 +4359,8 @@ abstract final class Levels {
     name: 'اطفيله النور',
     teaches: 'النور بيقطع الحبل: اطفيه لماضيك قبل ما تنزل.',
     nameEn: 'Put Out Its Light',
-    teachesEn: 'The light cuts the rope: put it out for your past before you drop.',
+    teachesEn:
+        'The light cuts the rope: put it out for your past before you drop.',
     delaySeconds: 1.5,
     leash: 200,
     spawnX: -300,
@@ -4377,9 +4379,129 @@ abstract final class Levels {
     goal: const Rect.fromLTRB(-200, 746, -120, 818),
   );
 
+  /// **The mirror, one** (`docs/phase-12-more.md` §9): it brings you back.
+  ///
+  /// The button is down past the edge of the shelf, and the shelf is taller
+  /// than any step you can leave yourself, so going down to it is going down
+  /// for good — your own weight opens the door, and you watch it from below.
+  /// The mirror is the way back up, and it is on the way to the door, not on
+  /// the way to the button: you have to go *to* it first, on purpose, and
+  /// then down. D seconds after you stood on it your past stands on it, and
+  /// you are up there in its place; it walks on down after you and stands on
+  /// the button while you walk through.
+  static final Level theMirrorBringsYouBack = Level(
+    id: 'the-mirror-brings-you-back',
+    solution: const [
+      Move.left(0.5), // onto the mirror
+      Move.right(2.25), // back, and off the edge onto the button
+      Move(2.2), // until your past is on the mirror: you are up there
+      Move.left(5), // and through, while it stands on the button
+    ],
+    wrongIdeas: const [
+      // The button first, and wait for your past to do it for you — from
+      // down there.
+      [Move.right(1.6), Move(6), Move.left(6)],
+      // On the mirror for as long as you like: it is your past that has to
+      // arrive on it, and it arrives where you stood, which is here.
+      [Move.left(0.5), Move(6), Move.left(5)],
+    ],
+    name: 'المراية بترجّعك',
+    teaches: 'ماضيك يوصل المراية، تلاقي نفسك مكانه.',
+    nameEn: 'The Mirror Brings You Back',
+    teachesEn: 'When your past reaches the mirror, you are where it is.',
+    delaySeconds: 4,
+    spawnX: 0,
+    floorTop: 400,
+    blocks: [
+      const Rect.fromLTRB(-700, 400, 300, 2200),
+      const Rect.fromLTRB(300, 620, 1100, 2200),
+      const Rect.fromLTRB(-740, 140, -700, 2200),
+      const Rect.fromLTRB(1100, 140, 1160, 2200),
+    ],
+    mirrors: const [Rect.fromLTRB(-150, 388, -90, 400)],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(380, 608, 460, 620), opens: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-330, 150, -304, 400)),
+    ],
+    goal: const Rect.fromLTRB(-480, 328, -400, 400),
+  );
+
+  /// **The mirror, two**: your past does it again.
+  ///
+  /// The two doors are up on the walkway and their buttons are under it,
+  /// down through a hole you cannot climb back out of. The mirror brings you
+  /// back up, and then your past walks the trip you took underneath — under
+  /// the first door, which stays open a moment after it is touched, and on
+  /// to the second, which only stays open while somebody stands on it. So
+  /// it is the far button you have to stand on, until you are taken back up;
+  /// the near one only has to be walked over.
+  static final Level yourPastGoesAgain = Level(
+    id: 'your-past-goes-again',
+    solution: const [
+      Move.left(0.5), // onto the mirror
+      Move.left(1.0), // on to the hole, and down it
+      Move.right(3.3), // underneath: over the near button, onto the far one
+      Move(1.3), // and stand, until the mirror takes you back up
+      Move.right(7), // along the top, behind your past, through both
+    ],
+    wrongIdeas: const [
+      // Stand on the near button instead, the first one you come to.
+      [Move.left(1.5), Move.right(2.25), Move(4), Move.right(7)],
+      // Down without the mirror: under the walkway for good.
+      [
+        Move.left(0.2),
+        Move.left(0.6, jump: true), // over the mirror, not on it
+        Move.left(0.7),
+        Move.right(4.0),
+        Move(3),
+        Move.right(7),
+      ],
+    ],
+    name: 'ماضيك بيعيدها',
+    teaches: 'المراية بترجّعك فوق، وماضيك بيعمل اللي عملته تحت.',
+    nameEn: 'Your Past Goes Again',
+    teachesEn:
+        'The mirror takes you back up; your past does again what you did '
+        'below.',
+    delaySeconds: 5.5,
+    spawnX: 0,
+    floorTop: 400,
+    blocks: [
+      // The walkway, with the hole in it.
+      const Rect.fromLTRB(-600, 400, -350, 430),
+      const Rect.fromLTRB(-250, 400, 700, 430),
+      // Underneath.
+      const Rect.fromLTRB(-1100, 620, 1200, 2200),
+      const Rect.fromLTRB(-640, 140, -600, 620),
+      const Rect.fromLTRB(700, 140, 740, 620),
+    ],
+    mirrors: const [Rect.fromLTRB(-150, 388, -90, 400)],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(130, 608, 190, 620), opens: 'near'),
+      PlateSpec(area: Rect.fromLTRB(360, 608, 400, 620), opens: 'far'),
+    ],
+    doors: const [
+      DoorSpec(
+        id: 'near',
+        closed: Rect.fromLTRB(150, 150, 176, 400),
+        lingerSeconds: 2,
+      ),
+      DoorSpec(id: 'far', closed: Rect.fromLTRB(380, 150, 406, 400)),
+    ],
+    goal: const Rect.fromLTRB(520, 328, 600, 400),
+  );
+
   /// Levels on the bench and not in the campaign: they use something still
   /// on trial. The editor's start menu offers them.
-  static final List<Level> bench = [thatsYou, hangOnYourPast, putOutItsLight];
+  static final List<Level> bench = [
+    thatsYou,
+    hangOnYourPast,
+    putOutItsLight,
+    theMirrorBringsYouBack,
+    yourPastGoesAgain,
+  ];
 
   static final Level lab = Level(
     id: 'lab',

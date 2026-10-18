@@ -103,8 +103,10 @@ class ShadowFigure extends PositionComponent {
 
   void apply(PoseSnapshot next) {
     final previous = _snapshot;
-    lastStepX = previous == null ? 0 : next.x - previous.x;
-    _previous = previous ?? next;
+    // A mirror put the body here: it did not walk, so it carries nobody across
+    // the level and is not drawn sliding there.
+    lastStepX = previous == null || next.warped ? 0 : next.x - previous.x;
+    _previous = next.warped ? next : previous ?? next;
     _snapshot = next;
     position.setValues(next.x, next.y);
   }

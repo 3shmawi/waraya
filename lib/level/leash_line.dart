@@ -54,8 +54,7 @@ class LeashLine extends Component {
   ///
   /// Thinning alone did not read as stretched, reported from playing. A
   /// string pulled tighter than it goes hums, and that does.
-  static double strainAt(double reach) =>
-      min(8.0, 60 * max(0.0, reach - 1));
+  static double strainAt(double reach) => min(8.0, 60 * max(0.0, reach - 1));
 
   /// Seconds this has been drawing. The hum is paint, so it runs on the
   /// frame clock and nothing reads it.

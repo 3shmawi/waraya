@@ -110,6 +110,7 @@ class Player extends PositionComponent {
 
   bool _walking = false;
   bool _jumpedSinceCapture = false;
+  bool _warpedSinceCapture = false;
 
   /// How far above a one-way surface the previous frame's feet may have been
   /// and still count as landing on it, rather than passing through from below.
@@ -146,8 +147,10 @@ class Player extends PositionComponent {
       stridePhase: _stridePhase,
       crouch: crouch,
       jumpPressed: _jumpedSinceCapture,
+      warped: _warpedSinceCapture,
     );
     _jumpedSinceCapture = false;
+    _warpedSinceCapture = false;
     return snapshot;
   }
 
@@ -172,7 +175,26 @@ class Player extends PositionComponent {
     _stridePhase = 0;
     _walking = false;
     _jumpedSinceCapture = false;
+    _warpedSinceCapture = false;
     _hanging = false;
+  }
+
+  /// Puts the body down at [feet], folded [crouch], with no speed — where a
+  /// mirror sends it (`Level.mirrors`). Facing is kept: nothing turned you
+  /// round.
+  ///
+  /// The fold comes with it because the place may be under a low ceiling
+  /// your past ducked under; standing up there is the ordinary crouch's job,
+  /// which only stands when there is room.
+  void warpTo(Offset feet, {double crouch = 0}) {
+    position.setValues(feet.dx, feet.dy);
+    locomotion.reset();
+    this.crouch = crouch;
+    isGrounded = false;
+    isOnShadow = false;
+    carryX = 0;
+    _hanging = false;
+    _warpedSinceCapture = true;
   }
 
   @override

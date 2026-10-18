@@ -32,6 +32,7 @@ import 'level.dart';
 import 'levels.dart';
 import 'player.dart';
 import 'leash_line.dart';
+import 'mirror.dart';
 import 'prelude.dart';
 import 'props.dart';
 
@@ -178,6 +179,12 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   final List<Door> doors = [];
   final List<LightZone> lights = [];
   final List<Goal> goals = [];
+  final List<Mirror> mirrors = [];
+
+  /// The past a mirror just put you inside, which does not kill you while
+  /// you are still standing in it (`Level.mirrors`). Null the rest of the
+  /// time.
+  ShadowFigure? _steppedOutOf;
 
   int _index;
   int get levelIndex => _index;
@@ -324,6 +331,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     doors.clear();
     lights.clear();
     goals.clear();
+    mirrors.clear();
+    _steppedOutOf = null;
     ticker.reset();
     steps.reset();
     shake.reset();
@@ -384,6 +393,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
         ),
       ),
     );
+    mirrors.addAll(level.mirrors.map((area) => Mirror(area, look: look)));
+    _markPairs();
     goals
       ..add(Goal(area: level.goal, look: look))
       ..addAll(
@@ -422,6 +433,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       ?prelude?.figure,
       Blocks(level.blocks, look: look),
       ...lights,
+      ...mirrors,
       ...plates,
       ...toggles,
       ...doors,
@@ -706,6 +718,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       }
     }
 
+    _mirror();
+
     for (final goal in goals) {
       if (goal.reached || !playerBox.overlaps(goal.area)) continue;
       goal.reached = true;
@@ -720,8 +734,83 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     // Not once the level is won. The shadow is still walking during the beat
     // between touching the goal and the next level loading, and being caught
     // in that beat used to wipe the finish and put you back at the start.
-    if (settings.shadowKills && !_completed && ghosts.any(playerBox.overlaps)) {
+    // A mirror puts you exactly where your past is standing, so the past it
+    // swapped you with does not count until you have stepped out of it.
+    final inside = _steppedOutOf;
+    if (inside != null && !inside.bounds.overlaps(player.bounds)) {
+      _steppedOutOf = null;
+    }
+    if (settings.shadowKills &&
+        !_completed &&
+        liveShadows.any(
+          (ghost) =>
+              ghost != _steppedOutOf && ghost.bounds.overlaps(player.bounds),
+        )) {
       die();
+    }
+  }
+
+  /// When a past arrives on a mirror, you are where it is
+  /// (`Level.mirrors`). The nearest past first, and one at a time: two
+  /// arriving together send you once, to the nearer.
+  ///
+  /// Every past's contact is fed to every mirror whether or not one has
+  /// already fired, so each mirror's idea of who is on it stays true.
+  void _mirror() {
+    if (mirrors.isEmpty) return;
+    ShadowFigure? sends;
+    Mirror? from;
+    for (final mirror in mirrors) {
+      for (final (i, ghost) in shadows.indexed) {
+        final live = ghost.isActive && !ghost.inLight;
+        final arrived = mirror.arrived(
+          i,
+          on: live && _standsOn(ghost.bounds, mirror.trigger),
+          warped: ghost.snapshot?.warped ?? false,
+        );
+        if (arrived && sends == null) {
+          sends = ghost;
+          from = mirror;
+        }
+      }
+    }
+    if (sends == null) return;
+    final ring = _lit ? SilhouettePalette.shadowColor : Palette.bodyColor;
+    world
+      ..add(MirrorRing(player.bounds.center, color: ring))
+      ..add(MirrorRing(sends.bounds.center, color: ring));
+    from!.flash();
+    player.warpTo(Offset(sends.x, sends.y), crouch: sends.crouch);
+    _steppedOutOf = sends;
+    audio.play(Sfx.plate, volume: 0.6);
+    haptics.buzz(Buzz.light);
+  }
+
+  /// Gives every door and named light a shape, and every plate and key the
+  /// shape of what it opens ([PairMark]) — but only when there is more than
+  /// one thing to open. With one there is nothing to tell apart.
+  void _markPairs() {
+    final targets = [
+      for (final door in doors) door.id,
+      for (final light in lights) ?light.spec.id,
+    ];
+    if (targets.length < 2) return;
+    int? of(String id) {
+      final i = targets.indexOf(id);
+      return i < 0 ? null : i;
+    }
+
+    for (final door in doors) {
+      door.mark = of(door.id);
+    }
+    for (final light in lights) {
+      if (light.spec.id case final id?) light.mark = of(id);
+    }
+    for (final plate in plates) {
+      plate.mark = of(plate.opens);
+    }
+    for (final toggle in toggles) {
+      toggle.mark = of(toggle.flips);
     }
   }
 
@@ -1008,6 +1097,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     for (final goal in goals) {
       goal.reset();
     }
+    for (final mirror in mirrors) {
+      mirror.reset();
+    }
+    _steppedOutOf = null;
     steps.reset();
     shake.reset();
     _completed = false;

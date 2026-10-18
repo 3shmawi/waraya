@@ -28,6 +28,7 @@ class PoseSnapshot {
     required this.stridePhase,
     this.crouch = 0,
     this.jumpPressed = false,
+    this.warped = false,
   });
 
   /// Feet position in world units — the walker is anchored bottom-centre.
@@ -58,6 +59,12 @@ class PoseSnapshot {
   /// eventually needs to *do* something at a moment (grab, press, throw), this
   /// is the field that says when.
   final bool jumpPressed;
+
+  /// True on the one tick the body was put here by a mirror (`Level.mirrors`)
+  /// rather than by moving. Replayed, it tells the shadow to jump straight
+  /// there instead of gliding across the level, and tells the mirror the
+  /// shadow did not *arrive*.
+  final bool warped;
 
   Vector2 get position => Vector2(x, y);
 
