@@ -155,6 +155,7 @@ class Dog extends PositionComponent {
   }
 
   void reset() {
+    _ring = null;
     _x = spec.home;
     facing = -1;
     target = null;
@@ -176,25 +177,88 @@ class Dog extends PositionComponent {
     final body = _lit ? SilhouettePalette.bodyColor : const Color(0xFF2A2420);
     final edge = _lit ? SilhouettePalette.blockTop : const Color(0xFF9A9A9A);
 
-    // Its ground: a worn strip of floor with a scuff at each end, so where
-    // it stops is something you can see. Flat on the floor — anything
-    // standing up here is something the player tries to climb.
-    final worn = Paint()
-      ..color = (_lit ? const Color(0xFF3A2C30) : const Color(0xFF5A5A5A))
-          .withValues(alpha: 0.7);
-    canvas.drawRect(
-      Rect.fromLTRB(spec.area.left, floor - 2, spec.area.right, floor + 3),
-      worn,
-    );
-    for (final end in [spec.area.left, spec.area.right]) {
-      canvas.drawRect(Rect.fromLTRB(end - 2, floor - 6, end + 2, floor), worn);
-    }
+    _drawTether(canvas, body, edge);
 
     canvas.save();
     canvas.translate(_x, floor);
     if (facing > 0) canvas.scale(-1, 1);
     _drawDog(canvas, body, edge);
     canvas.restore();
+  }
+
+  /// Where the stake is: the middle of its ground. The rope is why the
+  /// ground ends where it does — asked for after playing, in place of a worn
+  /// strip of floor that said where without saying why.
+  Offset get stake => Offset(spec.area.center.dx, floor);
+
+  /// The collar's ring, where the rope ties on, as last drawn — so the rope
+  /// follows the neck through every pose. Before the first frame, about
+  /// where it will be.
+  Offset get collar =>
+      _ring ?? Offset(_x + (facing > 0 ? 22 : -22), floor - 26);
+  Offset? _ring;
+
+  /// The collar's colour: worn leather on the bench, catching the
+  /// backlight in the scene.
+  Color get _collar => _lit ? const Color(0xFFB07A3E) : const Color(0xFF9C3A2C);
+
+  /// How long the rope is: just long enough to reach the collar with the dog
+  /// at either end of its ground, facing out.
+  double get ropeLength {
+    final reach = spec.area.width / 2 - bodyWidth / 2 + 24;
+    return sqrt(reach * reach + 12 * 12) + 2;
+  }
+
+  /// Pulling against the rope: after something it cannot get to.
+  bool get straining {
+    final at = target;
+    if (at == null) return false;
+    return (_x <= _left + 0.5 && at.x < _x) ||
+        (_x >= _right - 0.5 && at.x > _x);
+  }
+
+  /// The stake and the rope from it to the collar.
+  ///
+  /// The stake is an iron peg barely out of the ground: anything dark that
+  /// stands up in this game is something the player tries to stand on. The
+  /// rope sags when the dog is near the stake and pulls straight when it
+  /// is at the end of it — and shakes while it is pulling.
+  void _drawTether(Canvas canvas, Color body, Color edge) {
+    final peg = stake;
+    final paint = Paint()..color = body;
+    canvas.drawRect(
+      Rect.fromLTRB(peg.dx - 3, peg.dy - 9, peg.dx + 3, peg.dy),
+      paint,
+    );
+    canvas.drawCircle(
+      peg + const Offset(0, -10),
+      3.5,
+      Paint()
+        ..color = edge
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    final from = peg + const Offset(0, -10);
+    final to = collar;
+    final slack = max(0.0, ropeLength - (to - from).distance);
+    final pull = straining ? sin(_clock * 40) * 1.5 : 0.0;
+    final middle = Offset.lerp(from, to, 0.5)!;
+    // The sag, down to the floor and no further.
+    final sag = Offset(
+      middle.dx,
+      min(floor - 1, middle.dy + slack * 0.7 + pull),
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(from.dx, from.dy)
+        ..quadraticBezierTo(sag.dx, sag.dy, to.dx, to.dy),
+      Paint()
+        ..color = _lit ? const Color(0xFF8A6A48) : const Color(0xFF5A4A3A)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round,
+    );
   }
 
   /// The dog itself, facing left, feet on y = 0.
@@ -210,7 +274,9 @@ class Dog extends PositionComponent {
     final lunge = _Lunge.of(_lunge);
 
     // The gait, from distance run: a gallop when running, a trot going home.
-    final phase = _stride / (running ? 16 : 11);
+    // At the end of its rope it runs on the spot, pulling: the legs keep
+    // going while the dog does not.
+    final phase = straining ? _clock * 18 : _stride / (running ? 16 : 11);
     final bob = running
         ? -3 * sin(phase).abs()
         : (homeward ? -1.5 * sin(phase * 2).abs() : 0.0);
@@ -236,8 +302,7 @@ class Dog extends PositionComponent {
 
     final rumpY = sitting ? -14.0 : -24.0;
     if (sitting) {
-      // Haunches down, front legs straight.
-      canvas.drawOval(const Rect.fromLTWH(6, -20, 22, 20), fill);
+      // Front legs straight; the haunch is part of the body, below.
       leg(const Offset(-14, -20), 0.05, thigh: 10, shin: 10);
       leg(const Offset(-9, -20), -0.05, thigh: 10, shin: 10);
     } else {
@@ -250,24 +315,40 @@ class Dog extends PositionComponent {
     }
 
     // The body: deep chest at the front, tucked belly, rump behind.
-    final back = Path()
-      ..moveTo(-20, -33)
-      ..quadraticBezierTo(
-        2,
-        -36 - (running ? 2 * sin(phase) : 0),
-        24,
-        rumpY - 6,
-      )
-      ..quadraticBezierTo(30, rumpY + 2, 22, rumpY + 8)
-      ..quadraticBezierTo(8, -17, -6, -16)
-      ..quadraticBezierTo(-22, -14, -24, -24)
-      ..close();
+    final Path back;
+    if (sitting) {
+      // Sitting: the back slopes down from the shoulders to a haunch on the
+      // ground, with the hind paw out in front of it.
+      back = Path()
+        ..moveTo(-20, -35)
+        ..quadraticBezierTo(0, -30, 14, -18)
+        ..quadraticBezierTo(24, -10, 20, 0)
+        ..lineTo(-2, 0)
+        ..quadraticBezierTo(-4, -4, 4, -6)
+        ..quadraticBezierTo(-6, -12, -10, -17)
+        ..quadraticBezierTo(-22, -16, -24, -26)
+        ..close();
+    } else {
+      back = Path()
+        ..moveTo(-20, -33)
+        ..quadraticBezierTo(
+          2,
+          -36 - (running ? 2 * sin(phase) : 0),
+          24,
+          rumpY - 6,
+        )
+        ..quadraticBezierTo(30, rumpY + 2, 22, rumpY + 8)
+        ..quadraticBezierTo(8, -17, -6, -16)
+        ..quadraticBezierTo(-22, -14, -24, -24)
+        ..close();
+    }
     canvas.drawPath(back, fill);
 
     // The tail: out behind when running, wagging when it sits.
     final wag = sitting ? sin(_clock * 11) * 0.5 : 0.0;
-    final tailUp = running ? -0.9 : (sitting ? -0.4 : -0.2);
-    final tailBase = Offset(24, rumpY - 4);
+    // Sitting, it comes out from the haunch and sweeps along the ground.
+    final tailUp = running ? -0.9 : (sitting ? -0.25 : -0.2);
+    final tailBase = sitting ? const Offset(18, -5) : Offset(24, rumpY - 4);
     final tailMid =
         tailBase + Offset(cos(tailUp + wag) * 9, sin(tailUp + wag) * 9);
     final tailTip =
@@ -297,6 +378,38 @@ class Dog extends PositionComponent {
       shoulder,
       headAt + const Offset(4, 3),
       limb..strokeWidth = 11,
+    );
+    // The collar: a band right round the neck, and the ring under it that
+    // the rope is tied to. Asked for after the rope went in — a rope tied to
+    // a bare neck is a rope tied to nothing.
+    final neck = headAt + const Offset(4, 3) - shoulder;
+    final along = neck / neck.distance;
+    final across = Offset(-along.dy, along.dx);
+    final collarAt = shoulder + neck * 0.4;
+    final band = across * 7.5;
+    canvas.drawLine(
+      collarAt - band,
+      collarAt + band,
+      Paint()
+        ..color = _collar
+        ..strokeWidth = 4,
+    );
+    // The ring: on whichever side of the band is lower, where a tag hangs.
+    final ringAt = collarAt + (band.dy > 0 ? band : -band) * 1.25;
+    canvas.drawCircle(
+      ringAt,
+      2.6,
+      Paint()
+        ..color = edge
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6,
+    );
+    // Remembered in the world, for the rope (drawn first, behind the dog):
+    // the shift the pose put on the whole dog, and the way it faces.
+    final sign = facing > 0 ? -1.0 : 1.0;
+    _ring = Offset(
+      _x + sign * (ringAt.dx - 6 * lunge),
+      floor + ringAt.dy + bob - 4 * lunge,
     );
 
     // The head: skull, muzzle, and a jaw that opens on every bark.
@@ -332,14 +445,18 @@ class Dog extends PositionComponent {
 
     // The backlight along its back, so a black dog reads on a black floor.
     canvas.drawPath(
-      Path()
-        ..moveTo(-18, -34)
-        ..quadraticBezierTo(
-          2,
-          -37 - (running ? 2 * sin(phase) : 0),
-          22,
-          rumpY - 7,
-        ),
+      sitting
+          ? (Path()
+              ..moveTo(-18, -35.5)
+              ..quadraticBezierTo(0, -31, 14, -19))
+          : (Path()
+              ..moveTo(-18, -34)
+              ..quadraticBezierTo(
+                2,
+                -37 - (running ? 2 * sin(phase) : 0),
+                22,
+                rumpY - 7,
+              )),
       Paint()
         ..color = edge
         ..style = PaintingStyle.stroke
