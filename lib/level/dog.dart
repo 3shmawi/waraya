@@ -61,9 +61,11 @@ class Dog extends PositionComponent {
   double _sinceBark = 99;
   Bark? _due;
 
-  /// How often it barks while it is after you, and after your past.
-  static const double _barkEvery = 0.75;
-  static const double _barkAtPastEvery = 1.3;
+  /// How often it barks while it is after you, and after your past. The
+  /// bark is a recording of two barks and the start of a growl, 0.87 s long,
+  /// so after you it is very nearly one bark straight after another.
+  static const double _barkEvery = 0.9;
+  static const double _barkAtPastEvery = 1.6;
 
   /// From 1 when it has just bitten, down to 0: the lunge. Paint only.
   double _lunge = 0;

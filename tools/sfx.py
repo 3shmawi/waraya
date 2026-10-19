@@ -219,21 +219,6 @@ def harmonic_sweep(seconds: float, start_hz: float, end_hz: float, partials: int
     return mix(*layers)
 
 
-def bark() -> Samples:
-    """A street dog's bark: one short, rough "wuf".
-
-    A voice falling fast from high to low with its overtones, through a mouth
-    (the band-pass), on a burst of breath. Short and hard at the front, so two
-    in a row read as a dog that means it and not as a held note.
-    """
-    rng = random.Random(67)
-    voice = harmonic_sweep(0.17, 560, 290, partials=7, curve=0.5)
-    voice = highpass(lowpass(voice, 2400), 220)
-    voice = envelope(voice, 0.006, 0.15, curve=1.6)
-    breath = envelope(highpass(lowpass(noise(0.12, rng), 3000), 500), 0.002, 0.1, curve=2.5)
-    return normalise(mix(voice, gain(breath, 0.45)), 0.85)
-
-
 def snarl() -> Samples:
     """It has got you: a snap of teeth, then a growl that rattles.
 
@@ -250,6 +235,13 @@ def snarl() -> Samples:
     return normalise(mix(snap, gain(growl, 0.9), gain(throat, 0.35)), 0.85)
 
 
+# bark.wav is the one sound not made here. It is a recording, chosen by the
+# project's owner after the synthesised bark: Mixkit's "Hellhound monster
+# attack dog wolf creature" (#3015, Mixkit Sound Effects Free License),
+# mixed to mono, cut to 0.08-0.945 s (the leading silence and the last half
+# second off: two barks and the start of the growl), faded out over 40 ms and
+# normalised to 0.85. Not in SOUNDS, so running this script leaves it alone.
+
 SOUNDS = {
     "step_1.wav": lambda: step(1),
     "step_2.wav": lambda: step(2),
@@ -259,7 +251,6 @@ SOUNDS = {
     "plate.wav": plate,
     "door.wav": door,
     "reset.wav": reset,
-    "bark.wav": bark,
     "snarl.wav": snarl,
 }
 

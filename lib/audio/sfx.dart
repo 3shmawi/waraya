@@ -32,7 +32,8 @@ enum Sfx {
 
   /// A street dog (`Level.dogs`): every time it turns on something, and
   /// every so often while it is after it. Two at once is a dog barking
-  /// twice, which dogs do.
+  /// twice, which dogs do. A recording, not synthesised — `tools/sfx.py`
+  /// says where from and how it was cut.
   bark('bark.wav', voices: 2),
 
   /// The dog has got you.
