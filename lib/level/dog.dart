@@ -9,6 +9,9 @@ import 'level.dart';
 /// is -1, pasts by their place), where it is, and whether it is moving.
 typedef Mover = ({int id, double x, bool moving});
 
+/// A bark the game should make heard: at you, or at your past.
+enum Bark { atYou, atPast }
+
 /// A street dog keeping its stretch ([DogSpec]).
 ///
 /// Moved only by [tick], on the level's fixed clock, from where the bodies
@@ -54,8 +57,21 @@ class Dog extends PositionComponent {
   /// so it is the same on any screen.
   double _stride = 0;
 
-  /// From 1 when it has just seen somebody off, down to 0. Paint only.
-  double _bark = 0;
+  /// Seconds since it last barked, and the bark the game has not played yet.
+  double _sinceBark = 99;
+  Bark? _due;
+
+  /// How often it barks while it is after you, and after your past.
+  static const double _barkEvery = 0.75;
+  static const double _barkAtPastEvery = 1.3;
+
+  /// From 1 when it has just bitten, down to 0: the lunge. Paint only.
+  double _lunge = 0;
+  static const double _lungeSeconds = 0.4;
+
+  /// Seconds it has been drawn, for the wag and the jaw. Paint only: it
+  /// never moves anything, so it runs on the frame clock.
+  double _clock = 0;
 
   double get floor => spec.area.bottom;
 
@@ -94,6 +110,7 @@ class Dog extends PositionComponent {
       }
     }
     nearest = still ?? nearest;
+    final was = target?.id;
     target = nearest;
     final goal = (nearest?.x ?? spec.home).clamp(_left, _right).toDouble();
     final speed = nearest == null ? homeSpeed : chaseSpeed;
@@ -105,32 +122,59 @@ class Dog extends PositionComponent {
     } else if (nearest != null) {
       facing = (nearest.x - _x).sign == 0 ? facing : (nearest.x - _x).sign;
     }
-    _bark = max(0, _bark - dt * 2.5);
+
+    // The barks: the moment it turns on something, and every so often for as
+    // long as it is after it. On the tick, so a run always sounds the same.
+    _sinceBark += dt;
+    final turned = nearest != null && nearest.id != was;
+    if (afterYou && (turned || _sinceBark >= _barkEvery)) {
+      _due = Bark.atYou;
+      _sinceBark = 0;
+    } else if (nearest != null &&
+        !afterYou &&
+        (turned || _sinceBark >= _barkAtPastEvery)) {
+      _due = Bark.atPast;
+      _sinceBark = 0;
+    }
   }
 
   /// Whether a body moved enough between two of its x positions to count.
   static bool moved(double from, double to) => (to - from).abs() > _still;
 
-  /// It has just seen you off.
-  void barked() => _bark = 1;
+  /// The bark the game has not played yet, once.
+  Bark? takeBark() {
+    final bark = _due;
+    _due = null;
+    return bark;
+  }
+
+  /// It has got you.
+  void bite() {
+    _lunge = 1;
+    _sinceBark = 0;
+  }
 
   void reset() {
     _x = spec.home;
     facing = -1;
     target = null;
     _stride = 0;
-    _bark = 0;
+    _sinceBark = 99;
+    _due = null;
+    _lunge = 0;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _clock += dt;
+    _lunge = max(0, _lunge - dt / _lungeSeconds);
   }
 
   @override
   void render(Canvas canvas) {
     final body = _lit ? SilhouettePalette.bodyColor : const Color(0xFF2A2420);
-    final edge = _lit ? SilhouettePalette.blockTop : const Color(0xFF8C8C8C);
-    final paint = Paint()..color = body;
-    final legs = Paint()
-      ..color = body
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round;
+    final edge = _lit ? SilhouettePalette.blockTop : const Color(0xFF9A9A9A);
 
     // Its ground: a worn strip of floor with a scuff at each end, so where
     // it stops is something you can see. Flat on the floor — anything
@@ -149,83 +193,184 @@ class Dog extends PositionComponent {
     canvas.save();
     canvas.translate(_x, floor);
     if (facing > 0) canvas.scale(-1, 1);
-    // Drawn facing left, feet on y = 0.
+    _drawDog(canvas, body, edge);
+    canvas.restore();
+  }
+
+  /// The dog itself, facing left, feet on y = 0.
+  ///
+  /// Four ways of standing, all from state the game already has: sitting at
+  /// home with its tail going; trotting home; running at something, low,
+  /// neck out, ears back, barking; and the lunge when it has got you —
+  /// stretched out, front feet off the ground, jaws wide.
+  void _drawDog(Canvas canvas, Color body, Color edge) {
     final running = target != null;
-    final swing = running ? sin(_stride / 9) * 9 : 0.0;
-    // Legs: front pair and back pair, swinging against each other.
-    for (final (hip, phase) in [
-      (-18.0, 1.0),
-      (-12.0, -1.0),
-      (16.0, -1.0),
-      (22.0, 1.0),
-    ]) {
-      canvas.drawLine(Offset(hip, -16), Offset(hip + swing * phase, -1), legs);
+    final homeward = !running && (spec.home - _x).abs() > 1;
+    final sitting = !running && !homeward;
+    final lunge = _Lunge.of(_lunge);
+
+    // The gait, from distance run: a gallop when running, a trot going home.
+    final phase = _stride / (running ? 16 : 11);
+    final bob = running
+        ? -3 * sin(phase).abs()
+        : (homeward ? -1.5 * sin(phase * 2).abs() : 0.0);
+
+    final fill = Paint()..color = body;
+    final limb = Paint()
+      ..color = body
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    canvas.save();
+    canvas.translate(-6 * lunge, bob - 4 * lunge);
+
+    // Legs first, behind the body: two pairs, each leg a thigh and a shin.
+    void leg(Offset hip, double swing, {double thigh = 11, double shin = 11}) {
+      final knee = hip + Offset(sin(swing) * thigh, cos(swing) * thigh);
+      final paw =
+          knee + Offset(sin(swing * 1.3 - 0.2) * shin, cos(swing * 0.6) * shin);
+      canvas.drawLine(hip, knee, limb..strokeWidth = 5);
+      canvas.drawLine(knee, paw, limb..strokeWidth = 3.5);
     }
-    // Body, a little arched.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-24, -30, 50, 16),
-        const Radius.circular(8),
-      ),
-      paint,
-    );
-    // Neck and head, lower and further forward when it is running.
-    final headY = running ? -30.0 : -38.0;
+
+    final rumpY = sitting ? -14.0 : -24.0;
+    if (sitting) {
+      // Haunches down, front legs straight.
+      canvas.drawOval(const Rect.fromLTWH(6, -20, 22, 20), fill);
+      leg(const Offset(-14, -20), 0.05, thigh: 10, shin: 10);
+      leg(const Offset(-9, -20), -0.05, thigh: 10, shin: 10);
+    } else {
+      final amp = running ? 0.75 : 0.4;
+      final reach = lunge * 1.1;
+      leg(const Offset(-16, -20), amp * sin(phase) - reach);
+      leg(const Offset(-11, -20), amp * sin(phase + 0.6) - reach);
+      leg(const Offset(14, -20), amp * sin(phase + pi) + reach * 0.5);
+      leg(const Offset(19, -20), amp * sin(phase + pi + 0.6) + reach * 0.5);
+    }
+
+    // The body: deep chest at the front, tucked belly, rump behind.
+    final back = Path()
+      ..moveTo(-20, -33)
+      ..quadraticBezierTo(
+        2,
+        -36 - (running ? 2 * sin(phase) : 0),
+        24,
+        rumpY - 6,
+      )
+      ..quadraticBezierTo(30, rumpY + 2, 22, rumpY + 8)
+      ..quadraticBezierTo(8, -17, -6, -16)
+      ..quadraticBezierTo(-22, -14, -24, -24)
+      ..close();
+    canvas.drawPath(back, fill);
+
+    // The tail: out behind when running, wagging when it sits.
+    final wag = sitting ? sin(_clock * 11) * 0.5 : 0.0;
+    final tailUp = running ? -0.9 : (sitting ? -0.4 : -0.2);
+    final tailBase = Offset(24, rumpY - 4);
+    final tailMid =
+        tailBase + Offset(cos(tailUp + wag) * 9, sin(tailUp + wag) * 9);
+    final tailTip =
+        tailMid +
+        Offset(cos(tailUp * 1.4 + wag) * 9, sin(tailUp * 1.4 + wag) * 9);
     canvas.drawPath(
       Path()
-        ..moveTo(-20, -28)
-        ..lineTo(-30, headY - 2)
-        ..lineTo(-24, headY + 8)
-        ..close(),
-      paint,
+        ..moveTo(tailBase.dx, tailBase.dy)
+        ..quadraticBezierTo(tailMid.dx, tailMid.dy, tailTip.dx, tailTip.dy),
+      limb..strokeWidth = 3.5,
     );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(-42, headY - 6, 20, 12),
-        const Radius.circular(5),
-      ),
-      paint,
-    );
-    // Snout and ear.
-    canvas.drawRect(Rect.fromLTWH(-48, headY - 1, 8, 6), paint);
-    canvas.drawPath(
-      Path()
-        ..moveTo(-30, headY - 5)
-        ..lineTo(-26, headY - 14)
-        ..lineTo(-23, headY - 4)
-        ..close(),
-      paint,
-    );
-    // Tail, up when running, down when it is not.
+
+    // The neck: thick, from the shoulders to the head, and where the head
+    // goes says what the dog is doing — up and still at home, out and low
+    // after something, all the way out when it has got you.
+    final headAt = Offset.lerp(
+      sitting
+          ? const Offset(-24, -50)
+          : running
+          ? Offset(-38, -36 + 2 * sin(phase * 2))
+          : const Offset(-34, -42),
+      const Offset(-48, -32),
+      lunge,
+    )!;
+    final shoulder = const Offset(-14, -30);
     canvas.drawLine(
-      const Offset(25, -27),
-      Offset(36, running ? -40 : -18),
-      legs..strokeWidth = 4,
+      shoulder,
+      headAt + const Offset(4, 3),
+      limb..strokeWidth = 11,
     );
+
+    // The head: skull, muzzle, and a jaw that opens on every bark.
+    canvas.drawCircle(headAt, 7.5, fill);
+    final barking = running ? max(0.0, sin(_clock * 14)) : 0.0;
+    final jaw = max(barking * 0.45, lunge * 0.8);
+    canvas.drawPath(
+      Path()
+        ..moveTo(headAt.dx - 2, headAt.dy - 5)
+        ..lineTo(headAt.dx - 15, headAt.dy - 2)
+        ..lineTo(headAt.dx - 15, headAt.dy + 2)
+        ..lineTo(headAt.dx - 2, headAt.dy + 2)
+        ..close(),
+      fill,
+    );
+    canvas.save();
+    canvas.translate(headAt.dx - 2, headAt.dy + 2);
+    canvas.rotate(-jaw);
+    canvas.drawRect(const Rect.fromLTWH(-12, 0, 12, 3.5), fill);
+    canvas.restore();
+
+    // An ear: pricked when it sits, laid back when it runs.
+    final earBack = running ? 0.9 : (sitting ? 0.0 : 0.4);
+    final earBase = headAt + const Offset(2, -5);
+    canvas.drawPath(
+      Path()
+        ..moveTo(earBase.dx - 3, earBase.dy)
+        ..lineTo(earBase.dx + sin(earBack) * 9, earBase.dy - cos(earBack) * 9)
+        ..lineTo(earBase.dx + 4, earBase.dy + 1)
+        ..close(),
+      fill,
+    );
+
     // The backlight along its back, so a black dog reads on a black floor.
-    canvas.drawLine(
-      const Offset(-20, -30),
-      const Offset(22, -30),
+    canvas.drawPath(
+      Path()
+        ..moveTo(-18, -34)
+        ..quadraticBezierTo(
+          2,
+          -37 - (running ? 2 * sin(phase) : 0),
+          22,
+          rumpY - 7,
+        ),
       Paint()
         ..color = edge
+        ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
-    // Barking: three short lines out of the mouth while it is after
-    // something, louder for a moment after it has seen you off.
-    if (running || _bark > 0) {
-      final loud = 0.5 + 0.5 * _bark;
-      final bark = Paint()
-        ..color = edge.withValues(alpha: loud)
+
+    // The bark itself, out of the open mouth.
+    if (jaw > 0.25) {
+      final loud = ((jaw - 0.25) / 0.55).clamp(0.0, 1.0);
+      final lines = Paint()
+        ..color = edge.withValues(alpha: 0.4 + 0.6 * loud)
         ..strokeWidth = 2
         ..strokeCap = StrokeCap.round;
+      final mouth = headAt + const Offset(-17, 1);
       for (final dy in [-7.0, 0.0, 7.0]) {
         canvas.drawLine(
-          Offset(-54, headY + 2 + dy * 0.6),
-          Offset(-62 - 6 * _bark, headY + 2 + dy),
-          bark,
+          mouth + Offset(-3, dy * 0.5),
+          mouth + Offset(-9 - 5 * loud, dy),
+          lines,
         );
       }
     }
     canvas.restore();
+  }
+}
+
+/// The lunge's shape over its short life: out fast, back slowly.
+abstract final class _Lunge {
+  static double of(double left) {
+    if (left <= 0) return 0;
+    final t = 1 - left;
+    return t < 0.25 ? t / 0.25 : 1 - (t - 0.25) / 0.75;
   }
 }

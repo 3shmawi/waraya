@@ -347,6 +347,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     goals.clear();
     mirrors.clear();
     dogs.clear();
+    _fleeing = null;
     _steppedOutOf = null;
     ticker.reset();
     steps.reset();
@@ -608,6 +609,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     for (final ghost in shadows) {
       ghost.standable = steps.contains(ghost);
     }
+    _flee(step);
     super.update(step);
     _resolveInteractions();
 
@@ -669,6 +671,14 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     _lastPlayerX = pose.x;
     for (final dog in dogs) {
       dog.tick(ticker.tickRate, movers);
+      // Loud when it is after you, under its breath at your past.
+      switch (dog.takeBark()) {
+        case Bark.atYou:
+          audio.play(Sfx.bark, volume: 0.7);
+        case Bark.atPast:
+          audio.play(Sfx.bark, volume: 0.25);
+        case null:
+      }
     }
   }
 
@@ -843,18 +853,62 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// Only a dog that is after **you**. One that is after your past is busy:
   /// you can walk right by it.
   void _seenOff() {
+    if (_fleeing != null) return;
     for (final dog in dogs) {
       if (!dog.afterYou || !dog.bounds.overlaps(player.bounds)) continue;
-      final ring = _lit ? SilhouettePalette.blockTop : Palette.bodyColor;
-      world.add(MirrorRing(player.bounds.center, color: ring));
-      player.warpTo(Offset(dog.spec.backTo, dog.floor));
-      _lastPlayerX = dog.spec.backTo;
-      _stillFor[-1] = _forgets;
-      dog.barked();
-      audio.play(Sfx.reset, volume: 0.4);
+      _fleeing = dog.spec;
+      _fleeTo = (dog.spec.backTo - player.x).sign;
+      _fleeLeft = _fleeAtMost;
+      dog.bite();
+      // Kicked-up dust where it got you: the same puff a hard landing makes.
+      world.add(
+        Puff.landing(
+          Vector2(player.x, player.y),
+          color: _lit ? const Color(0x88D9C2A0) : const Color(0x88606060),
+          weight: 0.8,
+        ),
+      );
+      audio.play(Sfx.snarl, volume: 0.8);
       haptics.buzz(Buzz.medium);
       return;
     }
+  }
+
+  /// The dog that is seeing you off, while you run: back to its
+  /// [DogSpec.backTo], fast, with the controls not yours until you are there.
+  /// Seen, not jumped — the first version put you back in one frame, and a
+  /// body vanishing from under a dog reads as a glitch, not as a dog.
+  DogSpec? _fleeing;
+
+  /// Which way you are running, -1 or 1.
+  double _fleeTo = 0;
+
+  /// Seconds left before you are simply put there: a wall in the way must
+  /// not leave you running into it for ever.
+  double _fleeLeft = 0;
+  static const double _fleeAtMost = 3;
+
+  /// How much faster than walking you run from a dog.
+  static const double fleeBoost = 2.6;
+
+  /// Steers the body while a dog is seeing you off ([_fleeing]).
+  void _flee(double dt) {
+    final from = _fleeing;
+    if (from == null) return;
+    _fleeLeft -= dt;
+    final there = (player.x - from.backTo) * _fleeTo >= 0;
+    if (there || _fleeTo == 0 || _fleeLeft <= 0) {
+      if (!there) player.warpTo(Offset(from.backTo, from.area.bottom));
+      player
+        ..forcedIntent = null
+        ..speedBoost = 1;
+      player.locomotion.stopHorizontally();
+      _fleeing = null;
+      return;
+    }
+    player
+      ..forcedIntent = InputIntent(moveAxis: _fleeTo)
+      ..speedBoost = fleeBoost;
   }
 
   /// Gives every door and named light a shape, and every plate and key the
@@ -1174,6 +1228,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     for (final dog in dogs) {
       dog.reset();
     }
+    _fleeing = null;
     _lastPlayerX = level.spawnX;
     _stillFor.clear();
     _steppedOutOf = null;

@@ -210,6 +210,46 @@ def reset() -> Samples:
     return normalise(mix(fall, gain(air, 0.4)), 0.8)
 
 
+def harmonic_sweep(seconds: float, start_hz: float, end_hz: float, partials: int, curve: float = 1.0) -> Samples:
+    """A sweep with its overtones, falling off as 1/n: a throat, not a whistle."""
+    layers = [
+        gain(sweep(seconds, start_hz * n, end_hz * n, curve), 1.0 / n)
+        for n in range(1, partials + 1)
+    ]
+    return mix(*layers)
+
+
+def bark() -> Samples:
+    """A street dog's bark: one short, rough "wuf".
+
+    A voice falling fast from high to low with its overtones, through a mouth
+    (the band-pass), on a burst of breath. Short and hard at the front, so two
+    in a row read as a dog that means it and not as a held note.
+    """
+    rng = random.Random(67)
+    voice = harmonic_sweep(0.17, 560, 290, partials=7, curve=0.5)
+    voice = highpass(lowpass(voice, 2400), 220)
+    voice = envelope(voice, 0.006, 0.15, curve=1.6)
+    breath = envelope(highpass(lowpass(noise(0.12, rng), 3000), 500), 0.002, 0.1, curve=2.5)
+    return normalise(mix(voice, gain(breath, 0.45)), 0.85)
+
+
+def snarl() -> Samples:
+    """It has got you: a snap of teeth, then a growl that rattles.
+
+    The rattle is the growl's loudness going up and down thirty times a
+    second, which is what a growl is: the throat, not the pitch.
+    """
+    rng = random.Random(71)
+    snap = envelope(highpass(noise(0.03, rng), 1800), 0.0005, 0.025, curve=4.0)
+    growl = harmonic_sweep(0.45, 130, 95, partials=8)
+    rattle = [0.55 + 0.45 * math.sin(2 * math.pi * 31 * i / RATE) for i in range(len(growl))]
+    growl = [g * r for g, r in zip(growl, rattle)]
+    growl = envelope(lowpass(growl, 1400), 0.02, 0.4, curve=1.4)
+    throat = envelope(lowpass(noise(0.45, rng), 900), 0.02, 0.4, curve=1.6)
+    return normalise(mix(snap, gain(growl, 0.9), gain(throat, 0.35)), 0.85)
+
+
 SOUNDS = {
     "step_1.wav": lambda: step(1),
     "step_2.wav": lambda: step(2),
@@ -219,6 +259,8 @@ SOUNDS = {
     "plate.wav": plate,
     "door.wav": door,
     "reset.wav": reset,
+    "bark.wav": bark,
+    "snarl.wav": snarl,
 }
 
 

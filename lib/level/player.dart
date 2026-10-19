@@ -6,6 +6,7 @@ import 'package:flame/components.dart';
 import '../game/character/figure.dart';
 import '../game/character/locomotion.dart';
 import '../game/config.dart';
+import '../input/input.dart';
 import '../input/input_controller.dart';
 import '../shadow/snapshot.dart';
 import 'level.dart';
@@ -164,6 +165,8 @@ class Player extends PositionComponent {
   double _landingImpact = 0;
 
   void resetToSpawn() {
+    forcedIntent = null;
+    speedBoost = 1;
     position.setValues(_spawn.x, _spawn.y);
     locomotion.reset();
     _landingImpact = 0;
@@ -197,6 +200,16 @@ class Player extends PositionComponent {
     _warpedSinceCapture = true;
   }
 
+  /// What the body does instead of what the player asks, while set: a dog
+  /// seeing you off runs you back the way you came (`LevelGame`). Null —
+  /// nearly always — is the player's own input.
+  InputIntent? forcedIntent;
+
+  /// How much faster than walking, while [forcedIntent] is set.
+  double speedBoost = 1;
+
+  InputIntent get _intent => forcedIntent ?? input.intent;
+
   @override
   void update(double dt) {
     super.update(dt);
@@ -208,9 +221,10 @@ class Player extends PositionComponent {
     final before = bounds.center;
     locomotion.step(
       dt,
-      intent: input.intent,
+      intent: _intent,
       grounded: wasGrounded,
-      speedScale: 1 - (1 - WarayaConfig.crouchSpeedFactor) * crouch,
+      speedScale:
+          (1 - (1 - WarayaConfig.crouchSpeedFactor) * crouch) * speedBoost,
       // Not while folded up: a crouch that can be jumped out of at any moment
       // is a dodge, and the low corridor stops being a corridor.
       canJump: crouch < 0.2,
@@ -418,7 +432,7 @@ class Player extends PositionComponent {
   /// game that has ever had a crouch does, and the only alternative is being
   /// shoved through the floor.
   void _updateCrouch(double dt, Solids world) {
-    final wants = input.intent.crouch && isGrounded;
+    final wants = _intent.crouch && isGrounded;
     final step = WarayaConfig.crouchRate * dt;
     if (wants) {
       crouch = (crouch + step).clamp(0.0, 1.0);

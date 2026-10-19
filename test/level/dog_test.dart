@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waraya/audio/sfx.dart';
 import 'package:waraya/editor/editor_doc.dart';
 import 'package:waraya/level/dog.dart';
 import 'package:waraya/level/dog_levels.dart';
@@ -13,6 +14,17 @@ import 'package:waraya/level/levels.dart';
 import 'package:waraya/level/playthrough.dart';
 
 import 'run.dart';
+
+/// Every sound the game asked for, with how loud.
+class _Heard implements AudioOut {
+  final List<(Sfx, double)> played = [];
+
+  @override
+  Future<void> preload() async {}
+
+  @override
+  void play(Sfx sfx, {double volume = 1.0}) => played.add((sfx, volume));
+}
 
 /// The street dog (`docs/phase-12-more.md` §10): it runs at what moves, and
 /// it sees you off. On the bench, so the game and the gate refuse it by name.
@@ -130,6 +142,100 @@ void main() {
         }
         run.hold(1.0);
         expect(game.dogs.single.target, isNull);
+      },
+    );
+  });
+
+  group('seen off, and heard', () {
+    testWithGame<LevelGame>(
+      'you run back, seen, and the controls are not yours till you are there',
+      () => build(flat()),
+      (game) async {
+        await game.ready();
+        var biggestStep = 0.0;
+        var furthestBack = double.infinity;
+        var last = game.player.x;
+        var bitten = false;
+        // Hold right the whole time: while it sees you off you run left
+        // anyway.
+        Run(game).hold(
+          3,
+          axis: 1,
+          each: () {
+            final step = game.player.x - last;
+            biggestStep = [
+              biggestStep,
+              step.abs(),
+            ].reduce((a, b) => a > b ? a : b);
+            if (step < -1) bitten = true;
+            if (bitten) {
+              furthestBack = [
+                furthestBack,
+                game.player.x,
+              ].reduce((a, b) => a < b ? a : b);
+            }
+            last = game.player.x;
+          },
+        );
+        expect(bitten, isTrue);
+        expect(biggestStep, lessThan(15), reason: 'a run, not a jump');
+        expect(furthestBack, closeTo(-300, 12));
+      },
+    );
+
+    final heard = _Heard();
+    testWithGame<LevelGame>(
+      'it barks when it turns on you, and snarls when it gets you',
+      () =>
+          LevelGame(levels: [flat()], inputs: [ScriptedInput()], audio: heard),
+      (game) async {
+        await game.ready();
+        heard.played.clear();
+        var firstBark = -1;
+        var inSight = -1;
+        var frame = 0;
+        Run(game).hold(
+          2,
+          axis: 1,
+          each: () {
+            frame++;
+            if (inSight < 0 && game.player.x >= -Dog.sight) inSight = frame;
+            if (firstBark < 0 && heard.played.any((e) => e.$1 == Sfx.bark)) {
+              firstBark = frame;
+            }
+          },
+        );
+        // As soon as you come into sight, not when it gets to you.
+        expect(firstBark - inSight, inInclusiveRange(0, 2));
+        expect(heard.played.map((e) => e.$1), contains(Sfx.snarl));
+        final atYou = heard.played.firstWhere((e) => e.$1 == Sfx.bark);
+        expect(atYou.$2, greaterThan(0.5), reason: 'loud: it is after you');
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'and only under its breath at your past',
+      () => LevelGame(
+        levels: [
+          flat(delays: const [2.5]),
+        ],
+        inputs: [ScriptedInput()],
+        audio: heard,
+      ),
+      (game) async {
+        await game.ready();
+        final run = Run(game)..walkTo(-120);
+        for (var i = 0; i < 12; i++) {
+          run
+            ..hold(0.25, axis: 1)
+            ..hold(0.25, axis: -1);
+        }
+        run.hold(0.8);
+        heard.played.clear();
+        run.hold(1.5);
+        final barks = heard.played.where((e) => e.$1 == Sfx.bark);
+        expect(barks, isNotEmpty);
+        expect(barks.every((e) => e.$2 < 0.5), isTrue);
       },
     );
   });
