@@ -109,6 +109,7 @@ class EditorDoc {
     this.wrongIdeas = const [],
     this.prelude = const [],
     this.leash,
+    this.dogs = const [],
   });
 
   factory EditorDoc.fromLevel(Level level) => EditorDoc(
@@ -127,6 +128,7 @@ class EditorDoc {
     wrongIdeas: level.wrongIdeas,
     prelude: level.prelude,
     leash: level.leash,
+    dogs: level.dogs,
     pieces: [
       for (final rect in level.blocks) Piece(PieceKind.block, rect),
       for (final light in level.lights)
@@ -195,6 +197,10 @@ class EditorDoc {
   /// knob for it yet: a level gets one in its data.
   double? leash;
 
+  /// The dogs (`Level.dogs`, on trial), carried through. No tool to place
+  /// one yet: a level gets them in its data.
+  List<DogSpec> dogs;
+
   final List<Piece> pieces;
 
   /// The level this is, as the game and the gate will see it.
@@ -216,6 +222,7 @@ class EditorDoc {
       wrongIdeas: wrongIdeas,
       prelude: prelude,
       leash: leash,
+      dogs: dogs,
       // Exactly one: the editor neither adds nor removes it ([canRemove]).
       goal: of(PieceKind.goal).first.rect,
       blocks: [for (final p in of(PieceKind.block)) p.rect],
@@ -256,6 +263,7 @@ class EditorDoc {
     wrongIdeas: [...wrongIdeas],
     prelude: prelude,
     leash: leash,
+    dogs: dogs,
     pieces: [for (final p in pieces) p.copy()],
   );
 

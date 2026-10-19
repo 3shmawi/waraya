@@ -39,6 +39,7 @@ class Level {
     this.prelude = const [],
     this.leash,
     this.mirrors = const [],
+    this.dogs = const [],
   }) : assert(
          leash == null || leash > 0,
          'a leash with no length holds you to the spot, which is not a level',
@@ -235,6 +236,10 @@ class Level {
   /// in the light is not there and moves nobody.
   final List<Rect> mirrors;
 
+  /// Street dogs (`docs/phase-12-more.md` §10), on the bench. Empty — every
+  /// level but the bench's — is none. See [DogSpec].
+  final List<DogSpec> dogs;
+
   /// Whether this level can be checked by somebody who did not write it.
   ///
   /// A level with no recorded solution cannot be shown to be finishable, and
@@ -288,6 +293,7 @@ class Level {
     'prelude',
     'leash',
     'mirror',
+    'dog',
   };
 
   /// What the bench accepts: everything the game does, and what is on trial.
@@ -333,6 +339,8 @@ class Level {
     // Dropped, a mirror is a slab that does nothing: the level puts you down
     // somewhere with no way back out, and looks like a level while it does.
     if (mirrors.isNotEmpty) 'mirror',
+    // Dropped, the dog is not there, and the stretch it guards is a walk.
+    if (dogs.isNotEmpty) 'dog',
   };
 }
 
@@ -467,6 +475,46 @@ class DoorSpec {
 /// switch says for how long. And because your past inside a lit light presses
 /// nothing, a plate under its own light cannot switch it off — somebody in
 /// the dark has to (`docs/phase-12-more.md` §2).
+/// A street dog, and the stretch of ground it keeps (`docs/phase-12-more.md`
+/// §10), on the bench.
+///
+/// **It runs at the nearest thing that moves** — you, or your past — once it
+/// is anywhere near its stretch, and it is faster than you. What stands
+/// still it leaves alone, and a past in the light is not there for it any
+/// more than for anything else. If it gets to you, it sees you off: you are
+/// back at [backTo]. It never kills, and it never leaves [area].
+///
+/// Your past it cannot see off — your past is a memory. It runs to it and
+/// stays with it, barking, for as long as it keeps moving. That is the whole
+/// use: your past is bait.
+///
+/// One rule, worked out on the fixed tick from where the bodies are: no
+/// `Random`, no wandering. The same run, the same dog.
+class DogSpec {
+  const DogSpec({required this.area, required this.home, required this.backTo});
+
+  /// The stretch it keeps: its left and right ends, and the floor it runs
+  /// on (the bottom edge). The top is only drawn.
+  final Rect area;
+
+  /// Where it sits when nothing is moving.
+  final double home;
+
+  /// Where you are when it has seen you off — the x on the floor of
+  /// the way you came in.
+  final double backTo;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DogSpec &&
+      other.area == area &&
+      other.home == home &&
+      other.backTo == backTo;
+
+  @override
+  int get hashCode => Object.hash(area, home, backTo);
+}
+
 class LightSpec {
   const LightSpec(this.area, {this.id});
 
@@ -606,6 +654,15 @@ extension LevelJson on Level {
       'prelude': [for (final move in prelude) _moveToJson(move)],
     if (leash != null) 'leash': leash,
     if (mirrors.isNotEmpty) 'mirrors': mirrors.map(_rectToJson).toList(),
+    if (dogs.isNotEmpty)
+      'dogs': [
+        for (final dog in dogs)
+          {
+            'area': _rectToJson(dog.area),
+            'home': dog.home,
+            'backTo': dog.backTo,
+          },
+      ],
     'goal': _rectToJson(goal),
     'blocks': blocks.map(_rectToJson).toList(),
     // A bare rectangle, as every light was, unless it has a name.
@@ -754,6 +811,20 @@ Level levelFromJson(Object? source, {Set<String>? accepts}) {
       prelude: _moveList(json['prelude'], 'prelude'),
       leash: json['leash'] == null ? null : _asDouble(json['leash'], 'leash'),
       mirrors: _rectList(json['mirrors'], 'mirrors'),
+      dogs: [
+        for (final (i, entry) in _asList(json['dogs'], 'dogs').indexed)
+          DogSpec(
+            area: _rectFromJson(
+              _asMap(entry, 'dogs[$i]')['area'],
+              'dogs[$i].area',
+            ),
+            home: _asDouble(_asMap(entry, 'dogs[$i]')['home'], 'dogs[$i].home'),
+            backTo: _asDouble(
+              _asMap(entry, 'dogs[$i]')['backTo'],
+              'dogs[$i].backTo',
+            ),
+          ),
+      ],
       blocks: _rectList(json['blocks'], 'blocks'),
       lights: [
         for (final (i, entry) in _asList(json['lights'], 'lights').indexed)

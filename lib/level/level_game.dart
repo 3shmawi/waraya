@@ -31,6 +31,7 @@ import 'lang.dart';
 import 'level.dart';
 import 'levels.dart';
 import 'player.dart';
+import 'dog.dart';
 import 'leash_line.dart';
 import 'mirror.dart';
 import 'prelude.dart';
@@ -180,6 +181,19 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   final List<LightZone> lights = [];
   final List<Goal> goals = [];
   final List<Mirror> mirrors = [];
+  final List<Dog> dogs = [];
+
+  /// Where the player was on the last tick, for telling a dog whether they
+  /// moved.
+  double _lastPlayerX = 0;
+
+  /// Ticks each body has stood still, for the dogs: the player at -1, the
+  /// pasts by their place. See [_walkDogs].
+  final Map<int, int> _stillFor = {};
+
+  /// How long something has to stand still before a dog stops counting it
+  /// as moving: half a second.
+  static const int _forgets = 30;
 
   /// The past a mirror just put you inside, which does not kill you while
   /// you are still standing in it (`Level.mirrors`). Null the rest of the
@@ -332,6 +346,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     lights.clear();
     goals.clear();
     mirrors.clear();
+    dogs.clear();
     _steppedOutOf = null;
     ticker.reset();
     steps.reset();
@@ -394,6 +409,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       ),
     );
     mirrors.addAll(level.mirrors.map((area) => Mirror(area, look: look)));
+    dogs.addAll(level.dogs.map((spec) => Dog(spec, look: look)));
+    _lastPlayerX = level.spawnX;
+    _stillFor.clear();
     _markPairs();
     goals
       ..add(Goal(area: level.goal, look: look))
@@ -438,6 +456,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       ...toggles,
       ...doors,
       ...goals,
+      ...dogs,
       ShadowTrail(
         recorder: recorder,
         enabled: () => settings.showTrail,
@@ -620,6 +639,37 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     // which reads as a bug rather than as a moving platform. With two of them
     // it also has to be the right one: the other is somewhere else entirely.
     if (player.isOnShadow) player.carryX += _carrier()?.lastStepX ?? 0;
+    _walkDogs(pose);
+  }
+
+  /// Every dog picks the nearest thing that moved this tick and runs at it
+  /// ([DogSpec]). Your pasts first, then you, so a tie is your past's.
+  ///
+  /// A body put somewhere by a mirror, or sent back by a dog, did not move:
+  /// it was moved.
+  void _walkDogs(PoseSnapshot pose) {
+    if (dogs.isEmpty) return;
+    // Ticks since each body last moved: the player at -1, pasts by place.
+    // A dog does not lose interest the instant something stops — a past
+    // pacing back and forth stands still for a tick at every turn, and a
+    // dog that dropped it there for you would make pacing a coin toss.
+    void note(int who, bool moved) =>
+        _stillFor[who] = moved ? 0 : (_stillFor[who] ?? _forgets) + 1;
+    note(-1, !pose.warped && Dog.moved(_lastPlayerX, pose.x));
+    for (final (i, past) in shadows.indexed) {
+      note(i, past.isActive && Dog.moved(0, past.lastStepX));
+    }
+    bool moving(int who) => (_stillFor[who] ?? _forgets) < _forgets;
+    final movers = <Mover>[
+      for (final (i, past) in shadows.indexed)
+        if (past.isActive && !past.inLight)
+          (id: i, x: past.x, moving: moving(i)),
+      (id: -1, x: pose.x, moving: moving(-1)),
+    ];
+    _lastPlayerX = pose.x;
+    for (final dog in dogs) {
+      dog.tick(ticker.tickRate, movers);
+    }
   }
 
   /// Which shadow the player is standing on, if any.
@@ -719,6 +769,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     _mirror();
+    _seenOff();
 
     for (final goal in goals) {
       if (goal.reached || !playerBox.overlaps(goal.area)) continue;
@@ -784,6 +835,26 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     _steppedOutOf = sends;
     audio.play(Sfx.plate, volume: 0.6);
     haptics.buzz(Buzz.light);
+  }
+
+  /// A dog that gets to you sees you off: you are back where you came in
+  /// ([DogSpec.backTo]). Not a death — nothing else is put back.
+  ///
+  /// Only a dog that is after **you**. One that is after your past is busy:
+  /// you can walk right by it.
+  void _seenOff() {
+    for (final dog in dogs) {
+      if (!dog.afterYou || !dog.bounds.overlaps(player.bounds)) continue;
+      final ring = _lit ? SilhouettePalette.blockTop : Palette.bodyColor;
+      world.add(MirrorRing(player.bounds.center, color: ring));
+      player.warpTo(Offset(dog.spec.backTo, dog.floor));
+      _lastPlayerX = dog.spec.backTo;
+      _stillFor[-1] = _forgets;
+      dog.barked();
+      audio.play(Sfx.reset, volume: 0.4);
+      haptics.buzz(Buzz.medium);
+      return;
+    }
   }
 
   /// Gives every door and named light a shape, and every plate and key the
@@ -1100,6 +1171,11 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     for (final mirror in mirrors) {
       mirror.reset();
     }
+    for (final dog in dogs) {
+      dog.reset();
+    }
+    _lastPlayerX = level.spawnX;
+    _stillFor.clear();
     _steppedOutOf = null;
     steps.reset();
     shake.reset();

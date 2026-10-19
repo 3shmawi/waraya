@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../lab/lab_scene.dart';
+import 'dog_levels.dart';
 import 'level.dart';
 import 'mirror_levels.dart';
 import 'playthrough.dart';
@@ -4503,6 +4504,7 @@ abstract final class Levels {
     theMirrorBringsYouBack,
     yourPastGoesAgain,
     ...MirrorLevels.all,
+    ...DogLevels.all,
   ];
 
   static final Level lab = Level(
