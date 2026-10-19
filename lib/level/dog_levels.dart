@@ -383,10 +383,130 @@ abstract final class DogLevels {
     goal: const Rect.fromLTRB(720, 548, 800, 620),
   );
 
+  /// **The dark behind you.** The one spot the dog can see and cannot get
+  /// at is under a lamp, and a past in the light is nothing to a dog. The
+  /// lamp's key is two steps behind where you start.
+  ///
+  /// A key darkens what you did before it, not after: your past flips it
+  /// back D seconds later. So turning the lamp off first and then pacing
+  /// gets you a past that paces in the light again. Pace first, under the
+  /// lamp — the dog barks at you, not that it matters — and only then go
+  /// back and throw the key. Your past paces in the dark, the dog is on it,
+  /// go. Not too slowly: six seconds after you threw the key, your past
+  /// throws it back.
+  static final Level theDarkBehindYou = Level(
+    id: 'the-dark-behind-you',
+    solution: const [
+      Move.right(0.45), // to the dog's edge, under the lamp
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.left(0.8), // back, onto the key: the lamp goes off
+      Move.right(0.8), // to the edge again
+      Move(0.8), // still, so the dog forgets you
+      Move.right(8),
+    ],
+    wrongIdeas: const [
+      [Move.right(14)],
+      // The key first, then the pacing: your past throws it back on before
+      // it starts pacing, and paces in the light.
+      [
+        Move.left(0.3),
+        Move(0.5),
+        Move.right(0.8),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move(0.8),
+        Move.right(8),
+      ],
+      // The pacing and no key, as on «walk on the button»: under the lamp.
+      [
+        Move.right(0.35),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move(0.8),
+        Move.right(8),
+      ],
+      // The right order, then a long wait at the edge to be safe: six
+      // seconds after you, your past throws the key back.
+      [
+        Move.right(0.45),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.left(0.8),
+        Move.right(0.8),
+        Move(5.0),
+        Move.right(8),
+      ],
+      // The key, and straight in.
+      [Move.left(0.3), Move.right(14)],
+    ],
+    name: 'الضلمة اللي وراك',
+    teaches: 'اتمشّى الأول، واطفي بعدين: المفتاح بيطفي على اللي عملته قبله.',
+    nameEn: 'The Dark Behind You',
+    teachesEn: 'Pace first, then the key: it darkens what you did before it.',
+    delaySeconds: 6,
+    spawnX: -210,
+    floorTop: 620,
+    blocks: [
+      const Rect.fromLTRB(-1400, 620, 1400, 2200),
+      const Rect.fromLTRB(-800, 140, -760, 620),
+      const Rect.fromLTRB(700, 140, 740, 620),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(-200, 200, 0, 620), id: 'lamp')],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-330, 608, -270, 620), flips: 'lamp'),
+    ],
+    dogs: const [
+      DogSpec(area: Rect.fromLTRB(0, 560, 400, 620), home: 250, backTo: -210),
+    ],
+    goal: const Rect.fromLTRB(520, 548, 600, 620),
+  );
+
   static final List<Level> all = [
     theDog,
     walkOnTheButton,
     paceInTheDark,
     theDogFirst,
+    theDarkBehindYou,
   ];
 }

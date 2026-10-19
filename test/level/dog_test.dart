@@ -475,6 +475,43 @@ void main() {
       },
     );
 
+    // The key darkens what you did before it: pace, then throw it, works;
+    // throw it, then pace, never does.
+    testWithGame<LevelGame>(
+      'the-dark-behind-you: the pacing then the key, never the other way',
+      () => build(DogLevels.theDarkBehindYou),
+      (game) async {
+        final runs = <int, List<Move>>{};
+        for (final (t, turns) in [10, 14, 20].indexed) {
+          for (final (w, wait) in [0.0, 0.6, 1.2].indexed) {
+            runs[t * 10 + w] = [
+              const Move.right(0.35),
+              ...pace(turns),
+              const Move.left(0.8),
+              const Move(0.5),
+              const Move.right(0.8),
+              Move(wait),
+              const Move.right(8),
+            ];
+          }
+          for (final (w, wait) in [0.0, 0.6, 1.2, 3.0, 6.0].indexed) {
+            runs[100 + t * 10 + w] = [
+              const Move.left(0.3),
+              const Move(0.5),
+              const Move.right(0.8),
+              ...pace(turns),
+              Move(wait),
+              const Move.right(8),
+            ];
+          }
+        }
+        expect(await finishing(game, runs), {
+          for (var t = 0; t < 3; t++)
+            for (var w = 0; w < 3; w++) t * 10 + w,
+        });
+      },
+    );
+
     // Pace long enough and it works; how much longer than that does not
     // matter. Too short and your past stops before you are through.
     testWithGame<LevelGame>(
