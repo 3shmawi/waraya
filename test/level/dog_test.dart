@@ -413,6 +413,32 @@ void main() {
       },
     );
 
+    // The floor in front of the dog's ground is the one spot down there it
+    // can see and cannot get at. Pacing there solved both ledge levels
+    // without the ledge, found by playing; a lamp under the ledge closed it.
+    for (final level in [DogLevels.theDog, DogLevels.paceInTheDark]) {
+      testWithGame<LevelGame>(
+        '${level.id}: pacing on the floor in front of it never works',
+        () => build(level),
+        (game) async {
+          final runs = <int, List<Move>>{};
+          for (final (w, walk) in [2.4, 2.6, 2.8, 3.0].indexed) {
+            for (final (t, turns) in [8, 12, 16, 20, 24].indexed) {
+              for (final (s, wait) in [0.0, 0.6, 2.0].indexed) {
+                runs[w * 100 + t * 10 + s] = [
+                  Move.right(walk),
+                  ...pace(turns, first: -1),
+                  Move(wait),
+                  const Move.right(8),
+                ];
+              }
+            }
+          }
+          expect(await finishing(game, runs), isEmpty);
+        },
+      );
+    }
+
     // Pace long enough and it works; how much longer than that does not
     // matter. Too short and your past stops before you are through.
     testWithGame<LevelGame>(

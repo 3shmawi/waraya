@@ -53,6 +53,30 @@ abstract final class DogLevels {
         Move.left(2.6),
         Move.right(8),
       ],
+      // Pace on the floor in front of its ground instead, where it can see
+      // you and cannot get at you. Found by playing: it worked, and the
+      // ledge was decoration. The lamp under the ledge is there for it.
+      [
+        Move.right(2.8),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move(2.0),
+        Move.right(8),
+      ],
     ],
     name: 'الكلب',
     teaches: 'الكلب بيجري ورا أي حاجة بتتحرك. ماضيك كمان.',
@@ -71,6 +95,13 @@ abstract final class DogLevels {
       // The ledge, over the dog's ground. A body's height above the step
       // below it, so standing on the step you do not knock your head on it.
       const Rect.fromLTRB(-340, 284, 150, 304),
+    ],
+    lights: const [
+      // A lamp under the ledge, on the floor in front of the dog's ground:
+      // the one spot down there it can see and not get at. A past pacing
+      // there was a second answer — found by playing — that went round the
+      // ledge altogether.
+      LightSpec(Rect.fromLTRB(-200, 310, 0, 620)),
     ],
     dogs: const [
       DogSpec(area: Rect.fromLTRB(0, 560, 900, 620), home: 650, backTo: -300),
@@ -203,6 +234,30 @@ abstract final class DogLevels {
         Move.left(2.6),
         Move.right(8),
       ],
+      // Pace on the floor in front of its ground instead, where it can see
+      // you and cannot get at you. Found by playing: it worked, and the
+      // ledge was decoration. The lamp under the ledge is there for it.
+      [
+        Move.right(2.8),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move(2.0),
+        Move.right(8),
+      ],
     ],
     name: 'اتمشّى في الضلمة',
     teaches: 'الكلب مبيشوفش ماضيك في النور.',
@@ -219,7 +274,13 @@ abstract final class DogLevels {
       const Rect.fromLTRB(-500, 400, -340, 414),
       const Rect.fromLTRB(-340, 284, 150, 304),
     ],
-    lights: const [LightSpec(Rect.fromLTRB(40, 140, 150, 284))],
+    lights: const [
+      LightSpec(Rect.fromLTRB(40, 140, 150, 284)),
+      // A lamp under the ledge, on the floor in front of the dog's ground:
+      // the one spot down there it can see and not get at. The same as in
+      // the first dog level.
+      LightSpec(Rect.fromLTRB(-200, 310, 0, 620)),
+    ],
     dogs: const [
       DogSpec(area: Rect.fromLTRB(0, 560, 900, 620), home: 650, backTo: -300),
     ],
