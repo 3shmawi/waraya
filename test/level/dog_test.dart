@@ -385,6 +385,34 @@ void main() {
       },
     );
 
+    // The same pacing, in the dark and in the light: how long you pace does
+    // not decide it, where you pace does.
+    testWithGame<LevelGame>(
+      'pace-in-the-dark: pacing short of the lamp works, under it never',
+      () => build(DogLevels.paceInTheDark),
+      (game) async {
+        List<Move> run(int turns, {required bool inTheLight}) => [
+          const Move.right(0.55, jump: true),
+          const Move.right(0.55, jump: true),
+          const Move.right(0.25),
+          const Move.right(0.55, jump: true),
+          Move.right(inTheLight ? 2.0 : 1.3),
+          ...pace(turns, first: -1),
+          Move.left(inTheLight ? 2.6 : 1.6),
+          const Move.right(8),
+        ];
+        expect(
+          await finishing(game, {
+            for (final turns in [2, 12, 16, 20])
+              turns: run(turns, inTheLight: false),
+            for (final turns in [12, 16, 20, 24])
+              100 + turns: run(turns, inTheLight: true),
+          }),
+          {12, 16, 20},
+        );
+      },
+    );
+
     // Pace long enough and it works; how much longer than that does not
     // matter. Too short and your past stops before you are through.
     testWithGame<LevelGame>(

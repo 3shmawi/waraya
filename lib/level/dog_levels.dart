@@ -147,5 +147,84 @@ abstract final class DogLevels {
     goal: const Rect.fromLTRB(680, 548, 760, 620),
   );
 
-  static final List<Level> all = [theDog, walkOnTheButton];
+  /// **Pace in the dark.** The first dog level again, with a lamp over the
+  /// end of the ledge — the spot that level taught you to pace on.
+  ///
+  /// Pace there and the dog barks at you the whole time, so it looks as if
+  /// it works. It does not: a past in the light is nothing to a dog, the same
+  /// as it is nothing to a plate. Your past paces under the lamp and the dog
+  /// comes for you. Stop short of the lamp, where the ledge is dark and still
+  /// in the dog's sight, and pace there.
+  static final Level paceInTheDark = Level(
+    id: 'pace-in-the-dark',
+    solution: const [
+      Move.right(0.55, jump: true), // up the steps
+      Move.right(0.55, jump: true),
+      Move.right(0.25),
+      Move.right(0.55, jump: true), // onto the ledge
+      Move.right(1.3), // along it, and stop short of the lamp
+      Move.left(0.3), // and pace there, in the dark
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(1.6), // back along the ledge, down onto the step below
+      Move.right(8), // off it, and in
+    ],
+    wrongIdeas: const [
+      [Move.right(14)],
+      // The first dog level's answer: pace at the end of the ledge, right
+      // over the dog — in the light, where it cannot see your past.
+      [
+        Move.right(0.55, jump: true),
+        Move.right(0.55, jump: true),
+        Move.right(0.25),
+        Move.right(0.55, jump: true),
+        Move.right(2.0),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(2.6),
+        Move.right(8),
+      ],
+    ],
+    name: 'اتمشّى في الضلمة',
+    teaches: 'الكلب مبيشوفش ماضيك في النور.',
+    nameEn: 'Pace in the Dark',
+    teachesEn: 'The dog cannot see your past in the light.',
+    delaySeconds: 6,
+    spawnX: -700,
+    floorTop: 620,
+    blocks: [
+      const Rect.fromLTRB(-1400, 620, 1600, 2200),
+      const Rect.fromLTRB(-1040, 140, -1000, 620),
+      const Rect.fromLTRB(1300, 140, 1340, 620),
+      const Rect.fromLTRB(-660, 510, -500, 524),
+      const Rect.fromLTRB(-500, 400, -340, 414),
+      const Rect.fromLTRB(-340, 284, 150, 304),
+    ],
+    lights: const [LightSpec(Rect.fromLTRB(40, 140, 150, 284))],
+    dogs: const [
+      DogSpec(area: Rect.fromLTRB(0, 560, 900, 620), home: 650, backTo: -300),
+    ],
+    goal: const Rect.fromLTRB(1100, 548, 1180, 620),
+  );
+
+  static final List<Level> all = [theDog, walkOnTheButton, paceInTheDark];
 }
