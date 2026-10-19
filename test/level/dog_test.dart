@@ -439,6 +439,42 @@ void main() {
       );
     }
 
+    // The order is the puzzle: pacing then the button works however long
+    // you pace (past a minimum) and however briefly you stand; the button
+    // then pacing never does, however long you wait after.
+    testWithGame<LevelGame>(
+      'the-dog-first: the dog then the button, never the other way round',
+      () => build(DogLevels.theDogFirst),
+      (game) async {
+        final runs = <int, List<Move>>{};
+        for (final (t, turns) in [10, 12, 16, 20].indexed) {
+          for (final (s, stand) in [0.0, 1.0, 2.0].indexed) {
+            runs[t * 10 + s] = [
+              const Move.right(0.4),
+              ...pace(turns),
+              const Move.left(1.0),
+              Move(stand),
+              const Move.right(10),
+            ];
+          }
+          for (final (w, wait) in [0.0, 0.6, 2.0, 4.0, 6.0].indexed) {
+            runs[100 + t * 10 + w] = [
+              const Move.left(0.45),
+              const Move(1.0),
+              const Move.right(1.0),
+              ...pace(turns),
+              Move(wait),
+              const Move.right(10),
+            ];
+          }
+        }
+        expect(await finishing(game, runs), {
+          for (var t = 0; t < 4; t++)
+            for (var s = 0; s < 3; s++) t * 10 + s,
+        });
+      },
+    );
+
     // Pace long enough and it works; how much longer than that does not
     // matter. Too short and your past stops before you are through.
     testWithGame<LevelGame>(

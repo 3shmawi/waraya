@@ -287,5 +287,106 @@ abstract final class DogLevels {
     goal: const Rect.fromLTRB(1100, 548, 1180, 620),
   );
 
-  static final List<Level> all = [theDog, walkOnTheButton, paceInTheDark];
+  /// **The dog first, the button second.** The door's button is a few steps
+  /// behind where you start, out of the dog's sight; the door is just past
+  /// the dog's ground, and nothing holds it but a body on the button.
+  ///
+  /// Your past does things in the order you did them. You will need the dog
+  /// held first, while you cross, and the button held second, while you go
+  /// through. So pace at the dog's edge first — for no reason, with the
+  /// button right behind you — and only then go back and stand on the
+  /// button. Then go: your past is pacing, the dog is on it, and at the door
+  /// you stand and wait, still, until your past walks back to the button.
+  static final Level theDogFirst = Level(
+    id: 'the-dog-first',
+    solution: const [
+      Move.right(0.4), // to the dog's edge
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.right(0.3),
+      Move.left(0.3),
+      Move.left(1.0), // and only now back, onto the button
+      Move(1.0),
+      Move.right(8), // and go; at the door, wait, still
+    ],
+    wrongIdeas: const [
+      [Move.right(14)],
+      // The button first, since it is right behind you, then the pacing:
+      // your past stands on the button long before you reach the door.
+      [
+        Move.left(0.45),
+        Move(1.0),
+        Move.right(1.0),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move(0.6),
+        Move.right(8),
+      ],
+      // The pacing, as on «walk on the button», and go: nobody is on the
+      // button.
+      [
+        Move.right(0.4),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move.right(0.3),
+        Move.left(0.3),
+        Move(0.6),
+        Move.right(8),
+      ],
+      // The button, and straight in: nothing is holding the dog.
+      [Move.left(0.45), Move(1.0), Move.right(14)],
+    ],
+    name: 'الكلب الأول',
+    teaches: 'ماضيك بيعمل الحاجات بالترتيب اللي عملتها بيه.',
+    nameEn: 'The Dog First',
+    teachesEn: 'Your past does things in the order you did them.',
+    delaySeconds: 6,
+    spawnX: -200,
+    floorTop: 620,
+    blocks: [
+      const Rect.fromLTRB(-1400, 620, 1400, 2200),
+      const Rect.fromLTRB(-800, 140, -760, 620),
+      const Rect.fromLTRB(900, 140, 940, 620),
+    ],
+    plates: const [
+      // Out of the dog's sight, so pacing on it is nothing to the dog.
+      PlateSpec(area: Rect.fromLTRB(-300, 608, -240, 620), opens: 'gate'),
+    ],
+    doors: const [
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(600, 140, 626, 620)),
+    ],
+    dogs: const [
+      DogSpec(area: Rect.fromLTRB(0, 560, 500, 620), home: 300, backTo: -190),
+    ],
+    goal: const Rect.fromLTRB(720, 548, 800, 620),
+  );
+
+  static final List<Level> all = [
+    theDog,
+    walkOnTheButton,
+    paceInTheDark,
+    theDogFirst,
+  ];
 }
