@@ -123,9 +123,17 @@ class Clip {
   final List<Move>? moves;
 
   String get name => '${number.toString().padLeft(2, '0')}-$slug';
-  int get levelIndex => Levels.campaign.indexWhere((l) => l.id == levelId);
-  List<Move> get script => moves ?? Levels.campaign[levelIndex].solution;
+  int get levelIndex => playable.indexWhere((l) => l.id == levelId);
+  List<Move> get script => moves ?? playable[levelIndex].solution;
 }
+
+/// Every level a clip can show: the campaign, then the bench.
+///
+/// The bench is here for the weekly drops (`docs/media/drops.md`): a new
+/// thing's video is made while it is still on trial, so it is ready the
+/// Friday it is promoted — and it is the same recorded solution the tests
+/// play, so the video cannot show a level the game does not accept.
+final List<Level> playable = [...Levels.campaign, ...Levels.bench];
 
 const clips = <Clip>[
   Clip(number: 1, slug: 'the-plate', levelId: 'press-it-early'),
@@ -153,6 +161,18 @@ const clips = <Clip>[
   Clip(number: 13, slug: 'under-the-lamp', levelId: 'under-the-light'),
   Clip(number: 14, slug: 'dont-have-been-there', levelId: 'your-past-shuts-it'),
   Clip(number: 15, slug: 'all-of-it', levelId: 'all-of-it'),
+  // The weekly drops (`docs/media/drops.md`), each one the thing it brings:
+  // the first level that teaches it, then a harder one as the teaser.
+  Clip(number: 16, slug: 'the-mirror', levelId: 'the-mirror-brings-you-back'),
+  Clip(
+    number: 17,
+    slug: 'the-mirror-in-the-light',
+    levelId: 'the-mirror-in-the-light',
+  ),
+  Clip(number: 18, slug: 'the-dog', levelId: 'the-dog'),
+  Clip(number: 19, slug: 'walk-on-the-button', levelId: 'walk-on-the-button'),
+  Clip(number: 20, slug: 'you-hold-the-dark', levelId: 'you-hold-the-dark'),
+  Clip(number: 21, slug: 'a-chain-of-dark', levelId: 'a-chain-of-dark'),
 ];
 
 void main() {
@@ -177,6 +197,11 @@ void main() {
     // Twenty-five minutes a clip: the last level's is twenty seconds long and
     // renders at about two frames a second, which ran out of ten.
     test('clip ${clip.name}', () async {
+      expect(
+        clip.levelIndex,
+        isNonNegative,
+        reason: 'no level ${clip.levelId}',
+      );
       final shot = await render(clip);
       // A clip that runs the whole script and never reaches the goal is a
       // clip of somebody failing the level. Louder here than on the phone.
@@ -203,7 +228,7 @@ Future<({int frames, bool finished})> render(Clip clip) async {
   final scripted = ScriptedInput();
   final game = await initializeGame<LevelGame>(
     () => LevelGame(
-      levels: Levels.campaign,
+      levels: playable,
       look: LevelLook.silhouette,
       startAt: clip.levelIndex,
       inputs: [scripted],

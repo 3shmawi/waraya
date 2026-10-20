@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flutter/foundation.dart';
 
+import '../game/endless.dart';
 import '../shadow/shadow_recorder.dart';
 import 'level.dart';
 
@@ -324,6 +325,7 @@ class LightZone extends PositionComponent {
   void reset() {
     isOn = true;
     _glow = 1;
+    _filament = 1;
   }
 
   @override
@@ -331,7 +333,23 @@ class LightZone extends PositionComponent {
     super.update(dt);
     final step = dt / _fadeSeconds;
     _glow = (isOn ? _glow + step : _glow - step).clamp(0.0, 1.0);
+    // The filament is slower than the light it gives: it comes up with the
+    // beam, but going out it stays a dull orange for a moment after the beam
+    // has gone, which is what a real bulb does and why an out lamp reads as
+    // *switched off* rather than as missing.
+    _filament = isOn
+        ? max(_filament, _glow)
+        : (_filament - dt / _coolSeconds).clamp(0.0, 1.0);
+    _age += dt;
   }
+
+  /// How hot the bulb's filament is, 0 to 1. Paint only.
+  double _filament = 1;
+  static const double _coolSeconds = 0.7;
+
+  /// Seconds this light has been up, on the level's own clock: the dust in
+  /// the beam moves on it, so a clip rendered twice has the same dust.
+  double _age = 0;
 
   /// Whether the beam comes down onto a floor, or stops in the air.
   ///
@@ -389,6 +407,21 @@ class LightZone extends PositionComponent {
   /// How far above its bottom edge a hanging beam fades to nothing.
   static const double _fadeDepth = 90;
 
+  /// The column under the cone in the lit scene: paler than [_beam] and
+  /// screened rather than added, so on a bright sky it whitens the air
+  /// instead of turning it into a yellow box. Faint, but to the rectangle's
+  /// edges — it is the only thing drawn that says exactly where the rule is.
+  late final Paint _wash = Paint()
+    ..blendMode = BlendMode.screen
+    ..shader = ui.Gradient.linear(
+      Offset(0, area.top),
+      Offset(0, area.bottom),
+      landsOnSomething
+          ? const [Color(0x2EFFE6BC), Color(0x18FFE6BC)]
+          : const [Color(0x2EFFE6BC), Color(0x1AFFE6BC), Color(0x00FFE6BC)],
+      landsOnSomething ? null : [0, _fadeFrom, 1],
+    );
+
   /// A narrower, brighter core, so the column reads as a beam rather than as a
   /// tinted rectangle.
   late final Paint _core = Paint()
@@ -430,6 +463,10 @@ class LightZone extends PositionComponent {
 
   @override
   void render(Canvas canvas) {
+    if (_lit) {
+      _renderLit(canvas);
+      return;
+    }
     final lamp = Rect.fromLTRB(
       area.left + area.width * _lampInset,
       area.top - _lampDepth,
@@ -499,6 +536,201 @@ class LightZone extends PositionComponent {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
+  }
+
+  /// The lamp as it is in the game: a tin shade on a cord, a bulb in it, and
+  /// the light it throws.
+  ///
+  /// **The rectangle is still the rule, and still drawn.** Everything that
+  /// makes this look like a lamp — the cone out of the shade, the dust in it,
+  /// the oval on the floor — is drawn *inside* [area], over the old flat
+  /// column, which stays as a fainter wash right to the rectangle's edges.
+  /// The cone is what the eye reads as light; the wash is where the rule
+  /// actually stops. A lamp that looked real by throwing a cone narrower than
+  /// its rectangle would put a past in the dark corner of the picture that
+  /// the rule says is lit — the exact bug "any touch counts" fixed.
+  ///
+  /// The shade is the enamel one on every stair landing and rooftop in
+  /// Cairo: a flat cone, dark outside, with the bulb hanging just below its
+  /// lip. Wider than the old bar but no taller, and still well above the play
+  /// plane (`_lampDepth`), so it is not a thing to stand on.
+  void _renderLit(Canvas canvas) {
+    final cx = area.center.dx;
+    final lipHalf = area.width * (0.5 - _lampInset);
+    final top = area.top - _lampDepth - 5;
+    final lip = area.top - 2;
+    final bulb = Offset(cx, area.top + 2);
+
+    // The cord, lit, running off the top of the view.
+    canvas.drawRect(
+      Rect.fromLTRB(cx - 1, top - 900, cx + 1, top),
+      Paint()..color = const Color(0x66FFE7B0),
+    );
+
+    // The glow round the bulb, behind the shade so the shade cuts it.
+    final hot = _filament;
+    if (hot > 0) {
+      final radius = 26 + area.width * 0.35;
+      canvas.drawCircle(
+        bulb,
+        radius,
+        Paint()
+          ..blendMode = BlendMode.screen
+          ..shader = ui.Gradient.radial(bulb, radius, [
+            Color.fromRGBO(255, 214, 150, 0.45 * _glow),
+            const Color(0x00FFD696),
+          ]),
+      );
+    }
+
+    if (_glow > 0) {
+      final fading = _glow < 1;
+      if (fading) {
+        canvas.saveLayer(
+          area.inflate(4),
+          Paint()..color = Color.fromRGBO(0, 0, 0, _glow),
+        );
+      }
+      // The old flat column, as a wash: it is where the rule stops.
+      canvas.drawRect(area, _wash);
+      _drawCone(canvas, Offset(cx, lip), lipHalf);
+      _drawMotes(canvas);
+      if (landsOnSomething) _drawPool(canvas);
+      if (fading) canvas.restore();
+    }
+
+    // The shade: a flat trapezoid, the housing's dark, with a lit lip.
+    final shade = Path()
+      ..moveTo(cx - 6, top)
+      ..lineTo(cx + 6, top)
+      ..lineTo(cx + lipHalf, lip)
+      ..lineTo(cx - lipHalf, lip)
+      ..close();
+    canvas.drawPath(shade, Paint()..color = SilhouettePalette.blockFill);
+    canvas.drawLine(
+      Offset(cx - lipHalf, lip),
+      Offset(cx + lipHalf, lip),
+      Paint()
+        ..strokeWidth = 1.5
+        ..color = Color.lerp(
+          const Color(0x55D9A25C),
+          const Color(0xFFFFE7B0),
+          _glow,
+        )!,
+    );
+
+    // The bulb under the lip: white-hot when on, a cooling orange going out,
+    // the housing's dark once cold — with a rim, so there is a lamp there to
+    // come back on.
+    final bulbColor = isOn
+        ? Color.lerp(const Color(0xFF6B4A2A), const Color(0xFFFFF4D6), _glow)!
+        : Color.lerp(const Color(0xFF3A2A1E), const Color(0xFFE08A3A), hot)!;
+    canvas.drawCircle(bulb, 4.5, Paint()..color = bulbColor);
+    canvas.drawCircle(
+      bulb,
+      4.5,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0x66FFE7B0),
+    );
+
+    PairMark.draw(
+      canvas,
+      mark,
+      Offset(cx, (top + lip) / 2 + 1),
+      lit: !isOn,
+      look: look,
+      size: 8,
+    );
+  }
+
+  /// The light as it leaves the shade: from the lip's width out to the
+  /// rectangle's by a third of the way down, brightest at the top.
+  void _drawCone(Canvas canvas, Offset lip, double lipHalf) {
+    final spread = min(area.height / 3, 140.0);
+    final cone = Path()
+      ..moveTo(lip.dx - lipHalf, area.top)
+      ..lineTo(lip.dx + lipHalf, area.top)
+      ..lineTo(area.right, area.top + spread)
+      ..lineTo(area.right, area.bottom)
+      ..lineTo(area.left, area.bottom)
+      ..lineTo(area.left, area.top + spread)
+      ..close();
+    canvas.save();
+    canvas.clipRect(area);
+    canvas.drawPath(
+      cone,
+      Paint()
+        ..blendMode = BlendMode.screen
+        ..shader = ui.Gradient.linear(
+          Offset(0, area.top),
+          Offset(0, area.bottom),
+          landsOnSomething
+              ? const [Color(0x40FFE6BC), Color(0x16FFE6BC), Color(0x0AFFE6BC)]
+              : const [Color(0x40FFE6BC), Color(0x16FFE6BC), Color(0x00FFE6BC)],
+          // Most of the cone's light is in its first stretch out of the
+          // shade, the way light near a bulb is. Screened, not added: added
+          // over the sunset it went yellow fast, and the first version was a
+          // yellow block, not a lamp.
+          [0, 0.4, 1],
+        ),
+    );
+    canvas.restore();
+  }
+
+  /// Dust turning in the beam. Each mote is a pure function of its index and
+  /// the light's age — no `Random`, so the clips come out the same.
+  void _drawMotes(Canvas canvas) {
+    final count = (area.width * area.height / 5200).clamp(5, 36).round();
+    final paint = Paint()..blendMode = BlendMode.screen;
+    canvas.save();
+    canvas.clipRect(area);
+    for (var i = 0; i < count; i++) {
+      final fall = 5 + noise(i, 3) * 9;
+      final x =
+          area.left +
+          noise(i, 1) * area.width +
+          sin(_age * (0.3 + noise(i, 4) * 0.4) + i) * 6;
+      final y =
+          area.top + (noise(i, 2) * area.height + _age * fall) % area.height;
+      // Brighter near the lamp, the way dust in a beam is.
+      final near = 1 - (y - area.top) / area.height;
+      final twinkle = 0.5 + 0.5 * sin(_age * (0.6 + noise(i, 5)) + i * 1.7);
+      paint.color = Color.fromRGBO(
+        255,
+        231,
+        176,
+        (0.12 + 0.38 * near) * twinkle,
+      );
+      canvas.drawCircle(Offset(x, y), 0.9 + noise(i, 6) * 1.1, paint);
+    }
+    canvas.restore();
+  }
+
+  /// Where the light lands: an oval, brightest under the bulb, cut at the
+  /// rectangle's sides so the floor shows exactly where the rule ends.
+  void _drawPool(Canvas canvas) {
+    final floor = area.bottom;
+    final oval = Rect.fromCenter(
+      center: Offset(area.center.dx, floor),
+      width: area.width * 1.05,
+      height: 26,
+    );
+    canvas.save();
+    canvas.clipRect(Rect.fromLTRB(area.left, floor - 40, area.right, floor));
+    canvas.drawOval(
+      oval,
+      Paint()
+        ..blendMode = BlendMode.screen
+        ..shader = ui.Gradient.radial(
+          oval.center,
+          oval.width / 2,
+          const [Color(0x55FFE7B0), Color(0x22FFE7B0), Color(0x00FFE7B0)],
+          [0, 0.6, 1],
+        ),
+    );
+    canvas.restore();
   }
 
   void _drawBeam(Canvas canvas) {
