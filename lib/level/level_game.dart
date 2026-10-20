@@ -13,6 +13,7 @@ import '../game/config.dart';
 import '../game/puff.dart';
 import '../game/scenery.dart';
 import '../game/screen_shake.dart';
+import '../game/stairwell.dart';
 import '../input/input.dart';
 import '../input/input_controller.dart';
 import '../input/keyboard_input_source.dart';
@@ -26,6 +27,7 @@ import '../ui/level_fade.dart';
 import '../ui/level_hud.dart';
 import '../ui/level_title.dart';
 import '../ui/reset_flash.dart';
+import '../ui/words.dart';
 import 'attempts.dart';
 import 'lang.dart';
 import 'level.dart';
@@ -251,6 +253,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// beat to fill in, so finishing reads as finishing rather than as a cut.
   double _advanceIn = 0;
 
+  /// Seconds left on a chapter's card, once the goal's beat is over and the
+  /// next level is in another place. Zero the rest of the time.
+  double _chapterIn = 0;
+
   /// The beat between touching the goal and the next level replacing it.
   ///
   /// Public so a test can check it is still longer than the fade that has to
@@ -317,14 +323,12 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
     await add(_Hotkeys(onReload: retry, onMenu: onMenuRequested));
 
-    // The scene the levels stand in, added once. The world half is rebuilt per
-    // level — `_build` empties the world — but the sky and the air do not
-    // change between levels, so they are not torn down with them.
+    // Everything any place is made of, read once, here, so changing place
+    // between levels never waits on a decode (`Scenery.world`).
     if (_lit) {
-      final scenery = _scenery();
-      await scenery.preload();
-      await camera.backdrop.add(scenery.sky());
-      await camera.viewport.addAll(scenery.air());
+      for (final place in LevelPlace.values) {
+        await _sceneFor(place).preload();
+      }
     }
 
     await _build();
@@ -354,6 +358,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     shake.reset();
     _completed = false;
     _advanceIn = 0;
+    _chapterIn = 0;
     resetFlash.clear();
     _levelEpoch++;
     attempts?.started(level);
@@ -447,8 +452,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
             floorTop: level.floorTop,
           );
 
+    if (_lit) _dressFor(level.place);
     await world.addAll([
-      if (_lit) ..._scenery().world(),
+      if (_lit) ..._sceneFor(level.place).world(),
       ?prelude?.figure,
       Blocks(level.blocks, look: look),
       ...lights,
@@ -505,13 +511,49 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// as a backdrop hung behind the puzzle rather than as the place it is in.
   /// No road either — the level brings its own floor, and a second ground
   /// plane under it is haze in the wrong place.
-  Scenery _scenery() => Scenery(
-    images: images,
-    view: () => camera.visibleWorldRect,
-    groundY: _sceneryGround,
-    withGround: false,
-    withPowerLine: false,
-  );
+  PlaceScene _sceneFor(LevelPlace place) => switch (place) {
+    LevelPlace.rooftops => Scenery(
+      images: images,
+      view: () => camera.visibleWorldRect,
+      groundY: _sceneryGround,
+      withGround: false,
+      withPowerLine: false,
+    ),
+    LevelPlace.stairwell => Stairwell(
+      view: () => camera.visibleWorldRect,
+      groundY: _sceneryGround,
+    ),
+  };
+
+  /// The place on screen now: whose sky and air are up. Null before the first
+  /// level is built.
+  LevelPlace? get shownPlace => _shownPlace;
+  LevelPlace? _shownPlace;
+  Component? _sky;
+  List<Component> _air = const [];
+
+  /// Puts up [place]'s sky and air, unless they are already up.
+  ///
+  /// The world half of a place is rebuilt with every level — `_build` empties
+  /// the world — but the sky and the air outlive levels, so they are only
+  /// torn down when the place itself changes. Ten levels on the rooftops are
+  /// one sky, not ten.
+  ///
+  /// Synchronous for the same reason `Scenery.world` is: an `await` here sits
+  /// in the middle of `_build`, between emptying the world and filling it.
+  void _dressFor(LevelPlace place) {
+    if (place == _shownPlace) return;
+    _shownPlace = place;
+    _sky?.removeFromParent();
+    for (final layer in _air) {
+      layer.removeFromParent();
+    }
+    final scene = _sceneFor(place);
+    _sky = scene.sky();
+    _air = scene.air();
+    camera.backdrop.add(_sky!);
+    camera.viewport.addAll(_air);
+  }
 
   /// Points the camera so the level's ground lands at the same height on
   /// screen whatever shape the screen is. Only the vertical: the horizontal is
@@ -1021,6 +1063,14 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// The beat is in two halves: the goal fills in, and then the screen goes
   /// dark over the rest of it, so the swap itself happens on a black frame.
   void _advance(double dt) {
+    if (_chapterIn > 0) {
+      _chapterIn -= dt;
+      if (_chapterIn > 0) return;
+      _chapterIn = 0;
+      _index++;
+      _build();
+      return;
+    }
     if (_advanceIn <= 0) return;
     _advanceIn -= dt;
     if (_advanceIn <= LevelFade.startsAt) fade.cover();
@@ -1032,6 +1082,15 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       // screen that stays black if that ending is ever dismissed.
       fade.reveal();
       onCampaignFinished?.call();
+      return;
+    }
+    // Somewhere else next: the dark holds with the new place's name in it,
+    // and the level is built once the name has been read. Only in the lit
+    // scene — the bench is grey boxes wherever a level says it is.
+    final next = levels[_index + 1];
+    if (_lit && next.place != level.place) {
+      _chapterIn = LevelFade.chapterSeconds;
+      fade.announce(Words(lang).placeName(next.place), lang);
       return;
     }
     _index++;
@@ -1079,6 +1138,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     _index = found < 0 ? 0 : found;
     reloads = 0;
     _advanceIn = 0;
+    _chapterIn = 0;
     if (!quietly) fade.blackout();
     await _build();
   }
@@ -1090,6 +1150,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     _index = index.clamp(0, levels.length - 1);
     reloads = 0;
     _advanceIn = 0;
+    _chapterIn = 0;
     // Straight to black first: picking from the menu is not the end of a
     // level, so there is no cover already running — but the level still
     // arrives out of the dark, the same way every other one does.
@@ -1236,6 +1297,11 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     shake.reset();
     _completed = false;
     _advanceIn = 0;
+    _chapterIn = 0;
+    // A reload in the beat after the goal — or on a chapter's card — cancels
+    // the move on, and so has to cancel the dark that was covering it, or
+    // nothing ever calls `reveal` and the level is played blind.
+    fade.reveal();
     reloads++;
     // Seen and heard. Being put back used to happen between two frames with
     // nothing to mark it, which reads as the game glitching rather than as

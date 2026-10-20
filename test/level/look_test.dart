@@ -5,6 +5,7 @@ import 'package:waraya/level/level_game.dart';
 import 'package:waraya/level/levels.dart';
 
 import 'package:waraya/level/playthrough.dart';
+import 'package:waraya/ui/level_fade.dart';
 
 /// The environment is paint, not geometry.
 ///
@@ -28,19 +29,30 @@ void main() {
       await game.ready();
       final run = Playthrough(game, game.input.sources.first as ScriptedInput);
 
-      for (final level in Levels.campaign) {
+      for (final (i, level) in Levels.campaign.indexed) {
         expect(
           game.level.id,
           level.id,
           reason: 'expected to be on ${level.id} by now (${run.where})',
         );
+        // And in its own place: a chapter's levels are played in the
+        // chapter's scene, with the same rectangles as everywhere else.
+        expect(game.shownPlace, level.place, reason: level.id);
         run.play(level.solution, stopWhenComplete: true);
         expect(
           game.completed,
           isTrue,
           reason: '${level.id} was not finished lit (${run.where})',
         );
-        run.play(const [Move(1.2)]);
+        // The beat to the next level, and a chapter's card on top of it when
+        // the next one is somewhere else.
+        final next = i + 1 < Levels.campaign.length
+            ? Levels.campaign[i + 1]
+            : null;
+        final card = next != null && next.place != level.place
+            ? LevelFade.chapterSeconds
+            : 0.0;
+        run.play([Move(1.2 + card)]);
       }
 
       expect(run.finishes, hasLength(Levels.campaign.length));

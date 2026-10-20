@@ -2325,6 +2325,7 @@ abstract final class Levels {
   /// at all, reaches a roof up to about 200 out (searched, in
   /// `light_switch_test`); the lamp starts 230 out, so the dark is too far.
   static final Level theThirdFlip = Level(
+    place: LevelPlace.stairwell,
     id: 'the-third-flip',
     solution: const [
       Move.left(0.9), // the wrong way, to the foot of the balcony
@@ -2421,6 +2422,7 @@ abstract final class Levels {
   /// see what it is for — and throwing it early is exactly what the third
   /// flip rewards. Forget it and you reach a lit roof with no way back.
   static final Level allOfItInTheDark = Level(
+    place: LevelPlace.stairwell,
     id: 'all-of-it-in-the-dark',
     solution: const [
       Move.left(2.35), // the wrong way, to the foot of the far balcony
@@ -2578,6 +2580,7 @@ abstract final class Levels {
   /// reach — but that is a plate and a step, the level's answer in another
   /// place.)
   static final Level theLastSixSeconds = Level(
+    place: LevelPlace.stairwell,
     id: 'the-last-six-seconds',
     solution: const [
       Move.right(2.0), // under the lamp, past the plate's balcony
@@ -2716,6 +2719,7 @@ abstract final class Levels {
   /// It is `oneHoldsTheDark` with the roles turned over and one more link,
   /// and that link is you: yours is the only plate nothing but you can be on.
   static final Level aChainOfDark = Level(
+    place: LevelPlace.stairwell,
     id: 'a-chain-of-dark',
     solution: const [
       Move.left(3.05), // the wrong way, all the way to the far end
@@ -2838,6 +2842,7 @@ abstract final class Levels {
   ///
   /// How long you ducked is how long you can stop before climbing.
   static final Level oneIsTheStep = Level(
+    place: LevelPlace.stairwell,
     id: 'one-is-the-step',
     solution: const [
       Move.right(0.95), // to the foot of the switch's balcony
@@ -2942,6 +2947,7 @@ abstract final class Levels {
   /// gate. The other way round, the plate is too far from the switch for the
   /// near past to be on it.
   static final Level yourStepIsTheSwitch = Level(
+    place: LevelPlace.stairwell,
     id: 'your-step-is-the-switch',
     solution: const [
       Move.right(0.5), // toward the plate's balcony
@@ -3067,6 +3073,7 @@ abstract final class Levels {
   /// on it is the whole of it. The gate is tall because a stair of both
   /// pasts on the switch's balcony gets your feet to 232.
   static final Level theFarOneTwice = Level(
+    place: LevelPlace.stairwell,
     id: 'the-far-one-twice',
     solution: const [
       Move.left(1.6), // the wrong way, to the far end
@@ -3200,6 +3207,7 @@ abstract final class Levels {
   /// Every key before this one was thrown on the way. This one is on the way
   /// too, which is the trap.
   static final Level theKeyBehindYou = Level(
+    place: LevelPlace.stairwell,
     id: 'the-key-behind-you',
     solution: const [
       Move.left(0.7), // the wrong way, to the foot of the gate's plate
@@ -3341,6 +3349,7 @@ abstract final class Levels {
   /// The switch's lamp comes right up to the first gate, so no stair can be
   /// built against it.
   static final Level aChainThroughTheGate = Level(
+    place: LevelPlace.stairwell,
     id: 'a-chain-through-the-gate',
     solution: const [
       Move.left(2.55), // the wrong way, to the first gate's plate
@@ -3495,6 +3504,7 @@ abstract final class Levels {
   /// done: from leaving the switch to the near past on the plate is seven
   /// seconds, and nothing stretches the six.
   static final Level youHoldTheLast = Level(
+    place: LevelPlace.stairwell,
     id: 'you-hold-the-last',
     solution: const [
       Move.left(1.6), // the wrong way, to the first gate's plate
@@ -3662,6 +3672,7 @@ abstract final class Levels {
   /// time on the plate, and holding it yourself until the gate opens is how
   /// to find it shut.
   static final Level theChainsKey = Level(
+    place: LevelPlace.stairwell,
     id: 'the-chains-key',
     solution: const [
       Move.left(2.75), // the wrong way, past the plate, to the key
@@ -3796,6 +3807,7 @@ abstract final class Levels {
   /// six seconds and the grace after you step off the plate, however long
   /// you stood, so a stop by the key spends the same time either way.
   static final Level theGateOpensTwice = Level(
+    place: LevelPlace.stairwell,
     id: 'the-gate-opens-twice',
     solution: const [
       Move.right(0.25), // to the foot of the middle gate's plate
@@ -3909,6 +3921,10 @@ abstract final class Levels {
   );
 
   /// In teaching order.
+  ///
+  /// Two chapters, and nothing here says so but the levels' own `place`: the
+  /// rooftops up to `allOfItAgain`, then the light switch in the stairwell
+  /// from `youHoldTheDark` to the end (`docs/phase-12-more.md` §4.1).
   static final List<Level> campaign = [
     pressItEarly,
     standOnYourself,
@@ -4051,6 +4067,7 @@ abstract final class Levels {
   /// the switch you are still standing on as well as the walk: four seconds,
   /// enough for a short press held a while.
   static final Level youHoldTheDark = Level(
+    place: LevelPlace.stairwell,
     id: 'you-hold-the-dark',
     solution: const [
       Move.left(1.75), // to the plate under the lamp
@@ -4122,6 +4139,7 @@ abstract final class Levels {
   /// arrives. It is `theStepThatShuts` with a lamp instead of a button, which
   /// is the point: the same order, for a different reason.
   static final Level yourPastsDark = Level(
+    place: LevelPlace.stairwell,
     id: 'your-pasts-dark',
     solution: const [
       Move.right(2.45), // under the lamp, to the foot of the shelf
@@ -4214,6 +4232,7 @@ abstract final class Levels {
   /// the lever `twoNotOne` taught, not a stopwatch. The switch is close to
   /// the plate because the walk between them comes straight off that window.
   static final Level oneHoldsTheDark = Level(
+    place: LevelPlace.stairwell,
     id: 'one-holds-the-dark',
     solution: const [
       Move.left(2.3), // the wrong way, to the plate under the lamp

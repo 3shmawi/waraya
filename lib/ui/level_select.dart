@@ -60,21 +60,66 @@ class LevelSelect extends StatelessWidget {
             children: [
               _Header(onClose: onClose, words: Words(lang)),
               Expanded(
-                child: ListView.builder(
+                child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-                  itemCount: levels.length,
-                  itemBuilder: (context, i) => _Row(
-                    number: i + 1,
-                    level: levels[i],
-                    locked: i >= unlocked,
-                    playing: i == current,
-                    onTap: i >= unlocked ? null : () => onPick(i),
-                    lang: lang,
-                  ),
+                  children: [
+                    for (final entry in chapters(levels))
+                      switch (entry) {
+                        (final place, null) => _Chapter(
+                          name: Words(lang).placeName(place),
+                        ),
+                        (_, final int i) => _Row(
+                          number: i + 1,
+                          level: levels[i],
+                          locked: i >= unlocked,
+                          playing: i == current,
+                          onTap: i >= unlocked ? null : () => onPick(i),
+                          lang: lang,
+                        ),
+                      },
+                  ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// The list as it is shown: each level's index, with a chapter's place
+  /// (and no index) before the first level of every chapter.
+  ///
+  /// A chapter is a run of levels in one place, so a list with one place in
+  /// it — the bench, an author's folder — has no headings at all. Numbers
+  /// carry on across chapters: the level is still the twenty-second.
+  static List<(LevelPlace, int?)> chapters(List<Level> levels) {
+    final places = {for (final level in levels) level.place};
+    return [
+      for (final (i, level) in levels.indexed) ...[
+        if (places.length > 1 && (i == 0 || levels[i - 1].place != level.place))
+          (level.place, null),
+        (level.place, i),
+      ],
+    ];
+  }
+}
+
+class _Chapter extends StatelessWidget {
+  const _Chapter({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 14, 4, 10),
+      child: Text(
+        name,
+        style: const TextStyle(
+          fontFamily: arabicFontFamily,
+          fontSize: 20,
+          color: LevelSelect._warm,
         ),
       ),
     );

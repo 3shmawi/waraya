@@ -40,6 +40,7 @@ class Level {
     this.leash,
     this.mirrors = const [],
     this.dogs = const [],
+    this.place = LevelPlace.rooftops,
   }) : assert(
          leash == null || leash > 0,
          'a leash with no length holds you to the spot, which is not a level',
@@ -239,6 +240,16 @@ class Level {
   /// Street dogs (`docs/phase-12-more.md` §10), on the bench. Empty — every
   /// level but the bench's — is none. See [DogSpec].
   final List<DogSpec> dogs;
+
+  /// Where the level is drawn standing (`docs/phase-12-more.md` §4).
+  ///
+  /// Paint, not play — the same rule as [nameEn]: it is not in [requires],
+  /// because a build that has never heard of it puts the same rectangles up
+  /// on the rooftops, and that is the same puzzle somewhere else. Consecutive
+  /// levels in one place are a chapter, and the campaign is told where one
+  /// ends by the place changing, not by a second list that can drift from
+  /// this one.
+  final LevelPlace place;
 
   /// Whether this level can be checked by somebody who did not write it.
   ///
@@ -535,6 +546,20 @@ class LightSpec {
   String toString() => 'LightSpec($area${id == null ? '' : ', id: $id'})';
 }
 
+/// Where a level stands — the photographed place behind it.
+///
+/// Not [LevelLook]: that is whether the scene is drawn at all (the bench is
+/// grey boxes wherever its level says it is). This is *which* scene, and it
+/// only means something in the lit one.
+enum LevelPlace {
+  /// The skyline the game was built in: dust, treeline, palms.
+  rooftops,
+
+  /// A stairwell, where the bulb on each landing is on a timer and goes out
+  /// on its own — which is the light switch, said by the place.
+  stairwell,
+}
+
 /// How the level is drawn.
 ///
 /// The bench and the game want opposite things from the same rectangles. On
@@ -633,6 +658,9 @@ extension LevelJson on Level {
     // Only when written, so a level with none reads back exactly as it was.
     if (nameEn != null) 'nameEn': nameEn,
     if (teachesEn != null) 'teachesEn': teachesEn,
+    // Only when it is not the rooftops, so every level written before places
+    // existed reads back exactly as it was.
+    if (place != LevelPlace.rooftops) 'place': place.name,
     // Both, always. `delaySeconds` is what a build older than two shadows
     // reads, and it gets the nearest one — which is the right answer for a
     // level with one and the wrong level entirely for a level with two, which
@@ -791,6 +819,7 @@ Level levelFromJson(Object? source, {Set<String>? accepts}) {
       teaches: _asString(json['teaches'], 'teaches'),
       nameEn: _optionalString(json['nameEn'], 'nameEn'),
       teachesEn: _optionalString(json['teachesEn'], 'teachesEn'),
+      place: _place(json['place']),
       delays: json['delays'] == null
           ? [_asDouble(json['delaySeconds'], 'delaySeconds')]
           : _doubleList(json['delays'], 'delays'),
@@ -959,6 +988,21 @@ ShadowSolidity _solidity(Object? value) {
     if (mode.name == name) return mode;
   }
   throw LevelFormatException('shadowSolidWhen is not a mode: $name');
+}
+
+/// Absent, or a place this build has never heard of, is the rooftops.
+///
+/// The opposite of [_solidity] on purpose. An unknown solidity is a different
+/// puzzle and is refused; an unknown place is the same puzzle drawn somewhere
+/// this build cannot draw, and the honest answer to that is to draw it
+/// somewhere it can.
+LevelPlace _place(Object? value) {
+  if (value == null) return LevelPlace.rooftops;
+  final name = _asString(value, 'place');
+  for (final place in LevelPlace.values) {
+    if (place.name == name) return place;
+  }
+  return LevelPlace.rooftops;
 }
 
 Rect _rectFromJson(Object? value, String field) {

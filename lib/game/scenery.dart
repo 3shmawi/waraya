@@ -14,6 +14,26 @@ import 'photo_band.dart';
 import 'power_line.dart';
 import 'sky_backdrop.dart';
 
+/// A place a level can stand in: layers for the world, a backdrop, and the
+/// air over both. [Scenery] is the rooftops; `Stairwell` is the second.
+///
+/// One shape for every place so the game swaps a place without knowing what
+/// is in it — which is the whole of "paint, not geometry" for chapters.
+abstract interface class PlaceScene {
+  /// Reads whatever the place is made of into memory. Call once, before
+  /// [world].
+  Future<void> preload();
+
+  /// The layers that belong in the world, behind the level.
+  List<Component> world();
+
+  /// What goes in the camera's backdrop.
+  Component sky();
+
+  /// What goes over the world and under any readout.
+  List<Component> air();
+}
+
 /// The photographed environment, as something any scene can stand in.
 ///
 /// It was assembled inline in `WarayaGame`, which was fine while there was one
@@ -24,7 +44,7 @@ import 'sky_backdrop.dart';
 ///
 /// Nothing here compiles a fragment program. Every layer is a photograph, a
 /// gradient or a blend mode, which is why none of it can break on a web build.
-class Scenery {
+class Scenery implements PlaceScene {
   const Scenery({
     required this.images,
     required this.view,
@@ -63,6 +83,7 @@ class Scenery {
   ];
 
   /// Reads them into the cache. Call once, before [world].
+  @override
   Future<void> preload() => images.loadAll(assets);
 
   /// The layers that belong in the world, behind whatever is in front of them.
@@ -72,6 +93,7 @@ class Scenery {
   /// leaves the scene with no player in it for however long the decode takes,
   /// and input in that gap goes nowhere. Requiring [preload] first moves the
   /// waiting to startup, where there is nothing to interrupt.
+  @override
   List<Component> world() {
     final far = images.fromCache(assets[0]);
     final mid = images.fromCache(assets[1]);
@@ -147,10 +169,12 @@ class Scenery {
 
   /// The sky. Goes in the camera's backdrop: the camera renders backdrop →
   /// world → viewport, so a sky in the viewport paints over the entire scene.
+  @override
   Component sky() => SkyBackdrop();
 
   /// Dust, haze, light shafts and edge darkening, over the world and under
   /// any readout.
+  @override
   List<Component> air() => [
     GodRays(color: const Color(0xFFFFE7B0), priority: 90),
     HazeVeils(color: const Color(0xFFE8B55E), priority: 95),

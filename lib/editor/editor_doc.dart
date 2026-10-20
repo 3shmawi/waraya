@@ -110,6 +110,7 @@ class EditorDoc {
     this.prelude = const [],
     this.leash,
     this.dogs = const [],
+    this.place = LevelPlace.rooftops,
   });
 
   factory EditorDoc.fromLevel(Level level) => EditorDoc(
@@ -129,6 +130,7 @@ class EditorDoc {
     prelude: level.prelude,
     leash: level.leash,
     dogs: level.dogs,
+    place: level.place,
     pieces: [
       for (final rect in level.blocks) Piece(PieceKind.block, rect),
       for (final light in level.lights)
@@ -201,6 +203,10 @@ class EditorDoc {
   /// one yet: a level gets them in its data.
   List<DogSpec> dogs;
 
+  /// Where the level is drawn (`Level.place`), carried through. Paint: no
+  /// tool to change it yet, and the bench draws grey boxes either way.
+  LevelPlace place;
+
   final List<Piece> pieces;
 
   /// The level this is, as the game and the gate will see it.
@@ -223,6 +229,7 @@ class EditorDoc {
       prelude: prelude,
       leash: leash,
       dogs: dogs,
+      place: place,
       // Exactly one: the editor neither adds nor removes it ([canRemove]).
       goal: of(PieceKind.goal).first.rect,
       blocks: [for (final p in of(PieceKind.block)) p.rect],
@@ -264,6 +271,7 @@ class EditorDoc {
     prelude: prelude,
     leash: leash,
     dogs: dogs,
+    place: place,
     pieces: [for (final p in pieces) p.copy()],
   );
 

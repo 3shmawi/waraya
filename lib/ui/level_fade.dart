@@ -1,6 +1,8 @@
-import 'dart:ui';
-
 import 'package:flame/components.dart';
+import 'package:flutter/painting.dart';
+
+import '../level/lang.dart';
+import '../licenses.dart';
 
 /// The dark that covers the join between one level and the next.
 ///
@@ -42,10 +44,30 @@ class LevelFade extends PositionComponent {
   /// somewhere wants longer than leaving.
   static const double revealSeconds = 0.6;
 
+  /// How long the dark holds with a new place's name in it, between the
+  /// last level somewhere and the first level somewhere else
+  /// (`docs/phase-12-more.md` §4). The name and nothing else: the place is
+  /// the sentence.
+  static const double chapterSeconds = 2.4;
+
+  /// Seconds the name takes to come up out of the dark.
+  static const double nameSeconds = 0.5;
+
   static const Color _ink = Color(0xFF0B0709);
+  static const Color _nameColor = Color(0xFFF3E2C6);
 
   double _dark = 0;
   bool _covering = false;
+
+  String? _chapter;
+  Lang _chapterLang = Lang.ar;
+  double _name = 0;
+
+  /// The place being announced, while it is on screen. Read by tests.
+  String? get chapter => _name > 0 || _covering ? _chapter : null;
+
+  /// How much of the name is showing, 0 to 1. Read by tests.
+  double get nameShowing => _name;
 
   /// How black the screen is, 0 to 1. Read by tests; the game writes it
   /// through [cover] and [reveal].
@@ -54,8 +76,17 @@ class LevelFade extends PositionComponent {
   /// Start going dark.
   void cover() => _covering = true;
 
-  /// The swap has happened — come back.
+  /// The swap has happened — come back. A place's name, if one is up, goes
+  /// with the dark: the new place fades in through it.
   void reveal() => _covering = false;
+
+  /// Holds the dark and puts [name] up in the middle of it. The game calls
+  /// [reveal] once the new place is built, [chapterSeconds] later.
+  void announce(String name, Lang lang) {
+    _covering = true;
+    _chapter = name;
+    _chapterLang = lang;
+  }
 
   /// Straight to black, with no tween on the way in.
   ///
@@ -65,6 +96,8 @@ class LevelFade extends PositionComponent {
   void blackout() {
     _covering = false;
     _dark = 1;
+    _chapter = null;
+    _name = 0;
   }
 
   @override
@@ -79,6 +112,13 @@ class LevelFade extends PositionComponent {
     _dark = _covering
         ? (_dark + dt / coverSeconds).clamp(0.0, 1.0)
         : (_dark - dt / revealSeconds).clamp(0.0, 1.0);
+    if (_chapter == null) return;
+    // Up only once the screen is fully dark, so the name is never read over
+    // the level it is leaving; down with the dark, never ahead of it.
+    _name = _covering
+        ? (_dark >= 1 ? (_name + dt / nameSeconds).clamp(0.0, 1.0) : _name)
+        : _name.clamp(0.0, _dark);
+    if (!_covering && _dark <= 0) _chapter = null;
   }
 
   @override
@@ -88,5 +128,23 @@ class LevelFade extends PositionComponent {
       size.toRect(),
       Paint()..color = _ink.withValues(alpha: _dark),
     );
+    final name = _chapter;
+    if (name == null || _name <= 0) return;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: name,
+        style: TextStyle(
+          fontFamily: arabicFontFamily,
+          fontSize: 34,
+          color: _nameColor.withValues(alpha: _name),
+        ),
+      ),
+      textDirection: _chapterLang.isRtl ? TextDirection.rtl : TextDirection.ltr,
+    )..layout();
+    painter.paint(
+      canvas,
+      Offset((size.x - painter.width) / 2, (size.y - painter.height) / 2),
+    );
+    painter.dispose();
   }
 }

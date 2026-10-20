@@ -1,4 +1,5 @@
 import '../level/lang.dart';
+import '../level/level.dart';
 
 /// Every word the game's own screens say, in both languages.
 ///
@@ -24,6 +25,12 @@ class Words {
 
   // The level title.
   String get done => _en ? 'Done.' : 'خلصت.';
+
+  // Where a chapter is: the card between chapters, and the level list.
+  String placeName(LevelPlace place) => switch (place) {
+    LevelPlace.rooftops => _en ? 'The rooftops' : 'الأسطح',
+    LevelPlace.stairwell => _en ? 'The stairwell' : 'بيت السلّم',
+  };
 
   // The ending.
   String get theEnd => _en ? 'Done' : 'خلصت';
