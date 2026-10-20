@@ -14,7 +14,7 @@
 # Writes docs/media/drops/<drop>[-en].mp4. Needs ffmpeg.
 set -eu
 
-drop=${1:?which drop: mirror, dog, stairwell}
+drop=${1:?which drop: mirror, dog, stairwell, basket}
 lang=${2:-ar}
 
 # The clips each drop shows, by number in tool/clips.dart, in order.
@@ -22,6 +22,7 @@ case "$drop" in
   mirror) clips="16 17" ;;
   dog) clips="18 19" ;;
   stairwell) clips="20 21" ;;
+  basket) clips="22 23" ;;
   *) echo "no drop called $drop" >&2; exit 1 ;;
 esac
 

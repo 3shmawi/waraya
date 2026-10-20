@@ -173,6 +173,12 @@ const clips = <Clip>[
   Clip(number: 19, slug: 'walk-on-the-button', levelId: 'walk-on-the-button'),
   Clip(number: 20, slug: 'you-hold-the-dark', levelId: 'you-hold-the-dark'),
   Clip(number: 21, slug: 'a-chain-of-dark', levelId: 'a-chain-of-dark'),
+  Clip(number: 22, slug: 'pull-it-for-me', levelId: 'pull-it-for-me'),
+  Clip(
+    number: 23,
+    slug: 'the-basket-in-the-dark',
+    levelId: 'the-basket-in-the-dark',
+  ),
 ];
 
 void main() {

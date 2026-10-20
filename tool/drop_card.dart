@@ -65,6 +65,13 @@ const drops = <Drop>[
     next: 'السبَت',
     nextEn: 'The basket',
   ),
+  Drop(
+    slug: 'basket',
+    what: 'السبَت',
+    whatEn: 'The basket',
+    next: 'الأسانسير',
+    nextEn: 'The old lift',
+  ),
 ];
 
 const double width = 1080;
