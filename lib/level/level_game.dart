@@ -36,6 +36,7 @@ import 'player.dart';
 import 'basket.dart';
 import 'dog.dart';
 import 'leash_line.dart';
+import 'lift.dart';
 import 'mirror.dart';
 import 'prelude.dart';
 import 'props.dart';
@@ -186,6 +187,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   final List<Mirror> mirrors = [];
   final List<Dog> dogs = [];
   final List<Basket> baskets = [];
+  final List<Lift> lifts = [];
 
   /// Where the player was on the last tick, for telling a dog whether they
   /// moved.
@@ -354,6 +356,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     mirrors.clear();
     dogs.clear();
     baskets.clear();
+    lifts.clear();
     _fleeing = null;
     _steppedOutOf = null;
     ticker.reset();
@@ -420,6 +423,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     mirrors.addAll(level.mirrors.map((area) => Mirror(area, look: look)));
     dogs.addAll(level.dogs.map((spec) => Dog(spec, look: look)));
     baskets.addAll(level.baskets.map((spec) => Basket(spec, look: look)));
+    lifts.addAll(level.lifts.map((spec) => Lift(spec, look: look)));
     _lastPlayerX = level.spawnX;
     _stillFor.clear();
     _markPairs();
@@ -467,6 +471,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       ...toggles,
       ...doors,
       ...baskets,
+      ...lifts,
       ...goals,
       ...dogs,
       ShadowTrail(
@@ -658,6 +663,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
     _flee(step);
     _liftBaskets(step);
+    _liftCabins(step);
     super.update(step);
     _resolveInteractions();
 
@@ -737,13 +743,72 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// Only the player. Your pasts are where you were: one that rode a basket
   /// goes up exactly as you did, whether or not the basket is going up now.
   void _liftBaskets(double dt) {
+    final onFloor = _onFixedFloor();
     for (final basket in baskets) {
       final riding =
-          player.isGrounded && basket.carries(x: player.x, feet: player.y);
+          player.isGrounded &&
+          !onFloor &&
+          basket.carries(x: player.x, feet: player.y);
       final moved = basket.lift(dt);
-      if (riding && moved != 0) player.position.y += moved;
+      // Onto its top exactly, not moved by as far as it went: the sum drifts
+      // by a hair, and a hair inside the floor is a body the next step
+      // treats as walking into a wall (see [_liftCabins]).
+      if (riding && moved != 0) player.position.y = basket.bounds.top;
     }
   }
+
+  /// The lifts' turn at [_liftBaskets]: each cabin moves, and carries the
+  /// player if they are standing in it.
+  ///
+  /// Its gate is the rider's alone. It is there to keep whoever is in the
+  /// cabin in it, and a gate that also stopped somebody outside appeared on
+  /// top of a body half on the ledge and snapped it back into the shaft. And
+  /// it shuts *round* the rider: on the frame the cabin sets off, the rider
+  /// is moved inside its bars, because a gate that shut through a body
+  /// standing at the edge put that body outside the cabin — found by a test
+  /// riding up with the stick held against the far side.
+  void _liftCabins(double dt) {
+    final onFloor = _onFixedFloor();
+    _riding.clear();
+    for (final lift in lifts) {
+      final riding =
+          player.isGrounded &&
+          !onFloor &&
+          lift.carries(x: player.x, feet: player.y);
+      final moved = lift.lift(dt);
+      if (!riding) continue;
+      _riding.add(lift);
+      // Onto its floor exactly. Adding the distance it went drifts by a hair
+      // a frame, and a hair inside the floor is a body the next step treats
+      // as walking into a wall: it was snapped out to the side of the cabin.
+      if (moved != 0) player.position.y = lift.bounds.top;
+      if (lift.moving) {
+        final floor = lift.bounds;
+        player.position.x = player.position.x.clamp(
+          floor.left + 4 + 22,
+          floor.right - 4 - 22,
+        );
+      }
+    }
+  }
+
+  /// The lifts the player is standing in this frame.
+  final Set<Lift> _riding = {};
+
+  /// Whether the player's feet are on a block of the level — something that
+  /// does not move.
+  ///
+  /// A moving floor carries whoever is standing in it, with half a body's
+  /// grace either side, and a cabin flush with the ledge it stops at put
+  /// both under the feet of somebody stepping off it. When it left, it took
+  /// them with it: found tracing a run off a lift, the body back down the
+  /// shaft a frame after it had stepped out. Feet on the ledge stay there.
+  bool _onFixedFloor() => level.blocks.any(
+    (block) =>
+        (player.y - block.top).abs() <= 2 &&
+        player.x + 22 > block.left &&
+        player.x - 22 < block.right,
+  );
 
   /// Which shadow the player is standing on, if any.
   ///
@@ -855,6 +920,20 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       if (basket.hold(pull, forcedDown: forcedDown, lingers: lingers)) {
         audio.play(Sfx.door, volume: 0.3);
       }
+    }
+
+    // A lift answers its own two buttons, and only arrivals on them — a
+    // past in the light is not there to arrive.
+    for (final lift in lifts) {
+      final down = LiftSpec.triggerOf(lift.spec.callDown);
+      final up = LiftSpec.triggerOf(lift.spec.callUp);
+      final called = lift.touch(
+        youDown: _standsOn(playerBox, down),
+        youUp: _standsOn(playerBox, up),
+        pastDown: ghosts.any((ghost) => _standsOn(ghost, down)),
+        pastUp: ghosts.any((ghost) => _standsOn(ghost, up)),
+      );
+      if (called) audio.play(Sfx.plate, volume: 0.6);
     }
 
     _mirror();
@@ -1256,6 +1335,10 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       for (final door in doors)
         if (door.isSolid) door.bounds,
       for (final basket in baskets) basket.bounds,
+      for (final lift in lifts) ...[
+        lift.bounds,
+        if (_riding.contains(lift)) ...lift.gates,
+      ],
     ],
     oneWay: [
       if (settings.shadowIsSolid)
@@ -1312,6 +1395,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     prelude?.restart();
     for (final door in doors) {
       door.reset();
+    }
+    for (final lift in lifts) {
+      lift.reset();
     }
     for (final basket in baskets) {
       basket.reset();

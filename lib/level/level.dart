@@ -41,6 +41,7 @@ class Level {
     this.mirrors = const [],
     this.dogs = const [],
     this.baskets = const [],
+    this.lifts = const [],
     this.place = LevelPlace.rooftops,
   }) : assert(
          leash == null || leash > 0,
@@ -247,6 +248,10 @@ class Level {
   /// a door is. Empty — every level but the bench's — is none.
   final List<BasketSpec> baskets;
 
+  /// Lifts (`docs/media/drops.md` §3.2), on the bench: a cabin between two
+  /// floors that goes to whichever floor's button was stepped on last.
+  final List<LiftSpec> lifts;
+
   /// Where the level is drawn standing (`docs/phase-12-more.md` §4).
   ///
   /// Paint, not play — the same rule as [nameEn]: it is not in [requires],
@@ -312,6 +317,7 @@ class Level {
     'mirror',
     'dog',
     'baskets',
+    'lifts',
   };
 
   /// What the bench accepts: everything the game does, and what is on trial.
@@ -362,6 +368,8 @@ class Level {
     // Dropped, a basket is not there at all: no way up to what it lifts you
     // to, and nothing anywhere saying why.
     if (baskets.isNotEmpty) 'baskets',
+    // Dropped, the cabin is not there and neither is the floor it goes to.
+    if (lifts.isNotEmpty) 'lifts',
   };
 }
 
@@ -594,6 +602,79 @@ class BasketSpec {
   int get hashCode => Object.hash(id, area, rise, lingerSeconds);
 }
 
+/// The old lift with the folding iron gate (`docs/media/drops.md` §3.2), on
+/// the bench.
+///
+/// **It goes to the floor whose button was stepped on last.** One button
+/// down below ([callDown]) and one up top ([callUp]), each answering an
+/// arrival the way a key does — stepping on, not standing on — and the
+/// later arrival wins, however the cabin is moving. Your past steps where
+/// you stepped, so your past calls it too: up to where you need it, and
+/// away again from under you.
+///
+/// Not a plate held, which is the basket: a call is a decision that stands
+/// until somebody makes another. And while it travels its gate is shut, so
+/// nobody gets on or off between floors.
+class LiftSpec {
+  const LiftSpec({
+    required this.id,
+    required this.area,
+    required this.rise,
+    required this.callDown,
+    required this.callUp,
+    this.startsUp = false,
+  });
+
+  /// What it is called, for a level's other pieces to tell it apart.
+  final String id;
+
+  /// The cabin's floor at the bottom. Its top is what you stand on.
+  final Rect area;
+
+  /// How far above [area] the top floor is.
+  final double rise;
+
+  /// The button that calls it down, and the one that calls it up: floor
+  /// slabs a body steps onto, like a key's.
+  final Rect callDown;
+  final Rect callUp;
+
+  /// Where it is waiting when the level starts. Bottom unless said.
+  final bool startsUp;
+
+  /// How fast it travels, in world units a second — the basket's speed, so
+  /// the two read as the same kind of machine.
+  static const double speed = 200;
+
+  /// How tall its gate stands above the cabin floor while it travels.
+  static const double gateHeight = 110;
+
+  /// The cabin's floor at the top.
+  Rect get up => area.translate(0, -rise);
+
+  /// What a body has to be standing on to have arrived at [button]: the
+  /// same shape a key's is.
+  static Rect triggerOf(Rect button) => Rect.fromLTRB(
+    button.left,
+    button.top - 28,
+    button.right,
+    button.bottom + 2,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is LiftSpec &&
+      other.id == id &&
+      other.area == area &&
+      other.rise == rise &&
+      other.callDown == callDown &&
+      other.callUp == callUp &&
+      other.startsUp == startsUp;
+
+  @override
+  int get hashCode => Object.hash(id, area, rise, callDown, callUp, startsUp);
+}
+
 class LightSpec {
   const LightSpec(this.area, {this.id});
 
@@ -768,6 +849,18 @@ extension LevelJson on Level {
             'rise': basket.rise,
             if (basket.lingerSeconds != 0)
               'lingerSeconds': basket.lingerSeconds,
+          },
+      ],
+    if (lifts.isNotEmpty)
+      'lifts': [
+        for (final lift in lifts)
+          {
+            'id': lift.id,
+            'area': _rectToJson(lift.area),
+            'rise': lift.rise,
+            'callDown': _rectToJson(lift.callDown),
+            'callUp': _rectToJson(lift.callUp),
+            if (lift.startsUp) 'startsUp': true,
           },
       ],
     'goal': _rectToJson(goal),
@@ -948,6 +1041,32 @@ Level levelFromJson(Object? source, {Set<String>? accepts}) {
             lingerSeconds: _asDouble(
               _asMap(entry, 'baskets[$i]')['lingerSeconds'] ?? 0,
               'baskets[$i].lingerSeconds',
+            ),
+          ),
+      ],
+      lifts: [
+        for (final (i, entry) in _asList(json['lifts'], 'lifts').indexed)
+          LiftSpec(
+            id: _asString(_asMap(entry, 'lifts[$i]')['id'], 'lifts[$i].id'),
+            area: _rectFromJson(
+              _asMap(entry, 'lifts[$i]')['area'],
+              'lifts[$i].area',
+            ),
+            rise: _asDouble(
+              _asMap(entry, 'lifts[$i]')['rise'],
+              'lifts[$i].rise',
+            ),
+            callDown: _rectFromJson(
+              _asMap(entry, 'lifts[$i]')['callDown'],
+              'lifts[$i].callDown',
+            ),
+            callUp: _rectFromJson(
+              _asMap(entry, 'lifts[$i]')['callUp'],
+              'lifts[$i].callUp',
+            ),
+            startsUp: _asBool(
+              _asMap(entry, 'lifts[$i]')['startsUp'] ?? false,
+              'lifts[$i].startsUp',
             ),
           ),
       ],

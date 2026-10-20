@@ -447,6 +447,12 @@ class Player extends PositionComponent {
   void _resolveHorizontal(Solids world, double step) {
     for (final rect in world.blocking) {
       if (!bounds.overlaps(rect)) continue;
+      // A floor you are standing on, not a wall you walked into. Only a
+      // moving floor ever gets here — a cabin or a basket that carried you
+      // puts your feet on its top, and a position kept in single precision
+      // lands a hair inside it. Taken for a wall, that hair snapped the body
+      // out to the cabin's far side.
+      if (rect.top > y - 1) continue;
       position.x = step > 0 ? rect.left - size.x / 2 : rect.right + size.x / 2;
       // Otherwise speed piles up against the wall and the body fires sideways
       // the moment it steps clear of it.

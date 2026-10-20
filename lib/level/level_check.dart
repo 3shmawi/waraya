@@ -315,6 +315,7 @@ Iterable<Finding> _bounds(Level level) sync* {
     ('lights', level.lights.length),
     ('markers', level.markers.length),
     ('baskets', level.baskets.length),
+    ('lifts', level.lifts.length),
   ]) {
     if (count > CheckLimits.mostPieces) {
       yield out('$count $name; at most ${CheckLimits.mostPieces}');
@@ -334,6 +335,11 @@ Iterable<Finding> _bounds(Level level) sync* {
     for (final toggle in level.toggles) toggle.area,
     for (final door in level.doors) door.closed,
     for (final basket in level.baskets) basket.area.expandToInclude(basket.up),
+    for (final lift in level.lifts) ...[
+      lift.area.expandToInclude(lift.up),
+      lift.callDown,
+      lift.callUp,
+    ],
   ]) {
     extent = extent.expandToInclude(rect);
   }
@@ -413,6 +419,19 @@ Iterable<Finding> _bounds(Level level) sync* {
         'basket "$id" lingers ${basket.lingerSeconds}s; '
         '0–${CheckLimits.longestLinger.round()}s',
       );
+    }
+  }
+  final liftIds = <String>{};
+  for (final lift in level.lifts) {
+    final id = lift.id;
+    if (doorIds.contains(id) ||
+        lightIds.contains(id) ||
+        basketIds.contains(id) ||
+        !liftIds.add(id)) {
+      yield out('two things are called "$id"');
+    }
+    if (!(lift.rise > 0 && lift.rise <= CheckLimits.deepest)) {
+      yield out('lift "$id" rises ${lift.rise}; it has to go up');
     }
   }
   final targets = {...doorIds, ...lightIds, ...basketIds};
