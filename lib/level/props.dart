@@ -868,6 +868,56 @@ class Toggle extends PositionComponent {
 }
 
 /// A door. Open only while its plate is held.
+/// What the plates and keys naming a thing are asking of it — a door, or a
+/// basket — worked out in the one order that is the rule. [Door.hold] says
+/// why each step is there; this is those steps, once, so that a basket and
+/// a door can never disagree about what a plate means.
+///
+/// 1. an inverted plate pressed → no, whatever else is true;
+/// 2. otherwise a plate held or a key thrown → yes;
+/// 3. otherwise no, after [lingerSeconds] — and only if the thing was being
+///    held by your past (`lingers`), never by your own weight.
+class Held {
+  Held(this.lingerSeconds);
+
+  final double lingerSeconds;
+
+  /// The answer, this frame.
+  bool wanted = false;
+
+  bool _pressed = false;
+
+  /// Seconds of grace left since the plate was last held.
+  double _linger = 0;
+
+  /// Asks again. True if the answer changed.
+  bool ask(bool open, {bool forcedShut = false, bool lingers = true}) {
+    if (forcedShut) {
+      _pressed = false;
+      _linger = 0;
+    } else {
+      _pressed = open;
+      if (open) _linger = lingers ? lingerSeconds : 0;
+    }
+    final next = !forcedShut && (_pressed || _linger > 0);
+    if (next == wanted) return false;
+    wanted = next;
+    return true;
+  }
+
+  /// Runs the grace down. Before the next [ask], so the moment it runs out
+  /// is the moment the next ask changes the answer.
+  void tick(double dt) {
+    if (!_pressed && _linger > 0) _linger = max(0, _linger - dt);
+  }
+
+  void reset() {
+    wanted = false;
+    _pressed = false;
+    _linger = 0;
+  }
+}
+
 class Door extends PositionComponent {
   Door(this.spec, {this.look = LevelLook.greyBox, super.priority = -6});
 
@@ -879,16 +929,12 @@ class Door extends PositionComponent {
   /// wall blinking out of existence.
   static const double _speed = 3;
 
-  /// Whether the door is being asked to be open this frame.
-  ///
-  /// Write it through [hold] rather than directly: a door with a linger has to
-  /// remember that it was asked a moment ago.
-  bool wantsOpen = false;
+  /// What its plates and keys are asking of it, by the rule ([Held]).
+  late final Held _held = Held(spec.lingerSeconds);
 
-  bool _pressed = false;
-
-  /// Seconds of grace left since the plate was last held.
-  double _linger = 0;
+  /// Whether the door is being asked to be open this frame. Written through
+  /// [hold]: a door with a linger has to remember it was asked a moment ago.
+  bool get wantsOpen => _held.wanted;
 
   double _open = 0;
   double get openFraction => _open;
@@ -922,23 +968,8 @@ class Door extends PositionComponent {
   ///
   /// Returns true if the answer changed, which is what the scene listens to so
   /// a door makes its noise once rather than every frame.
-  bool hold(bool open, {bool forcedShut = false, bool lingers = true}) {
-    if (forcedShut) {
-      // The grace goes with it. A door being held shut that drifts open again
-      // a moment later because something was standing on a plate six seconds
-      // ago is not a door anybody is holding.
-      _pressed = false;
-      _linger = 0;
-    } else {
-      _pressed = open;
-      // Grace only for a door your **past** was holding. See [lingers].
-      if (open) _linger = lingers ? spec.lingerSeconds : 0;
-    }
-    final wanted = !forcedShut && (_pressed || _linger > 0);
-    if (wanted == wantsOpen) return false;
-    wantsOpen = wanted;
-    return true;
-  }
+  bool hold(bool open, {bool forcedShut = false, bool lingers = true}) =>
+      _held.ask(open, forcedShut: forcedShut, lingers: lingers);
 
   /// Solid until it is nearly all the way up, so squeezing through a door
   /// that is still closing is not a thing.
@@ -950,9 +981,7 @@ class Door extends PositionComponent {
     _open = 0;
     // Also the request, or the door creeps open for one frame after a reload
     // because the plate was still held when everything was put back.
-    wantsOpen = false;
-    _pressed = false;
-    _linger = 0;
+    _held.reset();
   }
 
   @override
@@ -960,7 +989,7 @@ class Door extends PositionComponent {
     super.update(dt);
     // Runs before the scene asks again this frame, so the moment the grace
     // runs out is picked up by the next `hold` and the door makes its noise.
-    if (!_pressed && _linger > 0) _linger = max(0, _linger - dt);
+    _held.tick(dt);
     _open = (_open + (wantsOpen ? _speed : -_speed) * dt).clamp(0.0, 1.0);
   }
 

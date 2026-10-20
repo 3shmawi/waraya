@@ -314,6 +314,7 @@ Iterable<Finding> _bounds(Level level) sync* {
     ('doors', level.doors.length),
     ('lights', level.lights.length),
     ('markers', level.markers.length),
+    ('baskets', level.baskets.length),
   ]) {
     if (count > CheckLimits.mostPieces) {
       yield out('$count $name; at most ${CheckLimits.mostPieces}');
@@ -332,6 +333,7 @@ Iterable<Finding> _bounds(Level level) sync* {
     for (final plate in level.plates) plate.area,
     for (final toggle in level.toggles) toggle.area,
     for (final door in level.doors) door.closed,
+    for (final basket in level.baskets) basket.area.expandToInclude(basket.up),
   ]) {
     extent = extent.expandToInclude(rect);
   }
@@ -396,7 +398,24 @@ Iterable<Finding> _bounds(Level level) sync* {
       yield out('two things are called "$id"');
     }
   }
-  final targets = {...doorIds, ...lightIds};
+  final basketIds = <String>{};
+  for (final basket in level.baskets) {
+    final id = basket.id;
+    if (doorIds.contains(id) || lightIds.contains(id) || !basketIds.add(id)) {
+      yield out('two things are called "$id"');
+    }
+    if (!(basket.rise > 0 && basket.rise <= CheckLimits.deepest)) {
+      yield out('basket "$id" rises ${basket.rise}; it has to go up');
+    }
+    if (!(basket.lingerSeconds >= 0 &&
+        basket.lingerSeconds <= CheckLimits.longestLinger)) {
+      yield out(
+        'basket "$id" lingers ${basket.lingerSeconds}s; '
+        '0–${CheckLimits.longestLinger.round()}s',
+      );
+    }
+  }
+  final targets = {...doorIds, ...lightIds, ...basketIds};
 
   // An inverted plate under the very lamp it keeps lit cannot make up its
   // mind. Your past standing on it in the dark presses it, the lamp comes on,
@@ -425,14 +444,14 @@ Iterable<Finding> _bounds(Level level) sync* {
   for (final plate in level.plates) {
     if (!targets.contains(plate.opens)) {
       yield out(
-        'a plate opens "${plate.opens}", which is not a door or a light',
+        'a plate opens "${plate.opens}", which is not a door, a light or a basket',
       );
     }
   }
   for (final toggle in level.toggles) {
     if (!targets.contains(toggle.flips)) {
       yield out(
-        'a key flips "${toggle.flips}", which is not a door or a light',
+        'a key flips "${toggle.flips}", which is not a door, a light or a basket',
       );
     }
   }

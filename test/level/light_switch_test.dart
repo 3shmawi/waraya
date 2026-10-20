@@ -267,7 +267,7 @@ void main() {
       expect(doc.toLevel().lights.single.id, isNull);
       expect(
         checkNumbers(doc.toLevel()).map((f) => '$f'),
-        contains(contains('which is not a door or a light')),
+        contains(contains('which is not a door, a light or a basket')),
       );
     });
 

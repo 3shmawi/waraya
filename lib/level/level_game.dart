@@ -33,6 +33,7 @@ import 'lang.dart';
 import 'level.dart';
 import 'levels.dart';
 import 'player.dart';
+import 'basket.dart';
 import 'dog.dart';
 import 'leash_line.dart';
 import 'mirror.dart';
@@ -184,6 +185,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   final List<Goal> goals = [];
   final List<Mirror> mirrors = [];
   final List<Dog> dogs = [];
+  final List<Basket> baskets = [];
 
   /// Where the player was on the last tick, for telling a dog whether they
   /// moved.
@@ -351,6 +353,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     goals.clear();
     mirrors.clear();
     dogs.clear();
+    baskets.clear();
     _fleeing = null;
     _steppedOutOf = null;
     ticker.reset();
@@ -416,6 +419,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     );
     mirrors.addAll(level.mirrors.map((area) => Mirror(area, look: look)));
     dogs.addAll(level.dogs.map((spec) => Dog(spec, look: look)));
+    baskets.addAll(level.baskets.map((spec) => Basket(spec, look: look)));
     _lastPlayerX = level.spawnX;
     _stillFor.clear();
     _markPairs();
@@ -462,6 +466,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       ...plates,
       ...toggles,
       ...doors,
+      ...baskets,
       ...goals,
       ...dogs,
       ShadowTrail(
@@ -652,6 +657,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       ghost.standable = steps.contains(ghost);
     }
     _flee(step);
+    _liftBaskets(step);
     super.update(step);
     _resolveInteractions();
 
@@ -721,6 +727,21 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
           audio.play(Sfx.bark, volume: 0.25);
         case null:
       }
+    }
+  }
+
+  /// Moves every basket for this frame, and the player with it if they are
+  /// standing in it — before anything else moves, so the player's own step
+  /// this frame starts from where the floor under them now is.
+  ///
+  /// Only the player. Your pasts are where you were: one that rode a basket
+  /// goes up exactly as you did, whether or not the basket is going up now.
+  void _liftBaskets(double dt) {
+    for (final basket in baskets) {
+      final riding =
+          player.isGrounded && basket.carries(x: player.x, feet: player.y);
+      final moved = basket.lift(dt);
+      if (riding && moved != 0) player.position.y += moved;
     }
   }
 
@@ -817,6 +838,22 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
           toggles.any((toggle) => toggle.flips == door.id && toggle.flipped);
       if (door.hold(open, forcedShut: forcedShut, lingers: lingers)) {
         audio.play(Sfx.door, volume: 0.4);
+      }
+    }
+
+    // A basket's rope is a door's plate by another name (`Held`): the same
+    // order, and the grace your past's alone.
+    for (final basket in baskets) {
+      final mine = plates.where((plate) => plate.opens == basket.id);
+      final forcedDown = mine.any((plate) => plate.inverts && plate.isPressed);
+      final pull =
+          mine.any((plate) => !plate.inverts && plate.isPressed) ||
+          toggles.any((toggle) => toggle.flips == basket.id && toggle.flipped);
+      final lingers =
+          mine.any((plate) => !plate.inverts && plate.pressedByShadow) ||
+          toggles.any((toggle) => toggle.flips == basket.id && toggle.flipped);
+      if (basket.hold(pull, forcedDown: forcedDown, lingers: lingers)) {
+        audio.play(Sfx.door, volume: 0.3);
       }
     }
 
@@ -960,6 +997,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     final targets = [
       for (final door in doors) door.id,
       for (final light in lights) ?light.spec.id,
+      for (final basket in baskets) basket.id,
     ];
     if (targets.length < 2) return;
     int? of(String id) {
@@ -972,6 +1010,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
     for (final light in lights) {
       if (light.spec.id case final id?) light.mark = of(id);
+    }
+    for (final basket in baskets) {
+      basket.mark = of(basket.id);
     }
     for (final plate in plates) {
       plate.mark = of(plate.opens);
@@ -1214,6 +1255,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       ...level.blocks,
       for (final door in doors)
         if (door.isSolid) door.bounds,
+      for (final basket in baskets) basket.bounds,
     ],
     oneWay: [
       if (settings.shadowIsSolid)
@@ -1270,6 +1312,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     prelude?.restart();
     for (final door in doors) {
       door.reset();
+    }
+    for (final basket in baskets) {
+      basket.reset();
     }
     for (final plate in plates) {
       plate.reset();

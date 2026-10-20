@@ -110,6 +110,7 @@ class EditorDoc {
     this.prelude = const [],
     this.leash,
     this.dogs = const [],
+    this.baskets = const [],
     this.place = LevelPlace.rooftops,
   });
 
@@ -130,6 +131,7 @@ class EditorDoc {
     prelude: level.prelude,
     leash: level.leash,
     dogs: level.dogs,
+    baskets: level.baskets,
     place: level.place,
     pieces: [
       for (final rect in level.blocks) Piece(PieceKind.block, rect),
@@ -203,6 +205,10 @@ class EditorDoc {
   /// one yet: a level gets them in its data.
   List<DogSpec> dogs;
 
+  /// The baskets (`Level.baskets`, on trial), carried through the same way:
+  /// no tool to place one yet.
+  List<BasketSpec> baskets;
+
   /// Where the level is drawn (`Level.place`), carried through. Paint: no
   /// tool to change it yet, and the bench draws grey boxes either way.
   LevelPlace place;
@@ -229,6 +235,7 @@ class EditorDoc {
       prelude: prelude,
       leash: leash,
       dogs: dogs,
+      baskets: baskets,
       place: place,
       // Exactly one: the editor neither adds nor removes it ([canRemove]).
       goal: of(PieceKind.goal).first.rect,
@@ -271,6 +278,7 @@ class EditorDoc {
     prelude: prelude,
     leash: leash,
     dogs: dogs,
+    baskets: baskets,
     place: place,
     pieces: [for (final p in pieces) p.copy()],
   );

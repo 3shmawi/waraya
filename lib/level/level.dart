@@ -40,6 +40,7 @@ class Level {
     this.leash,
     this.mirrors = const [],
     this.dogs = const [],
+    this.baskets = const [],
     this.place = LevelPlace.rooftops,
   }) : assert(
          leash == null || leash > 0,
@@ -241,6 +242,11 @@ class Level {
   /// level but the bench's — is none. See [DogSpec].
   final List<DogSpec> dogs;
 
+  /// Baskets on a rope (`docs/media/drops.md` §3.1), on the bench: floors
+  /// that go up while someone pulls them, named by a plate or a key the way
+  /// a door is. Empty — every level but the bench's — is none.
+  final List<BasketSpec> baskets;
+
   /// Where the level is drawn standing (`docs/phase-12-more.md` §4).
   ///
   /// Paint, not play — the same rule as [nameEn]: it is not in [requires],
@@ -305,6 +311,7 @@ class Level {
     'leash',
     'mirror',
     'dog',
+    'baskets',
   };
 
   /// What the bench accepts: everything the game does, and what is on trial.
@@ -352,6 +359,9 @@ class Level {
     if (mirrors.isNotEmpty) 'mirror',
     // Dropped, the dog is not there, and the stretch it guards is a walk.
     if (dogs.isNotEmpty) 'dog',
+    // Dropped, a basket is not there at all: no way up to what it lifts you
+    // to, and nothing anywhere saying why.
+    if (baskets.isNotEmpty) 'baskets',
   };
 }
 
@@ -526,6 +536,64 @@ class DogSpec {
   int get hashCode => Object.hash(area, home, backTo);
 }
 
+/// A basket on a rope — the one a flat lowers from its balcony
+/// (`docs/media/drops.md` §3.1), on the bench.
+///
+/// **It goes up while somebody pulls the rope**, and comes back down when
+/// they let go. The rope is a plate or a key that names it, exactly as one
+/// names a door, and by the same rule in the same order (`Door.hold`): an
+/// inverted plate held keeps it down whatever else is true, then a plate
+/// held or a key thrown pulls it up, and otherwise it comes down after
+/// [lingerSeconds] — your past's grace, never your own.
+///
+/// It is a floor you can stand in, and it carries you. What it cannot do is
+/// carry your past: your past is where *you* were, D seconds ago, and goes
+/// up and down exactly as you did. That is why the rope is a plate rather
+/// than a weight. A first plan had two baskets on one rope, the heavier
+/// going down, with your past as the weight — and on paper one past can
+/// never lift you, because you in one basket and it in the other is one
+/// each. Pulling is the same story from the balcony, and your past can do
+/// it: it stands at the rope while you ride.
+class BasketSpec {
+  const BasketSpec({
+    required this.id,
+    required this.area,
+    required this.rise,
+    this.lingerSeconds = 0,
+  });
+
+  /// What a plate's `opens` or a key's `flips` calls it.
+  final String id;
+
+  /// The basket where it rests, down. Its top is what you stand on.
+  final Rect area;
+
+  /// How far it goes up when it is pulled all the way.
+  final double rise;
+
+  /// How long it stays up after your past lets go. See [DoorSpec].
+  final double lingerSeconds;
+
+  /// How fast it travels either way, in world units a second. One speed for
+  /// both: a basket that came down faster than it went up would be a clock
+  /// the player has to learn as well as the rule.
+  static const double speed = 200;
+
+  /// The basket at the top of its rope.
+  Rect get up => area.translate(0, -rise);
+
+  @override
+  bool operator ==(Object other) =>
+      other is BasketSpec &&
+      other.id == id &&
+      other.area == area &&
+      other.rise == rise &&
+      other.lingerSeconds == lingerSeconds;
+
+  @override
+  int get hashCode => Object.hash(id, area, rise, lingerSeconds);
+}
+
 class LightSpec {
   const LightSpec(this.area, {this.id});
 
@@ -691,6 +759,17 @@ extension LevelJson on Level {
             'backTo': dog.backTo,
           },
       ],
+    if (baskets.isNotEmpty)
+      'baskets': [
+        for (final basket in baskets)
+          {
+            'id': basket.id,
+            'area': _rectToJson(basket.area),
+            'rise': basket.rise,
+            if (basket.lingerSeconds != 0)
+              'lingerSeconds': basket.lingerSeconds,
+          },
+      ],
     'goal': _rectToJson(goal),
     'blocks': blocks.map(_rectToJson).toList(),
     // A bare rectangle, as every light was, unless it has a name.
@@ -851,6 +930,24 @@ Level levelFromJson(Object? source, {Set<String>? accepts}) {
             backTo: _asDouble(
               _asMap(entry, 'dogs[$i]')['backTo'],
               'dogs[$i].backTo',
+            ),
+          ),
+      ],
+      baskets: [
+        for (final (i, entry) in _asList(json['baskets'], 'baskets').indexed)
+          BasketSpec(
+            id: _asString(_asMap(entry, 'baskets[$i]')['id'], 'baskets[$i].id'),
+            area: _rectFromJson(
+              _asMap(entry, 'baskets[$i]')['area'],
+              'baskets[$i].area',
+            ),
+            rise: _asDouble(
+              _asMap(entry, 'baskets[$i]')['rise'],
+              'baskets[$i].rise',
+            ),
+            lingerSeconds: _asDouble(
+              _asMap(entry, 'baskets[$i]')['lingerSeconds'] ?? 0,
+              'baskets[$i].lingerSeconds',
             ),
           ),
       ],
