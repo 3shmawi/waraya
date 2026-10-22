@@ -316,6 +316,7 @@ Iterable<Finding> _bounds(Level level) sync* {
     ('markers', level.markers.length),
     ('baskets', level.baskets.length),
     ('lifts', level.lifts.length),
+    ('barber mirrors', level.barberMirrors.length),
   ]) {
     if (count > CheckLimits.mostPieces) {
       yield out('$count $name; at most ${CheckLimits.mostPieces}');
@@ -335,6 +336,7 @@ Iterable<Finding> _bounds(Level level) sync* {
     for (final toggle in level.toggles) toggle.area,
     for (final door in level.doors) door.closed,
     for (final basket in level.baskets) basket.area.expandToInclude(basket.up),
+    for (final pair in level.barberMirrors) ...[pair.from, pair.to],
     for (final lift in level.lifts) ...[
       lift.area.expandToInclude(lift.up),
       lift.callDown,

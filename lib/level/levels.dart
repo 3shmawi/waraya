@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../lab/lab_scene.dart';
+import 'barber_levels.dart';
 import 'basket_levels.dart';
 import 'dog_levels.dart';
 import 'level.dart';
@@ -4528,6 +4529,7 @@ abstract final class Levels {
     ...DogLevels.all,
     ...BasketLevels.all,
     ...LiftLevels.all,
+    ...BarberLevels.all,
   ];
 
   static final Level lab = Level(

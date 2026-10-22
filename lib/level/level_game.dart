@@ -33,6 +33,7 @@ import 'lang.dart';
 import 'level.dart';
 import 'levels.dart';
 import 'player.dart';
+import 'barber_mirror.dart';
 import 'basket.dart';
 import 'dog.dart';
 import 'leash_line.dart';
@@ -188,6 +189,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   final List<Dog> dogs = [];
   final List<Basket> baskets = [];
   final List<Lift> lifts = [];
+  final List<BarberMirror> barbers = [];
 
   /// Where the player was on the last tick, for telling a dog whether they
   /// moved.
@@ -247,7 +249,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     ShadowSolidity.crouched => liveShadows.where(
       (s) => s.crouch >= _duckedEnough,
     ),
-  };
+  }.where((s) => s.away == Offset.zero);
 
   /// True once the player has touched the level's way out.
   bool get completed => _completed;
@@ -357,6 +359,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     dogs.clear();
     baskets.clear();
     lifts.clear();
+    barbers.clear();
     _fleeing = null;
     _steppedOutOf = null;
     ticker.reset();
@@ -424,6 +427,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     dogs.addAll(level.dogs.map((spec) => Dog(spec, look: look)));
     baskets.addAll(level.baskets.map((spec) => Basket(spec, look: look)));
     lifts.addAll(level.lifts.map((spec) => Lift(spec, look: look)));
+    barbers.addAll(
+      level.barberMirrors.map((spec) => BarberMirror(spec, look: look)),
+    );
     _lastPlayerX = level.spawnX;
     _stillFor.clear();
     _markPairs();
@@ -472,6 +478,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
       ...doors,
       ...baskets,
       ...lifts,
+      ...barbers,
       ...goals,
       ...dogs,
       ShadowTrail(
@@ -937,6 +944,7 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     _mirror();
+    _crossBarbers();
     _seenOff();
 
     for (final goal in goals) {
@@ -966,6 +974,38 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
               ghost != _steppedOutOf && ghost.bounds.overlaps(player.bounds),
         )) {
       die();
+    }
+  }
+
+  /// Sends pasts across a barber's mirror, and back (`Level.barberMirrors`).
+  ///
+  /// By the past's own bounds — where it is now, across or not — so a past
+  /// over there comes back by arriving on the far glass, which is where it
+  /// is. A past in the light is not there to arrive.
+  void _crossBarbers() {
+    for (final barber in barbers) {
+      final across = barber.spec.across;
+      for (final (i, ghost) in shadows.indexed) {
+        final live = ghost.isActive && !ghost.inLight;
+        final box = ghost.bounds;
+        final crossing = barber.arrive(
+          i,
+          onFrom: live && _standsOn(box, barber.fromTrigger),
+          onTo: live && _standsOn(box, barber.toTrigger),
+          over: ghost.away == across,
+          warped: ghost.snapshot?.warped ?? false,
+        );
+        switch (crossing) {
+          case Crossing.across:
+            ghost.sendAcross(across);
+          case Crossing.back:
+            ghost.sendAcross(Offset.zero);
+          case null:
+            continue;
+        }
+        ghost.inLight = _standsInLight(ghost.bounds);
+        audio.play(Sfx.plate, volume: 0.45);
+      }
     }
   }
 
@@ -1398,6 +1438,9 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     }
     for (final lift in lifts) {
       lift.reset();
+    }
+    for (final barber in barbers) {
+      barber.reset();
     }
     for (final basket in baskets) {
       basket.reset();

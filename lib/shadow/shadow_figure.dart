@@ -108,12 +108,30 @@ class ShadowFigure extends PositionComponent {
     lastStepX = previous == null || next.warped ? 0 : next.x - previous.x;
     _previous = next.warped ? next : previous ?? next;
     _snapshot = next;
-    position.setValues(next.x, next.y);
+    position.setValues(next.x + _away.dx, next.y + _away.dy);
+  }
+
+  /// How far from where you were this past is: nothing, unless a barber's
+  /// mirror sent it across (`Level.barberMirrors`). It still does exactly
+  /// what you did, this far away.
+  Offset get away => _away;
+  Offset _away = Offset.zero;
+
+  /// Puts this past [away] from where you were, from now on. It goes there:
+  /// it is not drawn sliding across the level, and it did not walk.
+  void sendAcross(Offset away) {
+    _away = away;
+    final current = _snapshot;
+    if (current == null) return;
+    _previous = current;
+    lastStepX = 0;
+    position.setValues(current.x + away.dx, current.y + away.dy);
   }
 
   void clear() {
     _snapshot = null;
     _previous = null;
+    _away = Offset.zero;
     lastStepX = 0;
     alpha = 0;
   }

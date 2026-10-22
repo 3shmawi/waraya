@@ -42,6 +42,7 @@ class Level {
     this.dogs = const [],
     this.baskets = const [],
     this.lifts = const [],
+    this.barberMirrors = const [],
     this.place = LevelPlace.rooftops,
   }) : assert(
          leash == null || leash > 0,
@@ -252,6 +253,10 @@ class Level {
   /// floors that goes to whichever floor's button was stepped on last.
   final List<LiftSpec> lifts;
 
+  /// Barber's mirrors (`docs/media/drops.md` §3.5), on the bench: a pair
+  /// that sends your past across and leaves you where you are.
+  final List<BarberMirrorSpec> barberMirrors;
+
   /// Where the level is drawn standing (`docs/phase-12-more.md` §4).
   ///
   /// Paint, not play — the same rule as [nameEn]: it is not in [requires],
@@ -318,6 +323,7 @@ class Level {
     'dog',
     'baskets',
     'lifts',
+    'barber-mirrors',
   };
 
   /// What the bench accepts: everything the game does, and what is on trial.
@@ -370,6 +376,9 @@ class Level {
     if (baskets.isNotEmpty) 'baskets',
     // Dropped, the cabin is not there and neither is the floor it goes to.
     if (lifts.isNotEmpty) 'lifts',
+    // Dropped, your past never goes across, and whatever it was to press
+    // over there nobody presses.
+    if (barberMirrors.isNotEmpty) 'barber-mirrors',
   };
 }
 
@@ -675,6 +684,49 @@ class LiftSpec {
   int get hashCode => Object.hash(id, area, rise, callDown, callUp, startsUp);
 }
 
+/// The two mirrors facing each other in a barber's shop
+/// (`docs/media/drops.md` §3.5), on the bench.
+///
+/// **Your past arrives on [from], and goes on from [to].** Not you — the
+/// other mirror (`Level.mirrors`) moves you; this one moves your past, and
+/// leaves you where you are. From then on it does what you do, step for
+/// step, a mirror's width away: you walk two hundred along the street and
+/// it walks two hundred along the roof. It stays over there until it
+/// arrives on [to] again, and then it is back with you, where you were.
+///
+/// So the room by [to] is the room by [from] again — the same floor at the
+/// same heights — or your past walks on air over there. That is the
+/// level's to draw, not a rule the game enforces.
+///
+/// And it is **never a step**: a past over there presses, throws and holds,
+/// but nothing stands on it. A step you could leave anywhere near [to] would
+/// be a step in a place you have never been, and every height in reach of
+/// it would have to be measured again.
+class BarberMirrorSpec {
+  const BarberMirrorSpec({required this.from, required this.to});
+
+  /// The floor slab your past arrives on to go across.
+  final Rect from;
+
+  /// The floor slab it comes out on, and arrives on again to come back.
+  final Rect to;
+
+  /// How far it sends a past: from [from] to [to], by their tops and middles.
+  Offset get across => Offset(to.center.dx - from.center.dx, to.top - from.top);
+
+  /// What a body has to be standing on to have arrived on [slab]: the
+  /// shape a key's is.
+  static Rect triggerOf(Rect slab) =>
+      Rect.fromLTRB(slab.left, slab.top - 28, slab.right, slab.bottom + 2);
+
+  @override
+  bool operator ==(Object other) =>
+      other is BarberMirrorSpec && other.from == from && other.to == to;
+
+  @override
+  int get hashCode => Object.hash(from, to);
+}
+
 class LightSpec {
   const LightSpec(this.area, {this.id});
 
@@ -850,6 +902,11 @@ extension LevelJson on Level {
             if (basket.lingerSeconds != 0)
               'lingerSeconds': basket.lingerSeconds,
           },
+      ],
+    if (barberMirrors.isNotEmpty)
+      'barberMirrors': [
+        for (final pair in barberMirrors)
+          {'from': _rectToJson(pair.from), 'to': _rectToJson(pair.to)},
       ],
     if (lifts.isNotEmpty)
       'lifts': [
@@ -1041,6 +1098,22 @@ Level levelFromJson(Object? source, {Set<String>? accepts}) {
             lingerSeconds: _asDouble(
               _asMap(entry, 'baskets[$i]')['lingerSeconds'] ?? 0,
               'baskets[$i].lingerSeconds',
+            ),
+          ),
+      ],
+      barberMirrors: [
+        for (final (i, entry) in _asList(
+          json['barberMirrors'],
+          'barberMirrors',
+        ).indexed)
+          BarberMirrorSpec(
+            from: _rectFromJson(
+              _asMap(entry, 'barberMirrors[$i]')['from'],
+              'barberMirrors[$i].from',
+            ),
+            to: _rectFromJson(
+              _asMap(entry, 'barberMirrors[$i]')['to'],
+              'barberMirrors[$i].to',
             ),
           ),
       ],

@@ -112,6 +112,7 @@ class EditorDoc {
     this.dogs = const [],
     this.baskets = const [],
     this.lifts = const [],
+    this.barberMirrors = const [],
     this.place = LevelPlace.rooftops,
   });
 
@@ -134,6 +135,7 @@ class EditorDoc {
     dogs: level.dogs,
     baskets: level.baskets,
     lifts: level.lifts,
+    barberMirrors: level.barberMirrors,
     place: level.place,
     pieces: [
       for (final rect in level.blocks) Piece(PieceKind.block, rect),
@@ -214,6 +216,9 @@ class EditorDoc {
   /// The lifts (`Level.lifts`, on trial), carried through too.
   List<LiftSpec> lifts;
 
+  /// The barber's mirrors (`Level.barberMirrors`, on trial), carried through.
+  List<BarberMirrorSpec> barberMirrors;
+
   /// Where the level is drawn (`Level.place`), carried through. Paint: no
   /// tool to change it yet, and the bench draws grey boxes either way.
   LevelPlace place;
@@ -242,6 +247,7 @@ class EditorDoc {
       dogs: dogs,
       baskets: baskets,
       lifts: lifts,
+      barberMirrors: barberMirrors,
       place: place,
       // Exactly one: the editor neither adds nor removes it ([canRemove]).
       goal: of(PieceKind.goal).first.rect,
@@ -286,6 +292,7 @@ class EditorDoc {
     dogs: dogs,
     baskets: baskets,
     lifts: lifts,
+    barberMirrors: barberMirrors,
     place: place,
     pieces: [for (final p in pieces) p.copy()],
   );
