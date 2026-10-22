@@ -109,11 +109,9 @@ abstract final class BarberLevels {
       ],
     ],
     name: 'ماضيك فوق',
-    teaches: 'ماضيك عدّى المراية: اللي تعمله تحت، هو بيعمله فوق.',
+    teaches: 'الزرار فوق، والأسانسير تحت.',
     nameEn: 'Your Past Upstairs',
-    teachesEn:
-        'Your past went through the mirror: what you do down here, '
-        'it does up there.',
+    teachesEn: 'The button is upstairs. The lift is down here.',
     delaySeconds: 5,
     spawnX: -700,
     floorTop: 620,
@@ -208,12 +206,10 @@ abstract final class BarberLevels {
         Move.right(2),
       ],
     ],
-    name: 'نط هناك',
-    teaches: 'فوق فيه حيطة مش هنا: نط انت عشان ماضيك ينط.',
-    nameEn: 'Jump Over There',
-    teachesEn:
-        'There is a wall up there and not down here: jump, so your '
-        'past jumps.',
+    name: 'فوق مش زي تحت',
+    teaches: 'بص على الدور اللي فوق كويس.',
+    nameEn: 'Up There Is Not Down Here',
+    teachesEn: 'Look closely at the floor above.',
     delaySeconds: 3,
     spawnX: -880,
     floorTop: 620,
@@ -255,10 +251,10 @@ abstract final class BarberLevels {
         Move.right(2),
       ],
     ],
-    name: 'وطّي عشانه',
-    teaches: 'فوق السقف واطي: وطّي انت تحت ولا حاجة.',
-    nameEn: 'Duck for It',
-    teachesEn: 'The ceiling is low up there: duck down here, under nothing.',
+    name: 'سقف واطي',
+    teaches: 'فوق، السقف قريب.',
+    nameEn: 'A Low Ceiling',
+    teachesEn: 'Up there, the ceiling is close.',
     delaySeconds: 3,
     spawnX: -880,
     floorTop: 620,
@@ -315,12 +311,10 @@ abstract final class BarberLevels {
         Move.right(2),
       ],
     ],
-    name: 'نط ووطّي',
-    teaches: 'الحيطة الأول، وبعدين السقف: كله فوق، وكله منك تحت.',
-    nameEn: 'Jump, Then Duck',
-    teachesEn:
-        'The wall first, then the ceiling: all of it up there, all of '
-        'it from you down here.',
+    name: 'حاجتين فوق',
+    teaches: 'واحدة ورا التانية.',
+    nameEn: 'Two Things Up There',
+    teachesEn: 'One after the other.',
     delaySeconds: 4,
     spawnX: -880,
     floorTop: 620,
@@ -336,11 +330,168 @@ abstract final class BarberLevels {
     goal: _goal,
   );
 
+  /// **The long way up.** The last three together: the lift is waiting at
+  /// the top, its UP button is upstairs behind you, and up there a wall is
+  /// between the mirror and the button. So: the mirror; back, with a jump
+  /// over nothing; stand under the button; then bring the cabin down
+  /// yourself and get in. And this once your past does not take it away
+  /// from under you — it is upstairs, nowhere near the button down here.
+  static final Level theLongWayUp = Level(
+    id: 'the-long-way-up',
+    solution: const [
+      Move.right(0.55), // onto the mirror
+      Move.left(1.0),
+      Move.left(0.8, jump: true), // over nothing: the wall, up there
+      Move.left(0.4), // under the button
+      Move(0.3),
+      Move.right(2.9), // onto DOWN
+      Move(1.2), // while it comes down
+      Move.right(0.3),
+      Move.right(0.35, jump: true), // in
+      Move(2.6), // until your past calls it up
+      Move.right(3), // off, and out
+    ],
+    wrongIdeas: const [
+      // The same, walking: up there your past walks into the wall.
+      [
+        Move.right(0.55),
+        Move.left(2.2),
+        Move(0.3),
+        Move.right(2.9),
+        Move(1.2),
+        Move.right(0.3),
+        Move.right(0.35, jump: true),
+        Move(5),
+        Move.right(3),
+      ],
+      // The mirror and straight to the lift: nobody up there calls it.
+      [
+        Move.right(1.0),
+        Move(1.2),
+        Move.right(0.3),
+        Move.right(0.35, jump: true),
+        Move(8),
+        Move.right(3),
+      ],
+    ],
+    name: 'الطلعة الطويلة',
+    teaches: 'كل اللي فات، مع بعض.',
+    nameEn: 'The Long Way Up',
+    teachesEn: 'Everything so far, together.',
+    delaySeconds: 6,
+    spawnX: -700,
+    floorTop: 620,
+    blocks: [
+      const Rect.fromLTRB(-1440, 620, -230, 2200),
+      const Rect.fromLTRB(-1480, 100, -1440, 2200),
+      // The floor above, up to the lift.
+      const Rect.fromLTRB(-1440, 320, -350, 340),
+      // The wall, up there only.
+      const Rect.fromLTRB(-880, 262, -860, 320),
+      // Past the lift: the way out.
+      const Rect.fromLTRB(-230, 320, 900, 2200),
+      const Rect.fromLTRB(900, 100, 940, 2200),
+    ],
+    barberMirrors: const [
+      BarberMirrorSpec(
+        from: Rect.fromLTRB(-630, 608, -570, 620),
+        to: Rect.fromLTRB(-630, 308, -570, 320),
+      ),
+    ],
+    lifts: const [
+      LiftSpec(
+        id: 'lift',
+        area: Rect.fromLTRB(-350, 600, -230, 620),
+        rise: 280,
+        callDown: Rect.fromLTRB(-480, 608, -400, 620),
+        callUp: Rect.fromLTRB(-1080, 308, -1000, 320),
+        startsUp: true,
+      ),
+    ],
+    goal: const Rect.fromLTRB(300, 248, 380, 320),
+  );
+
+  /// **One way.** Upstairs, going back from the mirror: a key, and past it a
+  /// button. The button holds the near door on the street; the key opens
+  /// the far gate — for as long as nobody arrives on it again. And your past
+  /// arrives on it twice: going to the button, and coming back.
+  ///
+  /// The second time shuts the gate, D seconds after you passed under the
+  /// key, which is a little before you get to the gate. So coming back,
+  /// jump — over nothing, down here — where the key is up there, and your
+  /// past hops it.
+  static final Level oneWay = Level(
+    id: 'one-way',
+    solution: const [
+      Move.right(0.3), // onto the mirror
+      Move.left(1.85), // under the key, and on, under the button
+      Move(0.5),
+      Move.right(0.85),
+      Move.right(0.8, jump: true), // over nothing: over the key, up there
+      Move.right(5.0), // the door, the gate, out
+    ],
+    wrongIdeas: const [
+      // There and back, walking: your past flips the key back on its way.
+      [
+        Move.right(0.3),
+        Move.left(1.85),
+        Move(0.5),
+        Move.right(6.6),
+        Move(3),
+        Move.right(1),
+      ],
+      // Hopping it both ways: the gate never opens.
+      [
+        Move.right(0.3),
+        Move.left(0.4),
+        Move.left(0.8, jump: true),
+        Move.left(0.65), // under the button, where the run turns
+        Move(0.5),
+        Move.right(0.85),
+        Move.right(0.8, jump: true),
+        Move.right(5.0),
+        Move(3),
+        Move.right(1),
+      ],
+    ],
+    name: 'رايح بس',
+    teaches: 'المفتاح بيتقلب كل ما حد يوصله.',
+    nameEn: 'One Way',
+    teachesEn: 'A key flips every time somebody arrives on it.',
+    delaySeconds: 3,
+    spawnX: -880,
+    floorTop: 620,
+    blocks: [
+      const Rect.fromLTRB(-1440, 620, 600, 2200),
+      const Rect.fromLTRB(-1480, 100, -1440, 2200),
+      const Rect.fromLTRB(600, 100, 640, 2200),
+      const Rect.fromLTRB(-1440, 320, 300, 340),
+    ],
+    barberMirrors: const [_pair],
+    toggles: const [
+      ToggleSpec(area: Rect.fromLTRB(-1000, 308, -920, 320), flips: 'gate'),
+    ],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-1240, 308, -1160, 320), opens: 'door'),
+    ],
+    doors: const [
+      DoorSpec(
+        id: 'door',
+        closed: Rect.fromLTRB(-400, 370, -374, 620),
+        lingerSeconds: 3,
+      ),
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-100, 370, -74, 620)),
+    ],
+    goal: const Rect.fromLTRB(100, 548, 180, 620),
+  );
+
   static final List<Level> all = [
     overYourHead,
     yourPastUpstairs,
     jumpOverThere,
     duckForIt,
     jumpThenDuck,
+    theLongWayUp,
+    oneWay,
   ];
 }
