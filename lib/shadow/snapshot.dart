@@ -1,3 +1,5 @@
+import 'dart:ui' show Rect;
+
 import 'package:flame/components.dart';
 import 'package:flutter/foundation.dart';
 
@@ -29,6 +31,10 @@ class PoseSnapshot {
     this.crouch = 0,
     this.jumpPressed = false,
     this.warped = false,
+    this.moveAxis = 0,
+    this.jumpHeld = false,
+    this.crouchHeld = false,
+    this.riding,
   });
 
   /// Feet position in world units — the walker is anchored bottom-centre.
@@ -65,6 +71,26 @@ class PoseSnapshot {
   /// there instead of gliding across the level, and tells the mirror the
   /// shadow did not *arrive*.
   final bool warped;
+
+  /// What was being asked of the body on this tick: the stick, the jump
+  /// held, the crouch held. With [jumpPressed], the input that made this
+  /// pose.
+  ///
+  /// **Not** a switch to input recording — every past is still moved by
+  /// where you ended up, for every reason the class says. These are read by
+  /// one thing only: a past a barber's mirror sent into another room
+  /// (`Level.barberMirrors`). Over there it is not where you were, so there
+  /// is no "where you were" to put it; it walks the room itself, on these.
+  /// Its own walk can drift from yours, and that is the point — the room
+  /// over there is a different room.
+  final double moveAxis;
+  final bool jumpHeld;
+  final bool crouchHeld;
+
+  /// The moving floor — a basket, a cabin — the body was standing in, as it
+  /// was on this tick. Paint only: the past is drawn standing in a pale copy
+  /// of it, so a past replaying a ride is not a body rising through the air.
+  final Rect? riding;
 
   Vector2 get position => Vector2(x, y);
 

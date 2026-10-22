@@ -110,6 +110,34 @@ void main() {
     );
 
     testWithGame<LevelGame>(
+      'a ride is recorded with the floor it was on, for your past to stand in',
+      () => build(flat(delay: 4)),
+      (game) async {
+        await game.ready();
+        final basket = game.baskets.single;
+        final run = Run(game)..walkTo(-300);
+        run.hold(1.2);
+        run.walkTo(-40);
+        run
+          ..hold(0.35, axis: 1, jump: true)
+          ..hold(0.5);
+        var recorded = 0;
+        var replayed = 0;
+        run.hold(
+          9,
+          each: () {
+            if (basket.raised > 0 && game.player.riding == basket.bounds) {
+              recorded++;
+            }
+            if (game.shadows.single.snapshot?.riding != null) replayed++;
+          },
+        );
+        expect(recorded, greaterThan(30), reason: 'while you rode it');
+        expect(replayed, greaterThan(30), reason: 'and your past, after');
+      },
+    );
+
+    testWithGame<LevelGame>(
       'the grace is your past\'s, never your own',
       () => build(flat(delay: 4, linger: 1)),
       (game) async {

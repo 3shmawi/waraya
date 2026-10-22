@@ -360,6 +360,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     baskets.clear();
     lifts.clear();
     barbers.clear();
+    _bodies.clear();
+    _bodyInputs.clear();
     _fleeing = null;
     _steppedOutOf = null;
     ticker.reset();
@@ -694,7 +696,30 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
         ghost.inLight = false;
         continue;
       }
-      ghost.apply(due);
+      final body = _bodies[i];
+      if (body == null) {
+        ghost.apply(due);
+      } else {
+        // Over there the body places it, never where you were: putting it
+        // here first and moving it after drew it sliding between the two.
+        _bodyInputs[i]!.next = InputIntent(
+          moveAxis: due.moveAxis,
+          jump: due.jumpPressed,
+          jumpHeld: due.jumpHeld,
+          crouch: due.crouchHeld,
+        );
+        body.input.refresh();
+        body.update(ticker.tickRate);
+        if (body.y > WarayaConfig.worldHeight + 240) {
+          // Fell where the room over there has no floor. Not a death — it is
+          // your past, not you — but it did not get there: back with you.
+          _disembody(i);
+          ghost.apply(due);
+        } else {
+          final pose = body.capture();
+          ghost.applyAs(pose, away: Offset(pose.x - due.x, pose.y - due.y));
+        }
+      }
       ghost.inLight = _standsInLight(ghost.bounds);
     }
     // A player standing on a shadow travels with it. Without this, a shadow
@@ -750,13 +775,22 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// Only the player. Your pasts are where you were: one that rode a basket
   /// goes up exactly as you did, whether or not the basket is going up now.
   void _liftBaskets(double dt) {
+    player.riding = null;
     final onFloor = _onFixedFloor();
     for (final basket in baskets) {
       final riding =
           player.isGrounded &&
           !onFloor &&
           basket.carries(x: player.x, feet: player.y);
+      final carried = [
+        for (final body in _bodies.values)
+          if (_rides(body, basket.carries)) body,
+      ];
       final moved = basket.lift(dt);
+      for (final body in carried) {
+        if (moved != 0) body.position.y = basket.bounds.top;
+      }
+      if (riding) player.riding = basket.bounds;
       // Onto its top exactly, not moved by as far as it went: the sum drifts
       // by a hair, and a hair inside the floor is a body the next step
       // treats as walking into a wall (see [_liftCabins]).
@@ -782,9 +816,17 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
           player.isGrounded &&
           !onFloor &&
           lift.carries(x: player.x, feet: player.y);
+      final carried = [
+        for (final body in _bodies.values)
+          if (_rides(body, lift.carries)) body,
+      ];
       final moved = lift.lift(dt);
+      for (final body in carried) {
+        if (moved != 0) body.position.y = lift.bounds.top;
+      }
       if (!riding) continue;
       _riding.add(lift);
+      player.riding = lift.bounds;
       // Onto its floor exactly. Adding the distance it went drifts by a hair
       // a frame, and a hair inside the floor is a body the next step treats
       // as walking into a wall: it was snapped out to the side of the cabin.
@@ -810,12 +852,72 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
   /// both under the feet of somebody stepping off it. When it left, it took
   /// them with it: found tracing a run off a lift, the body back down the
   /// shaft a frame after it had stepped out. Feet on the ledge stay there.
-  bool _onFixedFloor() => level.blocks.any(
+  bool _onFixedFloor() => _feetOnBlock(player.x, player.y);
+
+  bool _feetOnBlock(double x, double feet) => level.blocks.any(
     (block) =>
-        (player.y - block.top).abs() <= 2 &&
-        player.x + 22 > block.left &&
-        player.x - 22 < block.right,
+        (feet - block.top).abs() <= 2 &&
+        x + 22 > block.left &&
+        x - 22 < block.right,
   );
+
+  /// Whether a past's body over there is standing in a moving floor that
+  /// [carries] it, and not on a block beside it — the player's own test.
+  bool _rides(
+    Player body,
+    bool Function({required double x, required double feet}) carries,
+  ) =>
+      body.isGrounded &&
+      !_feetOnBlock(body.x, body.y) &&
+      carries(x: body.x, feet: body.y);
+
+  /// The bodies of the pasts a barber's mirror sent into another room, by
+  /// their place in [shadows], and what each is told to do.
+  ///
+  /// Over there a past is not where you were — there is no such place in
+  /// that room — so it gets a body of its own, with the player's own
+  /// physics, and is walked on your inputs as they were recorded
+  /// (`PoseSnapshot.moveAxis`): your stick, your jumps, your crouch, on the
+  /// fixed tick. It falls where the room has a hole, stops where it has a
+  /// wall, rides what is there to ride. You plan its walk by making yours.
+  final Map<int, Player> _bodies = {};
+  final Map<int, _Recorded> _bodyInputs = {};
+
+  /// What a body over there collides with: what you do, less the steps your
+  /// pasts leave and the gates that are only a rider's.
+  Solids _bodySolids() => Solids(
+    blocking: [
+      ...level.blocks,
+      for (final door in doors)
+        if (door.isSolid) door.bounds,
+      for (final basket in baskets) basket.bounds,
+      for (final lift in lifts) lift.bounds,
+    ],
+  );
+
+  /// Gives past [i] a body at [x], [feet], over there — moving as fast as
+  /// the past was, on the tick it went through. A body that started from a
+  /// standstill while you crossed at a run walked the whole room thirteen
+  /// units short of you.
+  void _embody(int i, double x, double feet, {required double speed}) {
+    final input = _Recorded();
+    _bodyInputs[i] = input;
+    final body = Player(
+      input: InputController([input]),
+      solids: _bodySolids,
+      spawnX: x,
+      floorTop: feet,
+    );
+    body.locomotion.horizontalVelocity = speed;
+    _bodies[i] = body;
+  }
+
+  /// Takes past [i]'s body away: it is back where you were.
+  void _disembody(int i) {
+    _bodies.remove(i);
+    _bodyInputs.remove(i);
+    shadows[i].comeBack();
+  }
 
   /// Which shadow the player is standing on, if any.
   ///
@@ -992,14 +1094,16 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
           i,
           onFrom: live && _standsOn(box, barber.fromTrigger),
           onTo: live && _standsOn(box, barber.toTrigger),
-          over: ghost.away == across,
+          over: _bodies.containsKey(i),
           warped: ghost.snapshot?.warped ?? false,
         );
         switch (crossing) {
           case Crossing.across:
+            final speed = ghost.lastStepX / ticker.tickRate;
             ghost.sendAcross(across);
+            _embody(i, ghost.x, ghost.y, speed: speed);
           case Crossing.back:
-            ghost.sendAcross(Offset.zero);
+            _disembody(i);
           case null:
             continue;
         }
@@ -1442,6 +1546,8 @@ class LevelGame extends FlameGame with HasKeyboardHandlerComponents {
     for (final barber in barbers) {
       barber.reset();
     }
+    _bodies.clear();
+    _bodyInputs.clear();
     for (final basket in baskets) {
       basket.reset();
     }
@@ -1505,4 +1611,19 @@ class _Hotkeys extends Component with KeyboardHandler {
     }
     return true;
   }
+}
+
+/// A past's recorded input, handed to its body over there one tick at a time
+/// (`LevelGame._bodies`).
+class _Recorded implements InputSource {
+  @override
+  String get label => 'recorded';
+
+  @override
+  bool get hasBeenUsed => true;
+
+  InputIntent next = InputIntent.none;
+
+  @override
+  InputIntent poll() => next;
 }

@@ -149,6 +149,10 @@ class Player extends PositionComponent {
       crouch: crouch,
       jumpPressed: _jumpedSinceCapture,
       warped: _warpedSinceCapture,
+      moveAxis: _walkedOn.moveAxis,
+      jumpHeld: _walkedOn.jumpHeld,
+      crouchHeld: _walkedOn.crouch,
+      riding: riding,
     );
     _jumpedSinceCapture = false;
     _warpedSinceCapture = false;
@@ -210,10 +214,21 @@ class Player extends PositionComponent {
 
   InputIntent get _intent => forcedIntent ?? input.intent;
 
+  /// The moving floor this body is standing in this frame, if any — set by
+  /// the game, which knows (`LevelGame._liftBaskets`), and recorded with the
+  /// pose for the past's sake. Paint only.
+  Rect? riding;
+
+  /// The intent the last [update] walked on — the one that put the body
+  /// where [capture] finds it. Not the intent being held now: that one has
+  /// not moved anybody yet, and a body walked on it runs a frame ahead.
+  InputIntent _walkedOn = InputIntent.none;
+
   @override
   void update(double dt) {
     super.update(dt);
     final world = solids();
+    _walkedOn = _intent;
 
     _updateCrouch(dt, world);
 

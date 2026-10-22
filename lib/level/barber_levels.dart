@@ -147,5 +147,200 @@ abstract final class BarberLevels {
     goal: const Rect.fromLTRB(400, 248, 480, 320),
   );
 
-  static final List<Level> all = [overYourHead, yourPastUpstairs];
+  /// The street every one of these is set on, with the floor above it: the
+  /// mirror on the street at -800 and its twin above it, the door on the
+  /// street, and [up] — whatever the floor above has that the street does
+  /// not — between the mirror and the button behind you.
+  static List<Rect> _floors(List<Rect> up) => [
+    const Rect.fromLTRB(-1440, 620, 600, 2200),
+    const Rect.fromLTRB(-1480, 100, -1440, 2200),
+    const Rect.fromLTRB(600, 100, 640, 2200),
+    const Rect.fromLTRB(-1440, 320, 300, 340),
+    ...up,
+  ];
+
+  static const _pair = BarberMirrorSpec(
+    from: Rect.fromLTRB(-830, 608, -770, 620),
+    to: Rect.fromLTRB(-830, 308, -770, 320),
+  );
+
+  static const _door = DoorSpec(
+    id: 'door',
+    closed: Rect.fromLTRB(-400, 370, -374, 620),
+    lingerSeconds: 0.5,
+  );
+
+  static const _goal = Rect.fromLTRB(-200, 548, -120, 620);
+
+  /// **Jump over there.** The button behind you is upstairs again — and up
+  /// there, between the mirror and the button, is a wall knee-high, which
+  /// down here there is not. Your past over there walks the floor it is on:
+  /// it walks into that wall and stops, unless you jumped. So jump, down
+  /// here, over nothing at all, at the spot where the wall is up there.
+  static final Level jumpOverThere = Level(
+    id: 'jump-over-there',
+    solution: const [
+      Move.right(0.3), // onto the mirror
+      Move.left(0.5),
+      Move.left(0.8, jump: true), // over nothing: over the wall, up there
+      Move.left(0.3), // onto the spot under the button
+      Move(0.6),
+      Move.right(4.4), // to the door, and through
+    ],
+    wrongIdeas: const [
+      // The same, and walk: up there your past walks into the wall.
+      [
+        Move.right(0.3),
+        Move.left(1.6),
+        Move(0.6),
+        Move.right(4.4),
+        Move(3),
+        Move.right(2),
+      ],
+      // No mirror: you jump over nothing, and so does your past, down here.
+      [
+        Move.left(0.3),
+        Move.left(0.8, jump: true),
+        Move.left(0.3),
+        Move(0.6),
+        Move.right(4.6),
+        Move(3),
+        Move.right(2),
+      ],
+    ],
+    name: 'نط هناك',
+    teaches: 'فوق فيه حيطة مش هنا: نط انت عشان ماضيك ينط.',
+    nameEn: 'Jump Over There',
+    teachesEn:
+        'There is a wall up there and not down here: jump, so your '
+        'past jumps.',
+    delaySeconds: 3,
+    spawnX: -880,
+    floorTop: 620,
+    blocks: _floors(const [
+      // The wall, up there only.
+      Rect.fromLTRB(-980, 262, -960, 320),
+    ]),
+    barberMirrors: const [_pair],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-1140, 308, -1060, 320), opens: 'door'),
+    ],
+    doors: const [_door],
+    goal: _goal,
+  );
+
+  /// **Duck for it.** Up there the ceiling comes down low between the mirror
+  /// and the button, and only a ducked body gets under it. Down here the
+  /// street is as tall as ever. So duck, down here, under nothing, for as
+  /// long as the low ceiling is up there — and slower, ducked, which is the
+  /// price.
+  static final Level duckForIt = Level(
+    id: 'duck-for-it',
+    solution: const [
+      Move.right(0.3), // onto the mirror
+      Move.left(0.6),
+      Move.left(1.3, crouch: true), // under nothing: under it, up there
+      Move.left(0.3),
+      Move(0.6),
+      Move.right(4.6), // to the door, and through
+    ],
+    wrongIdeas: const [
+      // The same, standing: up there your past walks into the ceiling.
+      [
+        Move.right(0.3),
+        Move.left(1.4),
+        Move(0.6),
+        Move.right(4.6),
+        Move(3),
+        Move.right(2),
+      ],
+    ],
+    name: 'وطّي عشانه',
+    teaches: 'فوق السقف واطي: وطّي انت تحت ولا حاجة.',
+    nameEn: 'Duck for It',
+    teachesEn: 'The ceiling is low up there: duck down here, under nothing.',
+    delaySeconds: 3,
+    spawnX: -880,
+    floorTop: 620,
+    blocks: _floors(const [
+      // The low ceiling, up there only: a standing head hits it, a ducked
+      // one clears it.
+      Rect.fromLTRB(-1030, 180, -940, 246),
+    ]),
+    barberMirrors: const [_pair],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-1160, 308, -1080, 320), opens: 'door'),
+    ],
+    doors: const [_door],
+    goal: _goal,
+  );
+
+  /// **Jump, then duck.** Both of them up there, the wall first and then the
+  /// low ceiling, and the button past both — all of it planned down here on
+  /// a street with nothing on it, for a body you will not see do it until
+  /// you are already walking to the door.
+  static final Level jumpThenDuck = Level(
+    id: 'jump-then-duck',
+    solution: const [
+      Move.right(0.3), // onto the mirror
+      Move.left(0.5),
+      Move.left(0.8, jump: true), // the wall, up there
+      Move.left(0.2),
+      Move.left(1.4, crouch: true), // the ceiling, up there
+      Move.left(0.3),
+      Move(0.6),
+      Move.right(5.4), // to the door, and through
+    ],
+    wrongIdeas: const [
+      // The jump and not the duck.
+      [
+        Move.right(0.3),
+        Move.left(0.5),
+        Move.left(0.8, jump: true),
+        Move.left(1.0),
+        Move(0.6),
+        Move.right(5.4),
+        Move(3),
+        Move.right(2),
+      ],
+      // The duck and not the jump.
+      [
+        Move.right(0.3),
+        Move.left(0.7),
+        Move.left(2.4, crouch: true),
+        Move.left(0.3),
+        Move(0.6),
+        Move.right(5.4),
+        Move(3),
+        Move.right(2),
+      ],
+    ],
+    name: 'نط ووطّي',
+    teaches: 'الحيطة الأول، وبعدين السقف: كله فوق، وكله منك تحت.',
+    nameEn: 'Jump, Then Duck',
+    teachesEn:
+        'The wall first, then the ceiling: all of it up there, all of '
+        'it from you down here.',
+    delaySeconds: 4,
+    spawnX: -880,
+    floorTop: 620,
+    blocks: _floors(const [
+      Rect.fromLTRB(-980, 262, -960, 320),
+      Rect.fromLTRB(-1130, 180, -1040, 246),
+    ]),
+    barberMirrors: const [_pair],
+    plates: const [
+      PlateSpec(area: Rect.fromLTRB(-1260, 308, -1180, 320), opens: 'door'),
+    ],
+    doors: const [_door],
+    goal: _goal,
+  );
+
+  static final List<Level> all = [
+    overYourHead,
+    yourPastUpstairs,
+    jumpOverThere,
+    duckForIt,
+    jumpThenDuck,
+  ];
 }

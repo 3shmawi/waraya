@@ -109,6 +109,78 @@ void main() {
     );
 
     testWithGame<LevelGame>(
+      'over there it is a body: a wall up there stops it, not you',
+      () => build(
+        Level(
+          id: 'barber-wall',
+          name: 'barber-wall',
+          teaches: 'barber-wall',
+          delaySeconds: 2,
+          spawnX: -600,
+          floorTop: 620,
+          blocks: const [
+            Rect.fromLTRB(-3000, 620, 3000, 2200),
+            Rect.fromLTRB(-3000, 320, 3000, 340),
+            // Up there only.
+            Rect.fromLTRB(-250, 240, -230, 320),
+          ],
+          barberMirrors: const [
+            BarberMirrorSpec(
+              from: Rect.fromLTRB(-430, 608, -370, 620),
+              to: Rect.fromLTRB(-430, 308, -370, 320),
+            ),
+          ],
+          goal: const Rect.fromLTRB(2800, 548, 2880, 620),
+        ),
+      ),
+      (game) async {
+        await game.ready();
+        final past = game.shadows.single;
+        final run = Run(game)..walkTo(-400);
+        run.walkTo(0);
+        run.hold(3);
+        expect(game.player.x, closeTo(0, 6), reason: 'nothing in your way');
+        expect(past.x + 22, lessThanOrEqualTo(-250), reason: 'its wall');
+      },
+    );
+
+    testWithGame<LevelGame>(
+      'off the edge over there, it is back with you',
+      () => build(
+        Level(
+          id: 'barber-edge',
+          name: 'barber-edge',
+          teaches: 'barber-edge',
+          delaySeconds: 2,
+          spawnX: -600,
+          floorTop: 620,
+          blocks: const [
+            Rect.fromLTRB(-3000, 620, 1000, 2200),
+            // A room far off to the right, whose floor ends at 2300.
+            Rect.fromLTRB(1500, 620, 2300, 2200),
+          ],
+          barberMirrors: const [
+            BarberMirrorSpec(
+              from: Rect.fromLTRB(-430, 608, -370, 620),
+              to: Rect.fromLTRB(1570, 608, 1630, 620),
+            ),
+          ],
+          goal: const Rect.fromLTRB(2800, 548, 2880, 620),
+        ),
+      ),
+      (game) async {
+        await game.ready();
+        final past = game.shadows.single;
+        final run = Run(game)..walkTo(-400);
+        run.walkTo(400); // over there: 2400, past the end of its floor
+        run.hold(4);
+        expect(past.away, Offset.zero, reason: 'it fell, and came back');
+        expect(past.y, closeTo(620, 0.5));
+        expect(game.reloads, 0, reason: 'your past, not you');
+      },
+    );
+
+    testWithGame<LevelGame>(
       'a reload brings every past back',
       () => build(twin()),
       (game) async {

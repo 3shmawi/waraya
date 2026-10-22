@@ -105,11 +105,35 @@ class ShadowFigure extends PositionComponent {
     final previous = _snapshot;
     // A mirror put the body here: it did not walk, so it carries nobody across
     // the level and is not drawn sliding there.
-    lastStepX = previous == null || next.warped ? 0 : next.x - previous.x;
-    _previous = next.warped ? next : previous ?? next;
+    final jumped = next.warped || _comingBack;
+    _comingBack = false;
+    lastStepX = previous == null || jumped ? 0 : next.x - previous.x;
+    _previous = jumped ? next : previous ?? next;
     _snapshot = next;
     position.setValues(next.x + _away.dx, next.y + _away.dy);
   }
+
+  /// Puts the past at [pose] — a body of its own, in another room — which is
+  /// [away] from where you were. For a past a barber's mirror sent across
+  /// (`LevelGame._fixedTick`): it is moved by where that body got to, not by
+  /// where you did.
+  void applyAs(PoseSnapshot pose, {required Offset away}) {
+    final previous = _snapshot;
+    lastStepX = previous == null ? 0 : pose.x - previous.x;
+    _previous = previous ?? pose;
+    _snapshot = pose;
+    _away = away;
+    position.setValues(pose.x, pose.y);
+  }
+
+  /// Back where you were, from the next pose on — and put there, not drawn
+  /// gliding back across the level.
+  void comeBack() {
+    _away = Offset.zero;
+    _comingBack = true;
+  }
+
+  bool _comingBack = false;
 
   /// How far from where you were this past is: nothing, unless a barber's
   /// mirror sent it across (`Level.barberMirrors`). It still does exactly
@@ -132,6 +156,7 @@ class ShadowFigure extends PositionComponent {
     _snapshot = null;
     _previous = null;
     _away = Offset.zero;
+    _comingBack = false;
     lastStepX = 0;
     alpha = 0;
   }
@@ -162,6 +187,34 @@ class ShadowFigure extends PositionComponent {
     // reading as one shape.
     final smoothing = renderOffset;
     canvas.translate(smoothing.dx, smoothing.dy);
+
+    // The floor it was riding, if it was: a pale copy in the past's own
+    // colour, faint, with no rim — it is not there to stand on, it is there
+    // so a past replaying a ride stands in something rather than rising
+    // through the air. Only where you were; a past over there rides what is
+    // really there.
+    final floor = snapshot.riding;
+    if (floor != null && _away == Offset.zero) {
+      final local = floor.translate(
+        -(snapshot.x - size.x / 2),
+        -(snapshot.y - size.y),
+      );
+      // Its own strength, not the body's: a past standing in a crouched
+      // level is drawn faint to say it is no step, and a floor that faint
+      // was not there at all. Gone only where the past is.
+      final strength = (opacity * 2).clamp(0.0, 1.0);
+      canvas.drawRect(
+        local,
+        Paint()..color = color.withValues(alpha: 0.3 * strength),
+      );
+      canvas.drawRect(
+        local,
+        Paint()
+          ..color = color.withValues(alpha: 0.75 * strength)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+    }
     canvas.saveLayer(
       Rect.fromLTWH(-size.x, -size.y * 0.4, size.x * 3, size.y * 1.6),
       Paint()..color = Color.fromRGBO(0, 0, 0, opacity),
