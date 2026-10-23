@@ -530,6 +530,64 @@ function endCard(u) {
     </div>`;
 }
 
+// ——— the store's stills (tool/promo/store.js) ———
+// One frame, not a film: the video's sky, its phone on its side with a frame
+// of the game in it, and the words in place — everything as it is once the
+// animations have settled.
+const STILL = 99;
+window.still = (spec) => {
+  C = spec.config;
+  const L = C.L;
+  stage.style.width = L.W + 'px';
+  stage.style.height = L.H + 'px';
+  stage.dir = spec.dir;
+  let html = sky(1.2);
+  const marks = [];
+  if (spec.ring) marks.push(ring(spec.ring.x, spec.ring.y, 40, 1, L.k, spec.ring.label, 1));
+  if (spec.tag) marks.push(tagAt(spec.tag.x, spec.tag.y, spec.tag.label, 1, L.k));
+  if (spec.frame) html += phone(STILL, { clip: null, frame: spec.frame, marks });
+  // The words stack in one column, centred in the sky over the phone, so a
+  // headline that takes two lines pushes its line down instead of onto it.
+  const m = L.markS;
+  html += `<div class="abs" style="left:0;right:0;top:0;height:${L.screen.y - L.bezel}px;display:flex;flex-direction:column;
+      justify-content:center;align-items:center;text-align:center;padding:0 ${L.pad}px;box-sizing:border-box;gap:${L.gap}px">
+    ${spec.chip ? `<div style="font-size:${L.type.small}px"><span class="chip">${spec.chip}</span></div>` : ''}
+    ${spec.mark ? `<img src="${spec.mark}" style="width:${m * 1.5}px;height:${m}px;filter:drop-shadow(0 22px 40px rgba(20,10,0,.35))">` : ''}
+    <div class="big" style="font-size:${L.type.big}px">${spec.text}</div>
+    ${spec.sub ? `<div class="sub" style="font-size:${L.type.small}px">${spec.sub}</div>` : ''}
+  </div>`;
+  // Under the phone, on the dark ground: the game's own tile and its name.
+  if (spec.tile) {
+    const ts = L.type.small * 2.2;
+    html += `<div class="abs cream" style="left:0;right:0;top:${L.lowY}px;display:flex;justify-content:center;align-items:center;
+        gap:${ts * 0.35}px;font-size:${L.type.small}px">
+      <img src="${spec.tile}" style="width:${ts}px;height:${ts}px;border-radius:${ts * 0.22}px">
+      <span>${spec.brand}</span></div>`;
+  }
+  stage.innerHTML = html;
+  return Promise.all([document.fonts.ready,
+    ...[...stage.querySelectorAll('img')].map(i => i.complete && i.naturalWidth ? 0 : i.decode().catch(() => 0))]);
+};
+
+// The banner Play puts over the top of the listing: 1024 x 500, wide and
+// short. The words on one side, the phone on the other.
+window.banner = (spec) => {
+  C = spec.config;
+  const L = C.L;
+  stage.style.width = L.W + 'px';
+  stage.style.height = L.H + 'px';
+  stage.dir = spec.dir;
+  let html = sky(1.2) + phone(STILL, { clip: null, frame: spec.frame, marks: [] });
+  const side = spec.dir === 'rtl' ? 'right' : 'left';
+  html += `<div class="abs" style="${side}:${L.textX}px;top:${L.textY}px;width:${L.textW}px;text-align:center">
+      <img src="${spec.mark}" style="width:${L.markS * 1.5}px;height:${L.markS}px;display:block;margin:0 auto 6px;filter:drop-shadow(0 12px 24px rgba(20,10,0,.35))">
+      <div class="big" style="font-size:${L.type.big}px;line-height:1.1">${spec.text}</div>
+      <div class="sub" style="font-size:${L.type.small}px;margin-top:6px">${spec.sub}</div></div>`;
+  stage.innerHTML = html;
+  return Promise.all([document.fonts.ready,
+    ...[...stage.querySelectorAll('img')].map(i => i.complete && i.naturalWidth ? 0 : i.decode().catch(() => 0))]);
+};
+
 // ——— the frame ———
 window.frame = (t) => {
   const L = C.L;

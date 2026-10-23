@@ -6,7 +6,8 @@ Character counts are checked against each store's limit; a store counts
 every letter, space and mark.
 
 The images are not committed: they are rendered from the game itself by
-`tool/store.dart` (see the end of this file), the way the TikTok clips are.
+`tool/promo/store.js`, in the videos' style — the same sky, the same phone on
+its side, the same words (see the end of this file).
 
 ---
 
@@ -55,9 +56,12 @@ Your shadow repeats everything you did, seconds later. Plan your past to pass.
 
 مفيش زرار تسجيل ومفيش رجوع بالوقت. التأخير شغال طول الوقت، سواء انت جاهز أو لأ، وده اللي بيخلّي الإحساس أقرب لإنك متطارد من إنه لغز هادي.
 
-ستة وتلاتين مرحلة:
-• عشرة بيعلّموا، كل مرحلة فكرة واحدة: الزرار، المنصة، العقبة، التضحية، المفتاح اللي ماضيك بيقلبه تاني، النور، وظلين بتأخيرين مختلفين في نفس الوقت
-• وستة وعشرين مرحلة صعبة بيجمعوا ده كله، وبيقلبوا اللي اتعلّمته — ومنهم زرار بيطفي النور
+خمسة وأربعين مرحلة في تلات فصول:
+• الأسطح: الزرار، المنصة، العقبة، التضحية، المفتاح اللي ماضيك بيقلبه تاني، النور، وظلين بتأخيرين مختلفين في نفس الوقت
+• بيت السلّم: خمستاشر مرحلة بزرار بيطفي النور
+• والجديد، المراية: ماضيك يوصلها، تلاقي نفسك مكانه — تسع مراحل
+
+وكل جمعة فيه حاجة جديدة.
 
 الصعوبة في الفهم مش في السرعة: مفيش عدّاد بيجري، ومفيش مرحلة بتعاقبك على لحظة تفكير.
 
@@ -88,9 +92,12 @@ And your shadow is not a picture. It is a real thing in the world:
 
 There is no record button and no rewind. The delay runs whether you are ready or not, which makes it feel closer to being chased than to a quiet puzzle box.
 
-Thirty-six levels:
-• Ten that teach, one idea each: the plate, the platform, the obstacle, the sacrifice, the switch your past flips back, the light, and two shadows at two different delays at once
-• Twenty-six hard levels that put all of it together and turn it over — among them a switch that puts the light out
+Forty-five levels in three chapters:
+• The rooftops: the plate, the platform, the obstacle, the sacrifice, the switch your past flips back, the light, and two shadows at two different delays at once
+• The stairwell: fifteen levels with a switch that puts the light out
+• And new, the mirror: when your past reaches it, you are where it is — nine levels
+
+And something new every Friday.
 
 The difficulty is in understanding, not speed: no timer running down, and no level that punishes a moment spent thinking.
 
@@ -104,16 +111,11 @@ The setting is contemporary Egypt. Everything dark in the background is a photog
 Made by one developer, one day a week.
 ```
 
-### Release notes for the first version (≤ 500)
+### Release notes (≤ 500)
 
-```
-<ar>
-أول نسخة: ستة وتلاتين مرحلة.
-</ar>
-<en-US>
-First release: twenty-eight levels.
-</en-US>
-```
+Not here: they are `fastlane/release_notes/ar.txt` and `en.txt`, uploaded
+with every build (`fastlane/Fastfile`) and shown in the game's own
+«what's new».
 
 ### Images
 
@@ -127,7 +129,7 @@ Upload the Arabic set to the Arabic listing and the English set to the
 English translation (Store listing → Manage translations → English). The
 order is the file numbers: the first two are the ones visible without
 scrolling, so they are the idea itself — the door your past opened, and the
-step that is your own body.
+step that is your own body. The third is what is new.
 
 ---
 
@@ -155,8 +157,8 @@ en: puzzle,platformer,shadow,time,delay,echo,logic,atmospheric,indie,egypt
 **Promotional text** (≤ 170, can be changed without a new version):
 
 ```
-ar: انت مش بتتحكم في ظلك. بتتحكم في اللي هيعمله بعد شوية. ستة وتلاتين مرحلة، من غير إعلانات.
-en: You do not control your shadow. You control what it does next. Thirty-six levels, no ads.
+ar: جديد: المراية. ماضيك يوصلها، تلاقي نفسك مكانه. خمسة وأربعين مرحلة، من غير إعلانات.
+en: New: the mirror. When your past reaches it, you are where it is. Forty-five levels, no ads.
 ```
 
 **Description:** the same full descriptions as Google Play.
@@ -172,14 +174,22 @@ captions, framed for each shape.
 
 ## Making the images again
 
+The same footage and the same drawing as the videos
+(`docs/marketing/launch-video.md` §٥):
+
 ```sh
-flutter test tool/store.dart                          # to /tmp/waraya-store/{ar,en}/{play,iphone,iphone-6.5,ipad}
-WARAYA_STORE_OUT=~/Desktop/store flutter test tool/store.dart
-WARAYA_FEATURE=go-in-low@5.25 flutter test tool/store.dart   # another banner moment
+WORK=/somewhere
+for n in 1 2 8 9 15 16; do
+  WARAYA_CLIP_SHADOW=0.9 WARAYA_CLIP_DEVICE=844x390@2 WARAYA_CLIP_EVERY=2 \
+    WARAYA_CLIP=$n WARAYA_CLIP_OUT=$WORK/frames flutter test tool/clips.dart
+done
+WARAYA_MARK_OUT=$WORK/mark flutter test tool/promo/mark_frames.dart
+node tool/promo/store.js $WORK            # -> $WORK/store/{ar,en}/{play,iphone,iphone-6.5,ipad}
 ```
 
-Each shot is a level and a moment in its recorded solution (`shots` in
-`tool/store.dart`), so a screenshot cannot show a solution the game no longer
-accepts, and a level that changes changes its screenshot the next time this
-runs. Everything is written as RGB with no alpha channel, because Play
-refuses a screenshot or a feature graphic that has one.
+Each shot is a clip and a moment in its recorded solution (`SHOTS` in
+`tool/promo/store.js`), so a screenshot cannot show a solution the game no
+longer accepts; the words are in the same file, in both languages. Everything
+is written as RGB with no alpha channel, because Play refuses a screenshot or
+a feature graphic that has one. The old portrait ones (`tool/store.dart`, the
+game on top and a caption under it) are still there, and no longer used.
