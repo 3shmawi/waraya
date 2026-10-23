@@ -21,66 +21,80 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/ui/game_mark.dart';
 
-/// One Friday's drop: what it brings, and what the one after it brings.
+/// One Friday's drop: what it brings. Nothing about the one after it — the
+/// owner's call: next Friday is a surprise, and the last thing on the card is
+/// where to get the game.
 class Drop {
-  const Drop({
-    required this.slug,
-    required this.what,
-    required this.whatEn,
-    this.next,
-    this.nextEn,
-  });
+  const Drop({required this.slug, required this.what, required this.whatEn});
 
   final String slug;
   final String what;
   final String whatEn;
-
-  /// Null on the last one written down: the card then says only that
-  /// there is more every Friday.
-  final String? next;
-  final String? nextEn;
 }
 
 /// In posting order. The plan, and why each comes where it does, is
 /// docs/media/drops.md.
 const drops = <Drop>[
-  Drop(
-    slug: 'mirror',
-    what: 'المراية',
-    whatEn: 'The mirror',
-    next: 'الكلب',
-    nextEn: 'The dog',
-  ),
-  Drop(
-    slug: 'dog',
-    what: 'كلب الشارع',
-    whatEn: 'The street dog',
-    next: 'بيت السلّم',
-    nextEn: 'The stairwell',
-  ),
-  Drop(
-    slug: 'stairwell',
-    what: 'بيت السلّم',
-    whatEn: 'The stairwell',
-    next: 'السبَت',
-    nextEn: 'The basket',
-  ),
-  Drop(
-    slug: 'basket',
-    what: 'السبَت',
-    whatEn: 'The basket',
-    next: 'الأسانسير',
-    nextEn: 'The old lift',
-  ),
+  Drop(slug: 'mirror', what: 'المراية', whatEn: 'The mirror'),
+  Drop(slug: 'dog', what: 'كلب الشارع', whatEn: 'The street dog'),
+  Drop(slug: 'stairwell', what: 'بيت السلّم', whatEn: 'The stairwell'),
+  Drop(slug: 'basket', what: 'السبَت', whatEn: 'The basket'),
+];
+
+/// Where the code goes: `site/get/index.html`, which sends an Android to
+/// Google Play and an iPhone to the App Store — the same code as the end of
+/// the launch video (docs/marketing/launch-video.md).
+const getUrl = 'https://waraya.pages.dev/get';
+
+/// [getUrl] as a QR code, at the highest error correction (H), so the mark
+/// can sit over its middle. Written out rather than computed so that the
+/// card needs nothing but the game to draw it; made with the `qrcode` npm
+/// package, `QRCode.create(getUrl, {errorCorrectionLevel: 'H'})`, the one
+/// the launch video uses. A new URL means making it again.
+const qrRows = <String>[
+  '#######..#.##.#.#.###.#.#.#######',
+  '#.....#.####.##..###.##...#.....#',
+  '#.###.#.##...####.##.##.#.#.###.#',
+  '#.###.#.###..#.##..#.####.#.###.#',
+  '#.###.#.##.#..#..#####.##.#.###.#',
+  '#.....#.#....##.##.####.#.#.....#',
+  '#######.#.#.#.#.#.#.#.#.#.#######',
+  '.............##.##...............',
+  '..#..####...##....#.#.##.#.#####.',
+  '#.##.#...#...#.#.###.#.#####.#..#',
+  '#.#.#.#.#..##...#.#.#..#.####...#',
+  '.#.##..#.#........##.#..##.#.#.##',
+  '#.#...#####.#.###.##.#.##.####..#',
+  '###..#.####..##.#....#.#.#####..#',
+  '..#.#.##.#.#######.##..#...#..#.#',
+  '#.##.....##.......##..#...####...',
+  '.######.####.#.##...#.##..##.....',
+  '.#..#..#...#...#..###..#..#...#.#',
+  '..#..###...#.##.###..###.##..##.#',
+  '###.#..##..#.#.#.#.....#.#...#.##',
+  '#..##.##.#......###.#..#####....#',
+  '..###...#.#.....##...#..##.#....#',
+  '#########......####.#...####..#.#',
+  '..#....##.##.#.#..###.###....#.#.',
+  '##.#######..##..#.##....#####..##',
+  '........##.###..##.##...#...##.##',
+  '#######.#......##.#.###.#.#.#.#.#',
+  '#.....#.####..###..#..###...##.##',
+  '#.###.#..####.#.##.##########....',
+  '#.###.#......####..####..#.###.#.',
+  '#.###.#.##..###..#.#..#.#...#####',
+  '#.....#..##..##....#..#.#.#......',
+  '#######..#..#..####.#...#.#.###.#',
 ];
 
 const double width = 1080;
 const double height = 1920;
 const int fps = 30;
 
-/// `CampaignEnd._walkIn`, then a hold long enough to read three lines.
+/// `CampaignEnd._walkIn`, then a hold long enough to get another phone out
+/// and point it at the code — six seconds, as at the end of the launch video.
 const double walkIn = 1.5;
-const double hold = 2.5;
+const double hold = 5;
 
 const ui.Color ink = ui.Color(0xFF0B0709);
 const ui.Color cream = ui.Color(0xFFF3E2C6);
@@ -145,9 +159,9 @@ void paintCard(ui.Canvas canvas, Drop drop, double t, {required bool en}) {
   );
 
   // The mark, the ending screen's panel, walking in.
-  const panel = Size(720, 480);
+  const panel = Size(600, 400);
   canvas.save();
-  canvas.translate((width - panel.width) / 2, 470);
+  canvas.translate((width - panel.width) / 2, 190);
   GameMark.panel(entrance: (t / walkIn).clamp(0.0, 1.0)).paint(canvas, panel);
   canvas.restore();
 
@@ -155,28 +169,134 @@ void paintCard(ui.Canvas canvas, Drop drop, double t, {required bool en}) {
   double fadeIn(double from) => ((t - from) / 0.35).clamp(0.0, 1.0);
   final dir = en ? ui.TextDirection.ltr : ui.TextDirection.rtl;
 
-  line(canvas, en ? 'Waraya' : 'ورايا', 1040, 110, cream, fadeIn(0.6), dir);
+  line(canvas, en ? 'Waraya' : 'ورايا', 620, 100, cream, fadeIn(0.6), dir);
   line(
     canvas,
     en ? 'New: ${drop.whatEn}' : 'جديد: ${drop.what}',
-    1210,
+    770,
     64,
     warm,
     fadeIn(1.1),
     dir,
   );
-  final next = en ? drop.nextEn : drop.next;
+
+  // And the last thing: where to get it.
+  qrCard(canvas, t - 1.4, centre: const ui.Offset(width / 2, 1250), side: 460);
   line(
     canvas,
-    next == null
-        ? (en ? 'Something new every Friday' : 'كل جمعة حاجة جديدة')
-        : (en ? 'Next Friday: $next' : 'الجمعة الجاية: $next'),
-    1320,
-    48,
-    dim,
-    fadeIn(1.6),
+    en ? 'Scan it and get the game' : 'صوّر الكود ونزّلها',
+    1545,
+    54,
+    cream,
+    fadeIn(2.2),
     dir,
   );
+  line(
+    canvas,
+    'Google Play · App Store',
+    1640,
+    38,
+    dim,
+    fadeIn(2.5),
+    ui.TextDirection.ltr,
+  );
+}
+
+/// The code on a cream card, [u] seconds after it starts: the card comes
+/// up, then the code builds from one corner to the other, then the game's
+/// icon lands in its middle. Rounded squares, not dots — dots did not scan
+/// in the launch video.
+void qrCard(
+  ui.Canvas canvas,
+  double u, {
+  required ui.Offset centre,
+  required double side,
+}) {
+  if (u <= 0) return;
+  double prog(double from, double to) =>
+      ((u - from) / (to - from)).clamp(0.0, 1.0);
+  double ease(double p) => 1 - (1 - p) * (1 - p) * (1 - p);
+
+  final n = qrRows.length;
+  final pad = side * 0.07;
+  final up = ease(prog(0, 0.45));
+  canvas.save();
+  canvas.translate(centre.dx, centre.dy + (1 - up) * 80);
+  canvas.scale(0.8 + 0.2 * up);
+  final card = ui.Rect.fromCenter(
+    center: ui.Offset.zero,
+    width: side + 2 * pad,
+    height: side + 2 * pad,
+  );
+  canvas.drawRRect(
+    ui.RRect.fromRectAndRadius(card, ui.Radius.circular(pad * 1.4)),
+    ui.Paint()..color = const ui.Color(0xFFFFE7B0).withValues(alpha: up),
+  );
+
+  // One module of quiet zone inside the card's own margin.
+  final cell = side / (n + 2);
+  final origin = ui.Offset(-side / 2 + cell, -side / 2 + cell);
+  bool finder(int r, int c) =>
+      (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
+  bool hole(int r, int c) =>
+      (r - (n - 1) / 2).abs() < n * 0.13 && (c - (n - 1) / 2).abs() < n * 0.13;
+  final paint = ui.Paint()..color = const ui.Color(0xFF0E0A10);
+  for (var r = 0; r < n; r++) {
+    for (var c = 0; c < n; c++) {
+      if (qrRows[r][c] != '#' || finder(r, c) || hole(r, c)) continue;
+      final diagonal = (r + c) / (2 * n);
+      final p = ease(prog(0.3 + diagonal * 0.6, 0.5 + diagonal * 0.6));
+      if (p <= 0) continue;
+      final w = cell * 0.94 * p;
+      final at = origin + ui.Offset((c + 0.5) * cell, (r + 0.5) * cell);
+      canvas.drawRRect(
+        ui.RRect.fromRectAndRadius(
+          ui.Rect.fromCenter(center: at, width: w, height: w),
+          ui.Radius.circular(w * 0.32),
+        ),
+        paint,
+      );
+    }
+  }
+  // The three corners, drawn whole: they are what a camera looks for.
+  for (final (i, (r, c)) in const [(0, 0), (0, 1), (1, 0)].indexed) {
+    final p = ease(prog(0.3 + i * 0.1, 0.6 + i * 0.1));
+    if (p <= 0) continue;
+    final at = origin + ui.Offset(c * (n - 7) * cell, r * (n - 7) * cell);
+    final box = ui.Rect.fromLTWH(at.dx, at.dy, 7 * cell, 7 * cell);
+    canvas.save();
+    canvas.translate(box.center.dx, box.center.dy);
+    canvas.scale(p);
+    canvas.translate(-box.center.dx, -box.center.dy);
+    canvas.drawRRect(
+      ui.RRect.fromRectAndRadius(
+        box.deflate(cell / 2),
+        ui.Radius.circular(cell * 1.6),
+      ),
+      ui.Paint()
+        ..color = paint.color
+        ..style = ui.PaintingStyle.stroke
+        ..strokeWidth = cell,
+    );
+    canvas.drawRRect(
+      ui.RRect.fromRectAndRadius(
+        box.deflate(2 * cell),
+        ui.Radius.circular(cell * 0.9),
+      ),
+      paint,
+    );
+    canvas.restore();
+  }
+  // The icon over the middle, once the code is built.
+  final icon = ease(prog(1.1, 1.4));
+  if (icon > 0) {
+    final s = cell * n * 0.24 * icon;
+    canvas.save();
+    canvas.translate(-s / 2, -s / 2);
+    const GameMark.icon().paint(canvas, Size(s, s));
+    canvas.restore();
+  }
+  canvas.restore();
 }
 
 void line(

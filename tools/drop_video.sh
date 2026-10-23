@@ -1,7 +1,7 @@
 #!/bin/sh
 # One weekly drop's TikTok video (docs/media/drops.md): the level that
 # teaches the new thing, a harder one as the teaser, and the card that says
-# what it is and what comes next Friday.
+# what it is and the QR code to get the game (nothing about next Friday).
 #
 #   tools/drop_video.sh mirror          # Arabic
 #   tools/drop_video.sh mirror en       # English card
