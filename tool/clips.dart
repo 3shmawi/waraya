@@ -188,6 +188,9 @@ const clips = <Clip>[
     slug: 'all-of-it-in-the-mirror',
     levelId: 'all-of-it-in-the-mirror',
   ),
+  // And the dog's (docs/marketing/dog-video.md).
+  Clip(number: 26, slug: 'pace-in-the-dark', levelId: 'pace-in-the-dark'),
+  Clip(number: 27, slug: 'the-dog-first', levelId: 'the-dog-first'),
 ];
 
 void main() {
