@@ -163,6 +163,12 @@ en: New: the mirror. When your past reaches it, you are where it is. Forty-five 
 
 **Description:** the same full descriptions as Google Play.
 
+**Header and Search Results** (the header artwork): `ar/app-store-header/` and
+`en/app-store-header/` — **3840×1646** for the slot that takes 5244×2950 or
+3840×1646, **3840×2560** for the one that takes 5244×2950, 3840×2560 or
+1920×1280, and **5244×2950**, which either slot takes. The same drawing as
+Play's feature graphic, laid out for the shape.
+
 **Screenshots:** `ar/iphone/` and `en/iphone/` are 6.9" iPhone at
 **1290×2796**, and `ar/iphone-6.5/` and `en/iphone-6.5/` are 6.5" iPhone at
 **1284×2778** — App Store Connect shows the 6.5" slot first on some accounts

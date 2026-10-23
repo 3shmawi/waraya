@@ -11,7 +11,7 @@
 // screenshot cannot show a solution the game no longer accepts — drawn by
 // window.still in tool/promo/motion.html.
 //
-// Writes OUT/{ar,en}/{play,iphone,iphone-6.3,iphone-6.5,ipad,iphone-duo}/N-<slug>.png and
+// Writes OUT/{ar,en}/app-store-header/<W>x<H>.png, and OUT/{ar,en}/{play,iphone,iphone-6.3,iphone-6.5,ipad,iphone-duo}/N-<slug>.png and
 // OUT/{ar,en}/play/feature-graphic.png (default OUT: WORK/store). RGB with
 // no alpha channel, through ffmpeg: Play refuses an image that has one.
 // Needs ffmpeg and Playwright (CHROMIUM=<executable> if its own browser is
@@ -79,9 +79,35 @@ const SHOTS = [
 
 const BANNER = {
   clip: '16-the-mirror', at: 5.6,
-  ar: { text: 'ورايا', sub: 'ظلك بيعيد كل اللي عملته… بعد ثواني' },
-  en: { text: 'Waraya', sub: 'Your shadow repeats everything you did, seconds later' },
+  // Broken by hand: left to the browser, «بعد» was alone on a line.
+  ar: { text: 'ورايا', sub: 'ظلك بيعيد كل اللي عملته…<br>بعد ثواني' },
+  en: { text: 'Waraya', sub: 'Your shadow repeats everything<br>you did, seconds later' },
 };
+
+const BANNERS = [
+  ['play/feature-graphic.png', 1024, 500],
+  ['app-store-header/3840x1646.png', 3840, 1646],
+  ['app-store-header/5244x2950.png', 5244, 2950],
+  ['app-store-header/3840x2560.png', 3840, 2560],
+];
+
+// The phone and the words side by side, the pair centred: the words a
+// fixed share of the width, the phone the rest, no taller than 70% of the
+// image. Sizes from the feature graphic's own (1024 x 500), scaled.
+function bannerLayout(W, H, dir) {
+  const margin = W * 0.06, gap = W * 0.04;
+  const tw = Math.min(W * 0.36, 460 * H / 500);
+  const sw = Math.min(W - 2 * margin - tw - gap, H * 0.7 * 844 / 390), sh = sw * 390 / 844;
+  const start = (W - sw - gap - tw) / 2;
+  const u = Math.min(H / 500, tw / 368);
+  return {
+    W, H, bezel: 12 * u, reflect: false, k: sw / 844,
+    screen: { x: dir === 'rtl' ? start : W - start - sw, y: (H * 0.88 - sh) / 2, w: sw, h: sh },
+    horizon: H * 0.88, sunY: H * 0.44,
+    textX: start, textW: tw, markS: 120 * u,
+    type: { big: 78 * u, small: 30 * u },
+  };
+}
 
 const frameOf = (work, clip, t) => {
   const dir = fs.readdirSync(path.join(work, 'frames')).find((d) => d === clip || d.startsWith(clip));
@@ -129,20 +155,17 @@ async function shoot(page, file) {
         await shoot(page, path.join(out, lang, device, `${i + 1}-${shot.slug}.png`));
       }
     }
-    // The feature graphic: 1024 x 500.
-    const W = 1024, H = 500, sw = 560, sh = sw * 390 / 844;
-    const L = {
-      W, H, bezel: 12, reflect: false, k: sw / 844,
-      screen: { x: dir === 'rtl' ? 36 : W - 36 - sw, y: (H - sh) / 2 - 10, w: sw, h: sh },
-      horizon: 440, sunY: 220,
-      textX: 24, textY: 70, textW: W - sw - 100, markS: 120,
-      type: { big: 78, small: 30 },
-    };
-    await page.setViewportSize({ width: W, height: H });
-    await page.evaluate((spec) => window.banner(spec), {
-      config: { L }, dir, frame: frameOf(work, BANNER.clip, BANNER.at), mark, ...BANNER[lang],
-    });
-    await shoot(page, path.join(out, lang, 'play', 'feature-graphic.png'));
+    // The wide ones: Play's feature graphic, and the App Store's header
+    // artwork (its «Header and Search Results» tab), which asks for
+    // 3840x1646 or 5244x2950 in one slot and 3840x2560 or 1920x1280 in the
+    // other. One drawing, laid out by the shape.
+    for (const [file, W, H] of BANNERS) {
+      await page.setViewportSize({ width: W, height: H });
+      await page.evaluate((spec) => window.banner(spec), {
+        config: { L: bannerLayout(W, H, dir) }, dir, frame: frameOf(work, BANNER.clip, BANNER.at), mark, ...BANNER[lang],
+      });
+      await shoot(page, path.join(out, lang, file));
+    }
     console.log(`${lang}: done`);
   }
   await browser.close();

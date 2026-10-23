@@ -579,7 +579,8 @@ window.banner = (spec) => {
   stage.dir = spec.dir;
   let html = sky(1.2) + phone(STILL, { clip: null, frame: spec.frame, marks: [] });
   const side = spec.dir === 'rtl' ? 'right' : 'left';
-  html += `<div class="abs" style="${side}:${L.textX}px;top:${L.textY}px;width:${L.textW}px;text-align:center">
+  html += `<div class="abs" style="${side}:${L.textX}px;top:0;height:${L.H * 0.88}px;width:${L.textW}px;text-align:center;
+      display:flex;flex-direction:column;justify-content:center">
       <img src="${spec.mark}" style="width:${L.markS * 1.5}px;height:${L.markS}px;display:block;margin:0 auto 6px;filter:drop-shadow(0 12px 24px rgba(20,10,0,.35))">
       <div class="big" style="font-size:${L.type.big}px;line-height:1.1">${spec.text}</div>
       <div class="sub" style="font-size:${L.type.small}px;margin-top:6px">${spec.sub}</div></div>`;
