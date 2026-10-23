@@ -11,7 +11,7 @@
 // screenshot cannot show a solution the game no longer accepts — drawn by
 // window.still in tool/promo/motion.html.
 //
-// Writes OUT/{ar,en}/{play,iphone,iphone-6.5,ipad,iphone-duo}/N-<slug>.png and
+// Writes OUT/{ar,en}/{play,iphone,iphone-6.3,iphone-6.5,ipad,iphone-duo}/N-<slug>.png and
 // OUT/{ar,en}/play/feature-graphic.png (default OUT: WORK/store). RGB with
 // no alpha channel, through ffmpeg: Play refuses an image that has one.
 // Needs ffmpeg and Playwright (CHROMIUM=<executable> if its own browser is
@@ -27,6 +27,9 @@ const DEVICES = {
   play: { W: 1080, H: 1920 },
   iphone: { W: 1290, H: 2796 },
   'iphone-6.5': { W: 1284, H: 2778 },
+  // App Store, «iPhone with Dynamic Island (medium display)», 6.1"/6.3":
+  // 1206x2622 or 1179x2556, and it refuses every other size.
+  'iphone-6.3': { W: 1206, H: 2622 },
   ipad: { W: 2064, H: 2752, phone: 0.8 },
   // App Store, iPhone Duo: 1398x2034 or 2007x2853 — the bigger one, which
   // App Store Connect scales down.
