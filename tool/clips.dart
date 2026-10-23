@@ -179,6 +179,15 @@ const clips = <Clip>[
     slug: 'the-basket-in-the-dark',
     levelId: 'the-basket-in-the-dark',
   ),
+  // The mirror's launch, in the launch video's style
+  // (docs/marketing/mirror-video.md): two of the harder ones, for its
+  // montage.
+  Clip(number: 24, slug: 'two-mirrors', levelId: 'two-mirrors'),
+  Clip(
+    number: 25,
+    slug: 'all-of-it-in-the-mirror',
+    levelId: 'all-of-it-in-the-mirror',
+  ),
 ];
 
 void main() {

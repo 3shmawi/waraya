@@ -244,17 +244,19 @@ const SCENES = {
     const marks = [];
     // The door, wherever the camera has it: a glow that says "look here"
     // while it opens, without a word.
-    const g = Math.sin(Math.PI * prog(ct, sc.glow[0], sc.glow[1]));
+    const g = sc.glow ? Math.sin(Math.PI * prog(ct, sc.glow[0], sc.glow[1])) : 0;
     if (g > 0) {
       const dx = pts(sc.doorX, ct), [y0, y1] = sc.doorY;
       marks.push(`<div class="mark" style="left:${(dx - 26) * L.k}px;top:${(y0 - 12) * L.k}px;width:${52 * L.k}px;
         height:${(y1 - y0 + 24) * L.k}px;border-radius:${10 * L.k}px;box-shadow:0 0 ${40 * L.k}px ${12 * L.k}px rgba(255,246,214,${0.75 * g});
         border:${3 * L.k}px solid rgba(255,246,214,${0.9 * g})"></div>`);
     }
+    const clip = sc.clip || 'c1';
     return phone(u, {
-      clip: 'c1', ct, frame: C.frame('c1', ct), marks,
+      clip, ct, frame: C.frame(clip, ct), marks,
       phone: { y: (1 - enter) * 160, s: lerp(0.9, 1, enter), r: (1 - enter) * -6, o: clamp(u * 4) },
-    }) + words('الباب ده فتح لوحده؟', { t: u, at: 0.18, out: d - 0.18, y: L.capY, size: L.type.big * 1.08 })
+    }) + words(sc.text || 'الباب ده فتح لوحده؟', { t: u, at: 0.18, out: d - 0.18, y: L.capY, size: L.type.big * 1.08 })
+      + (sc.sub ? words(sc.sub, { t: u, at: sc.subAt || 0.6, out: d - 0.18, y: L.capY + L.type.big * 1.6, size: L.type.small, cls: 'sub' }) : '')
       + `<div class="line big" style="top:${L.capY - L.type.big * 1.25}px;font-size:${L.type.big * 1.3}px;
           opacity:${clamp((u - 0.9) * 4) * (1 - prog(u, d - 0.2, d))};transform:rotate(${8 * Math.sin(u * 9)}deg) scale(${easeBack(prog(u, 0.9, 1.3))})">؟؟</div>`;
   },
@@ -267,15 +269,16 @@ const SCENES = {
     const fx = sc.shadow.x * L.k, fy = sc.shadow.y * L.k;
     const zoom = { s: z, x: fx - fx * z + (L.screen.w / 2 - fx) * (z - 1) / (sc.zoom - 1) * 0.6 * zin * (1 - zout),
                    y: fy - fy * z + (L.screen.h * 0.55 - fy) * (z - 1) / (sc.zoom - 1) * 0.6 * zin * (1 - zout) };
-    const marks = [ring(sc.shadow.x, sc.shadow.y, 40, prog(u, 0.7, 1.5), L.k, 'انت · من ٢٫٥ ثانية', prog(u, 1.05, 1.45))];
+    const clip = sc.clip || 'c1';
+    const marks = [ring(sc.shadow.x, sc.shadow.y, 40, prog(u, 0.7, 1.5), L.k, sc.label || 'انت · من ٢٫٥ ثانية', prog(u, 1.05, 1.45))];
     const flash = 1 - prog(u, 0, 0.3);
     const dim = 0.35 * zin * (1 - zout);
-    return phone(u, { clip: null, ct, frame: C.frame('c1', ct), zoom, marks,
+    return phone(u, { clip: null, ct, frame: C.frame(clip, ct), zoom, marks,
         fx: `<div class="layer" style="background:radial-gradient(ellipse at ${50}% ${55}%, rgba(0,0,0,0) 30%, rgba(0,0,0,${dim}) 80%)"></div>` })
       + `<div class="layer" style="background:rgba(255,248,226,${flash * 0.85})"></div>`
-      + words('لأ… ده [انت]', { t: u, at: 0.15, out: d - 0.2, y: L.capY, size: L.type.big * 1.08 })
-      + words('من ٢٫٥ ثانية بالظبط', { t: u, at: 0.55, out: d - 0.2, y: L.capY + L.type.big * 1.6, size: L.type.small, cls: 'sub' })
-      + words('الفاتح اللي على الزرار ده ماضيك', { t: u, at: 1.1, out: d - 0.2, y: L.lowY, size: L.type.mid, cls: 'cream' });
+      + words(sc.text || 'لأ… ده [انت]', { t: u, at: 0.15, out: d - 0.2, y: L.capY, size: L.type.big * 1.08 })
+      + words(sc.sub || 'من ٢٫٥ ثانية بالظبط', { t: u, at: 0.55, out: d - 0.2, y: L.capY + L.type.big * 1.6, size: L.type.small, cls: 'sub' })
+      + words(sc.low || 'الفاتح اللي على الزرار ده ماضيك', { t: u, at: 1.1, out: d - 0.2, y: L.lowY, size: L.type.mid, cls: 'cream' });
   },
 
   // Back to the start: the footage runs backwards, fast, like a tape.
@@ -286,8 +289,8 @@ const SCENES = {
     const jitter = Math.round(Math.sin(u * 90) * 3);
     const lines = `<div class="layer" style="background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 2px, rgba(0,0,0,0) 2px 6px);mix-blend-mode:multiply"></div>
       <div class="abs" style="left:0;right:0;top:${(u * 2.2 % 1) * 100}%;height:${18 * L.k}px;background:rgba(255,255,255,.18)"></div>`;
-    const secs = (2.5 * p).toFixed(1);
-    return phone(u, { clip: null, ct, frame: C.frame('c1', ct), fx: lines,
+    const secs = ((sc.secs || 2.5) * p).toFixed(1);
+    return phone(u, { clip: null, ct, frame: C.frame(sc.clip || 'c1', ct), fx: lines,
         zoom: { s: 1.02, x: jitter - 8, y: 0 } })
       + `<div class="line big" style="top:${L.capY}px;font-size:${L.type.big * 1.15}px">
            <bdi>${ar(secs)} ثانية</bdi> <span style="font-family:system-ui;display:inline-block;transform:scale(${1 + 0.12 * Math.sin(u * 30)})">◀◀</span></div>`
@@ -300,9 +303,9 @@ const SCENES = {
     const steps = sc.steps;
     const marks = [];
     // "you", over your head: the camera follows you, so you stay put.
-    marks.push(tagAt(422, 268, 'انت', prog(u, 0.1, 0.5), L.k));
-    if (ct > sc.shadowFrom) marks.push(`<div class="mark" style="left:0;top:0"></div>`);
-    let html = phone(u, { clip: 'c1', ct, frame: C.frame('c1', ct), marks });
+    if (sc.you !== false) marks.push(tagAt(422, 268, 'انت', prog(u, 0.1, 0.5), L.k));
+    const clip = sc.clip || 'c1';
+    let html = phone(u, { clip, ct, frame: C.frame(clip, ct), marks });
     steps.forEach(([at, out, n, text, sub]) => {
       if (u >= at - 0.05 && u <= out + 0.3) html += step(n, text, sub, { t: u, at, out: out === d ? d - 0.2 : out, L });
     });
@@ -354,9 +357,9 @@ const SCENES = {
             phone: { x: whip * (i % 2 ? -1 : 1) * 260, r: whip * (i % 2 ? 3 : -3) },
             fx: `<div class="layer" style="backdrop-filter:blur(${blur}px)"></div>` });
         if (cut.counter) {
-          const n = Math.round(lerp(1, 16, easeOut(prog(v, 0.05, 0.9))));
+          const n = Math.round(lerp(1, cut.to || 16, easeOut(prog(v, 0.05, 0.9))));
           const pop = 1 + 0.18 * (1 - easeOut(prog(v, 0.9, 1.2))) * (v > 0.9 ? 1 : 0);
-          html += `<div class="line big" style="top:${L.capY - L.type.big * 0.15}px;font-size:${L.type.big * 1.25}px;transform:scale(${pop})">${ar(n)} مرحلة</div>`
+          html += `<div class="line big" style="top:${L.capY - L.type.big * 0.15}px;font-size:${L.type.big * 1.25}px;transform:scale(${pop})">${ar(n)} ${cut.unit || 'مرحلة'}</div>`
             + words(cut.sub, { t: v, at: 0.5, y: L.capY + L.type.big * 1.45, size: L.type.small, cls: 'sub' });
         } else {
           const shake = cut.shake ? Math.sin(v * 40) * 6 * (1 - prog(v, 0, 0.6)) : 0;
@@ -509,7 +512,10 @@ function endCard(u) {
       ${mark}
       <div style="font-size:${E.title}px;line-height:1.1;margin-top:6px;color:#14100A;opacity:${clamp(tp * 2)};transform:translateY(${(1 - easeOut(tp)) * 40}px) scale(${lerp(.85, 1, easeBack(tp))})">ورايا</div>
       <div style="font-size:${E.facts}px;color:#2A1A06">${factHtml}</div>
+
     </div>
+    ${C.endNew ? `<div class="abs" style="left:${hx - 400}px;width:800px;top:${E.head - E.facts * 1.9}px;text-align:center;font-size:${E.facts * 1.1}px;
+      opacity:${clamp(prog(u, 0.9, 1.2) * 2)};transform:scale(${easeBack(prog(u, 0.9, 1.3))})"><span class="chip">${C.endNew}</span></div>` : ''}
     ${qrCard}${qrWords}
     <div class="abs" style="left:0;right:0;top:${E.horizon + E.gap}px;display:flex;flex-direction:column;align-items:center;gap:${E.rowGap}px">
       <div style="display:flex;gap:22px;direction:ltr">${pills}</div>

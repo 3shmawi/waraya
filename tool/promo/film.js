@@ -1,6 +1,9 @@
-// The launch video, frame by frame — docs/marketing/launch-video.md.
+// The launch video, frame by frame — docs/marketing/launch-video.md — and
+// every video after it in the same style (FILMS below): the mirror's is
+// docs/marketing/mirror-video.md.
 //
 //   node tool/promo/film.js WORK [story|feed ...]
+//   FILM=mirror node tool/promo/film.js WORK
 //
 // WORK/mark/{panel,tile}/NNN.png is the ending's walk-in, painted by the game
 // (tool/promo/mark_frames.dart). WORK/clips/phone-<name>.mp4 is the game's own footage at a phone's screen
@@ -9,7 +12,8 @@
 // tool/promo/motion.html — window.frame(t) is a pure function of t, so the
 // same frame comes out every run — and pipes them into ffmpeg.
 //
-// Writes docs/media/promo/waraya-<layout>.mp4. Needs ffmpeg and Playwright
+// Writes the film's own `out(layout)`, docs/media/promo/waraya-<layout>.mp4
+// for the launch. Needs ffmpeg and Playwright
 // (CHROMIUM=<executable> if Playwright's own browser is not installed).
 const fs = require('fs');
 const path = require('path');
@@ -54,7 +58,7 @@ const LAYOUTS = {
 // tool/clips.dart stands still for leadIn before playing them.
 const L = (s) => ({ s, x: -1 }), R = (s) => ({ s, x: 1 }), W = (s) => ({ s, x: 0 });
 const j = (m) => ({ ...m, j: true }), c = (m) => ({ ...m, c: true });
-const CLIPS = {
+const LAUNCH_CLIPS = {
   c1: { file: 'phone-01-the-plate', moves: [R(1.8), W(1.2), L(4.8)] },
   c2: { file: 'phone-02-the-step', moves: [L(3.3), c(W(2.5)), R(.9), W(.15), L(.4), j(L(.55)), j(L(.6)), L(1.5)] },
   c8: { file: 'phone-08-in-the-light', moves: [L(1.58), c(W(2.2)), L(.6), W(1.3), R(.12), j(R(.55)), W(.1), j(R(.6)), R(1.6)] },
@@ -66,7 +70,7 @@ const CLIPS = {
 // ——— the cut ———
 // Times in seconds; `from`/`hold`/`a`/`b` are times into a clip. Positions
 // are in the phone screen's own pixels (844 x 390), read off the footage.
-const SCENES = {
+const LAUNCH_SCENES = {
   // A door opens in front of you, by itself.
   hook: { at: 0, dur: 1.9, from: 4.2, doorX: [[4.1, 140], [4.67, 207], [5.0, 245], [6.05, 375]], doorY: [185, 335],
     glow: [4.65, 5.6] },
@@ -99,6 +103,47 @@ const SCENES = {
   end: { at: 24.2, dur: 6.3 },
 };
 
+// ——— the mirror, the first weekly drop (docs/marketing/mirror-video.md) ———
+// The same cut as the launch, about one thing: your past arrives on the
+// mirror and you are where it is. Positions read off the footage the same
+// way (844 x 390, frame round(t*30)+1).
+const MIRROR_CLIPS = {
+  m1: { file: 'phone-16-the-mirror', moves: [L(.5), R(2.25), W(2.2), L(5)] },
+  m2: { file: 'phone-17-the-mirror-in-the-light', moves: [R(2.15), W(1.85), R(1.1), W(1.5), L(6)] },
+  m3: { file: 'phone-24-two-mirrors', moves: [R(2.2), R(.95), W(1.7), L(.5), W(.6), L(.5), W(1), R(6)] },
+  m4: { file: 'phone-25-all-of-it-in-the-mirror', moves: [R(1.75), W(2), R(1.9), W(1.2), L(7)] },
+};
+const MIRROR_SCENES = {
+  // You are down on the button, where there is no climbing back — and then
+  // you are up on the ledge.
+  hook: { at: 0, dur: 2.4, clip: 'm1', from: 3.4, text: 'نزل تحت…', sub: 'ورجع فوق إزاي؟', subAt: 1.4 },
+  // How: freeze the moment your past arrives on the mirror.
+  reveal: { at: 2.4, dur: 2.8, clip: 'm1', hold: 5.1, shadow: { x: 172, y: 190 }, zoom: 1.7,
+    label: 'ماضيك', text: 'ماضيك وصل [المراية]', sub: 'فانت رجعت مكانه', low: 'المراية بترجّعك لمكان ماضيك' },
+  rewind: { at: 5.2, dur: 0.8, clip: 'm1', a: 5.1, b: 0.6, secs: 4 },
+  how: { at: 6.0, dur: 7.6, clip: 'm1', from: 0.6, you: false, steps: [
+    [0, 2.4, 1, 'المس المراية', 'وكمّل عادي'],
+    [2.5, 4.3, 2, 'انزل على الزرار', 'ومن تحت مفيش طلعة'],
+    [4.4, 7.6, 3, 'ماضيك يوصل المراية', 'تطلع مكانه… وهو يدوس الزرار'],
+  ] },
+  montage: { at: 13.6, dur: 4.7, cuts: [
+    { clip: 'm2', from: 5.6, dur: 1.6, text: 'والمراية في النور؟', sub: 'ماضيك في النور مش موجود', flash: 0.5 },
+    { clip: 'm3', from: 5.1, dur: 1.5, text: 'مرايتين؟', sub: 'كل واحدة بترجّعك ليها', shake: true },
+    { clip: 'm4', from: 7.0, dur: 1.6, counter: true, to: 9, unit: 'مراحل جديدة', sub: 'كل واحدة أصعب من اللي قبلها' },
+  ] },
+  end: { at: 18.3, dur: 6.3 },
+};
+
+const FILMS = {
+  launch: { clips: LAUNCH_CLIPS, scenes: LAUNCH_SCENES,
+    out: (layout) => path.join(REPO, 'docs', 'media', 'promo', `waraya-${layout}.mp4`) },
+  mirror: { clips: MIRROR_CLIPS, scenes: MIRROR_SCENES, endNew: 'جديد: المراية',
+    out: (layout) => path.join(REPO, 'docs', 'media', 'drops', `mirror-${layout}.mp4`) },
+};
+const FILM = FILMS[process.env.FILM || 'launch'];
+if (!FILM) throw new Error(`no film called ${process.env.FILM}: ${Object.keys(FILMS).join(', ')}`);
+const CLIPS = FILM.clips, SCENES = FILM.scenes;
+
 function extract(work, key) {
   const dir = path.join(work, 'jpg', key);
   if (fs.existsSync(path.join(dir, 'done'))) return fs.readdirSync(dir).filter((f) => f.endsWith('.jpg')).length;
@@ -122,16 +167,16 @@ async function film(page, work, name) {
   await page.setViewportSize({ width: layout.W, height: layout.H });
   const code = QRCode.create(GET_URL, { errorCorrectionLevel: 'H' }).modules;
   const qr = { size: code.size, data: Array.from(code.data) };
-  await page.evaluate(({ layout, scenes, clips, counts, work, qr }) => {
+  await page.evaluate(({ layout, scenes, clips, counts, work, qr, endNew }) => {
     window.setup({
-      L: layout, scenes, clips, qr,
+      L: layout, scenes, clips, qr, endNew,
       mark: (shape, p) => `file://${work}/mark/${shape}/${String(Math.round(p * 45)).padStart(3, '0')}.png`,
       frame: (key, ct) => {
         const i = Math.min(counts[key], Math.max(1, Math.round(ct * 30) + 1));
         return `file://${work}/jpg/${key}/${String(i).padStart(5, '0')}.jpg`;
       },
     });
-  }, { layout, scenes: SCENES, clips, counts, work, qr });
+  }, { layout, scenes: SCENES, clips, counts, work, qr, endNew: FILM.endNew });
 
   const only = process.env.FRAMES;   // "12.5,20": just those stills, for looking
   if (only) {
@@ -142,9 +187,8 @@ async function film(page, work, name) {
     return;
   }
 
-  const outDir = path.join(REPO, 'docs', 'media', 'promo');
-  fs.mkdirSync(outDir, { recursive: true });
-  const out = path.join(outDir, `waraya-${name}.mp4`);
+  const out = FILM.out(name);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
   // A silent track: some apps treat a video with no sound as broken, and
   // every one of them lets the poster put a sound over it.
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error',
