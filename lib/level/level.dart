@@ -305,6 +305,10 @@ class Level {
     // (`docs/phase-12-more.md` §2.1). Nothing released had refused it, so no
     // level a player could reach was ever played without it.
     'light-switch',
+    // The first weekly drop (`docs/media/drops.md` §2), promoted on the
+    // owner's word with its nine levels: a chapter of their own, back on the
+    // roof, at the end of the campaign.
+    'mirror',
   };
 
   /// Mechanics whose code is here but which are **still being tried on the
@@ -319,7 +323,6 @@ class Level {
   static const Set<String> labMechanics = <String>{
     'prelude',
     'leash',
-    'mirror',
     'dog',
     'baskets',
     'lifts',

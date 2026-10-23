@@ -3925,9 +3925,11 @@ abstract final class Levels {
 
   /// In teaching order.
   ///
-  /// Two chapters, and nothing here says so but the levels' own `place`: the
-  /// rooftops up to `allOfItAgain`, then the light switch in the stairwell
-  /// from `youHoldTheDark` to the end (`docs/phase-12-more.md` §4.1).
+  /// Three chapters, and nothing here says so but the levels' own `place`:
+  /// the rooftops up to `allOfItAgain`, then the light switch in the
+  /// stairwell from `youHoldTheDark` to `allOfItInTheDark`
+  /// (`docs/phase-12-more.md` §4.1), then the mirror back on the roof — and
+  /// each weekly drop after it goes on the end (`docs/media/drops.md`).
   static final List<Level> campaign = [
     pressItEarly,
     standOnYourself,
@@ -3965,6 +3967,12 @@ abstract final class Levels {
     theChainsKey,
     theGateOpensTwice,
     allOfItInTheDark,
+    // The mirror, the first weekly drop (`docs/media/drops.md` §2): back up
+    // on the roof, where the old wardrobe went. After the stairwell, because
+    // three of its levels put a lamp out.
+    theMirrorBringsYouBack,
+    yourPastGoesAgain,
+    ...MirrorLevels.all,
   ];
 
   /// The levels whose intended solution **is** one of the cheap runs
@@ -4523,9 +4531,6 @@ abstract final class Levels {
     thatsYou,
     hangOnYourPast,
     putOutItsLight,
-    theMirrorBringsYouBack,
-    yourPastGoesAgain,
-    ...MirrorLevels.all,
     ...DogLevels.all,
     ...BasketLevels.all,
     ...LiftLevels.all,

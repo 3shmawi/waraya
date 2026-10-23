@@ -275,7 +275,8 @@ abstract final class MirrorLevels {
       PlateSpec(area: Rect.fromLTRB(690, 608, 730, 620), opens: 'gate'),
     ],
     doors: const [
-      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-560, 150, -534, 400)),
+      // Two pasts stack, so the door is as tall as two steps reach.
+      DoorSpec(id: 'gate', closed: Rect.fromLTRB(-560, 40, -534, 400)),
     ],
     goal: const Rect.fromLTRB(-720, 328, -640, 400),
   );

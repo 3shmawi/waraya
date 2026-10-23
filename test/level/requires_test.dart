@@ -36,6 +36,7 @@ void main() {
         if (level.lights.any((light) => light.id != null)) 'light-switch',
         if (level.delays.length > 1) 'delays',
         if (level.solidWhen != ShadowSolidity.always) 'crouched-solid',
+        if (level.mirrors.isNotEmpty) 'mirror',
       };
       expect(level.requires, expected, reason: level.id);
       expect(level.toJson()['requires'], expected.toList()..sort());
@@ -53,6 +54,7 @@ void main() {
       'lights': 'your-shadow-is-not-here',
       'delays': 'two-not-one',
       'light-switch': 'you-hold-the-dark',
+      'mirror': 'the-mirror-brings-you-back',
     }.entries) {
       expect(
         Levels.campaign.firstWhere((l) => l.requires.contains(mechanic)).id,
@@ -101,6 +103,7 @@ void main() {
       'delays',
       'crouched-solid',
       'light-switch',
+      'mirror',
     });
     expect(levelFromJson(jsonOf(sample, requires: const [])).id, sample.id);
     expect(

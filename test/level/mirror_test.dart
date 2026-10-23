@@ -196,24 +196,22 @@ void main() {
 
     test('a level with a mirror says so', () {
       expect(level.requires, contains('mirror'));
-      expect(Level.labMechanics, contains('mirror'));
-      expect(Level.knownMechanics, isNot(contains('mirror')));
     });
 
-    test('the bench reads it; the game refuses it by name', () {
+    test('promoted: the game plays it, and an older build refuses it', () {
+      expect(Level.knownMechanics, contains('mirror'));
+      expect(Level.labMechanics, isNot(contains('mirror')));
       final json = jsonDecode(jsonEncode(level.toJson()));
+      expect(levelFromJson(json).mirrors, level.mirrors);
+      // What the name is for: a build from before it would put the level up
+      // with no mirror in it, and a level about the mirror without one.
+      final older = Level.knownMechanics.difference({'mirror'});
       expect(
-        levelFromJson(json, accepts: Level.benchMechanics).mirrors,
-        level.mirrors,
-      );
-      expect(
-        () => levelFromJson(json),
+        () => levelFromJson(json, accepts: older),
         throwsA(
-          isA<LevelUnsupportedException>().having(
-            (e) => e.onTheBench,
-            'on the bench',
-            {'mirror'},
-          ),
+          isA<LevelUnsupportedException>().having((e) => e.missing, 'missing', {
+            'mirror',
+          }),
         ),
       );
     });
@@ -222,12 +220,11 @@ void main() {
       expect(Levels.campaign.first.toJson(), isNot(contains('mirrors')));
     });
 
-    test('the gate refuses it as on trial', () async {
+    test('the gate takes it', () async {
       final verdict = await checkLevelJson(
         jsonDecode(jsonEncode(level.toJson())),
       );
-      expect(verdict.accepted, isFalse);
-      expect('${verdict.findings.single}', contains('still on the bench'));
+      expect(verdict.findings, isEmpty);
     });
 
     test('the editor keeps it', () {
@@ -236,12 +233,24 @@ void main() {
       expect(jsonEncode(again.toJson()), jsonEncode(level.toJson()));
     });
 
-    test('no level in the campaign has one', () {
-      expect(Levels.campaign.where((l) => l.mirrors.isNotEmpty), isEmpty);
+    test('the campaign has all nine, together, at its end', () {
+      final mirrors = [
+        for (final (i, l) in Levels.campaign.indexed)
+          if (l.mirrors.isNotEmpty) i,
+      ];
+      expect(mirrors, hasLength(9));
+      expect(mirrors.last - mirrors.first, 8, reason: 'one unbroken run');
+      expect(Levels.campaign[mirrors.first].id, level.id);
+      expect(mirrors.last, Levels.campaign.length - 1);
+      expect(
+        Levels.campaign[mirrors.first - 1].id,
+        Levels.allOfItInTheDark.id,
+        reason: 'after the stairwell: three of them put a lamp out',
+      );
     });
   });
 
-  for (final level in Levels.bench.where((l) => l.mirrors.isNotEmpty)) {
+  for (final level in Levels.campaign.where((l) => l.mirrors.isNotEmpty)) {
     group(level.id, () {
       testWithGame<LevelGame>('solved', () => build(level), (game) async {
         await game.ready();

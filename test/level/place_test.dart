@@ -36,19 +36,33 @@ void main() {
     (level) => level.place == LevelPlace.stairwell,
   );
 
+  /// The first level of the third: the mirror, back on the roof.
+  final firstMirror = Levels.campaign.indexWhere(
+    (level) => level.mirrors.isNotEmpty,
+  );
+
   group('the data', () {
-    test('the campaign is two chapters, each one unbroken run', () {
-      // A place that came back after another one would put up the first
-      // place's card twice, and say a chapter was over that was not.
+    test('the campaign is three chapters, each one unbroken run', () {
+      // The third is the roof again — the mirror, the first weekly drop,
+      // goes on the end (`docs/media/drops.md` §2). What this keeps out is a
+      // place broken up by one level of another, which would put up a card
+      // to say a chapter was over that was not.
       final runs = <LevelPlace>[];
       for (final level in Levels.campaign) {
         if (runs.isEmpty || runs.last != level.place) runs.add(level.place);
       }
-      expect(runs, [LevelPlace.rooftops, LevelPlace.stairwell]);
+      expect(runs, [
+        LevelPlace.rooftops,
+        LevelPlace.stairwell,
+        LevelPlace.rooftops,
+      ]);
     });
 
     test('the stairwell is the light switch, and ends on a finale', () {
-      final stairs = Levels.campaign.sublist(firstStair);
+      final stairs = Levels.campaign
+          .sublist(firstStair)
+          .takeWhile((l) => l.place == LevelPlace.stairwell)
+          .toList();
       expect(stairs.first.id, Levels.youHoldTheDark.id);
       expect(stairs.last.id, Levels.allOfItInTheDark.id);
       // Each chapter ends in a level that gathers it up.
@@ -315,6 +329,9 @@ void main() {
           (0, LevelPlace.rooftops),
           // Every level before it, plus the first heading.
           (firstStair + 1, LevelPlace.stairwell),
+          // And the roof again, for the mirror: every level before it, plus
+          // the two headings.
+          (firstMirror + 2, LevelPlace.rooftops),
         ]);
         // Every level still there, once, in order: the numbers carry on.
         expect([
