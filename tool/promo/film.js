@@ -134,11 +134,42 @@ const MIRROR_SCENES = {
   end: { at: 18.3, dur: 6.3 },
 };
 
+// ——— the street dog, the second drop (docs/marketing/dog-video.md) ———
+// It runs at whatever moves, faster than you; your past moves too.
+const pace = (n) => Array.from({ length: n }, (_, i) => (i % 2 ? R(.3) : L(.3)));
+const DOG_CLIPS = {
+  d1: { file: 'phone-18-the-dog', moves: [j(R(.55)), j(R(.55)), R(.25), j(R(.55)), R(2), ...pace(12), L(2.6), R(8)] },
+  d2: { file: 'phone-19-walk-on-the-button', moves: [R(1.45), ...pace(12).map((m) => ({ ...m, x: -m.x })), W(.6), R(6)] },
+  d3: { file: 'phone-26-pace-in-the-dark', moves: [j(R(.55)), j(R(.55)), R(.25), j(R(.55)), R(1.3), ...pace(12), L(1.6), R(8)] },
+  d4: { file: 'phone-27-the-dog-first', moves: [R(.4), ...pace(12).map((m) => ({ ...m, x: -m.x })), L(1), W(1), R(8)] },
+};
+const DOG_SCENES = {
+  // You walk across the dog's ground, and it does not so much as look.
+  hook: { at: 0, dur: 2.4, clip: 'd1', from: 10.2, text: 'مش شايفني؟', sub: 'الكلب ده بيجري ورا مين؟', subAt: 1.2 },
+  // Freeze: it is under your past, pacing up on the ledge.
+  reveal: { at: 2.4, dur: 2.8, clip: 'd1', hold: 12.6, shadow: { x: 515, y: 128 }, zoom: 1.6,
+    label: 'ماضيك', text: 'بيجري ورا [ماضيك]', sub: 'من ٦ ثواني كان بيتحرك هناك', low: 'الكلب بيجري ورا أي حاجة بتتحرك' },
+  rewind: { at: 5.2, dur: 0.8, clip: 'd1', a: 12.6, b: 1.2, secs: 6 },
+  how: { at: 6.0, dur: 7.6, clip: 'd1', from: 1.2, rate: 1.6, you: false, steps: [
+    [0, 1.9, 1, 'اطلع فوق', 'الكلب مش هيطولك'],
+    [2.0, 4.3, 2, 'واتحرك رايح جاي', 'على الفاضي'],
+    [4.4, 7.6, 3, 'وانزل عدّي', 'الكلب مشغول بماضيك'],
+  ] },
+  montage: { at: 13.6, dur: 4.7, cuts: [
+    { clip: 'd2', from: 7.0, dur: 1.6, text: 'والزرار؟', sub: 'الباب عايز حد واقف… والكلب عايز حد ماشي', shake: true },
+    { clip: 'd3', from: 9.5, dur: 1.5, text: 'ولمبة؟', sub: 'الكلب بيشوف بعينه', flash: 0.5 },
+    { clip: 'd4', from: 8.0, dur: 1.6, counter: true, to: 5, unit: 'مراحل جديدة', sub: 'كل واحدة أصعب من اللي قبلها' },
+  ] },
+  end: { at: 18.3, dur: 6.3 },
+};
+
 const FILMS = {
   launch: { clips: LAUNCH_CLIPS, scenes: LAUNCH_SCENES,
     out: (layout) => path.join(REPO, 'docs', 'media', 'promo', `waraya-${layout}.mp4`) },
   mirror: { clips: MIRROR_CLIPS, scenes: MIRROR_SCENES, endNew: 'جديد: المراية',
     out: (layout) => path.join(REPO, 'docs', 'media', 'drops', `mirror-${layout}.mp4`) },
+  dog: { clips: DOG_CLIPS, scenes: DOG_SCENES, endNew: 'جديد: كلب الشارع',
+    out: (layout) => path.join(REPO, 'docs', 'media', 'drops', `dog-${layout}.mp4`) },
 };
 const FILM = FILMS[process.env.FILM || 'launch'];
 if (!FILM) throw new Error(`no film called ${process.env.FILM}: ${Object.keys(FILMS).join(', ')}`);

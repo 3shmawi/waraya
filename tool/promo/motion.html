@@ -299,7 +299,9 @@ const SCENES = {
 
   how(u, d) {
     const L = C.L, sc = C.scenes.how;
-    const ct = sc.from + u;
+    // `rate` plays a level longer than the scene faster: the dog's takes
+    // eighteen seconds.
+    const ct = sc.from + u * (sc.rate || 1);
     const steps = sc.steps;
     const marks = [];
     // "you", over your head: the camera follows you, so you stay put.
@@ -309,6 +311,10 @@ const SCENES = {
     steps.forEach(([at, out, n, text, sub]) => {
       if (u >= at - 0.05 && u <= out + 0.3) html += step(n, text, sub, { t: u, at, out: out === d ? d - 0.2 : out, L });
     });
+    if (sc.rate && sc.rate !== 1) {
+      html += `<div class="abs" style="left:${L.screen.x + 30}px;top:${L.screen.y - 70}px;font-size:${L.type.small * .8}px;
+        font-family:system-ui;color:#14100A;direction:ltr">▶▶ ×${sc.rate}</div>`;
+    }
     return html + words('ورايا · لعبة ألغاز مصرية', { t: u, at: 0.3, y: L.lowY, size: L.type.small, cls: 'cream', stagger: 0.04 });
   },
 
