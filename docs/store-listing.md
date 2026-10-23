@@ -167,7 +167,8 @@ en: New: the mirror. When your past reaches it, you are where it is. Forty-five 
 **1290×2796**, and `ar/iphone-6.5/` and `en/iphone-6.5/` are 6.5" iPhone at
 **1284×2778** — App Store Connect shows the 6.5" slot first on some accounts
 and refuses the 6.9" size in it; `ar/ipad/` and `en/ipad/` are 13" iPad at **2064×2752**, which
-Apple requires while the app still runs on iPad. Same six moments, same
+Apple requires while the app still runs on iPad. `ar/iphone-duo/` and `en/iphone-duo/` are
+**2007×2853**, for the iPhone Duo slot (it also takes 1398×2034). Same six moments, same
 captions, framed for each shape.
 
 ---
@@ -184,7 +185,7 @@ for n in 1 2 8 9 15 16; do
     WARAYA_CLIP=$n WARAYA_CLIP_OUT=$WORK/frames flutter test tool/clips.dart
 done
 WARAYA_MARK_OUT=$WORK/mark flutter test tool/promo/mark_frames.dart
-node tool/promo/store.js $WORK            # -> $WORK/store/{ar,en}/{play,iphone,iphone-6.5,ipad}
+node tool/promo/store.js $WORK            # -> $WORK/store/{ar,en}/{play,iphone,iphone-6.5,ipad,iphone-duo}
 ```
 
 Each shot is a clip and a moment in its recorded solution (`SHOTS` in

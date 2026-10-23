@@ -11,7 +11,7 @@
 // screenshot cannot show a solution the game no longer accepts — drawn by
 // window.still in tool/promo/motion.html.
 //
-// Writes OUT/{ar,en}/{play,iphone,iphone-6.5,ipad}/N-<slug>.png and
+// Writes OUT/{ar,en}/{play,iphone,iphone-6.5,ipad,iphone-duo}/N-<slug>.png and
 // OUT/{ar,en}/play/feature-graphic.png (default OUT: WORK/store). RGB with
 // no alpha channel, through ffmpeg: Play refuses an image that has one.
 // Needs ffmpeg and Playwright (CHROMIUM=<executable> if its own browser is
@@ -28,13 +28,16 @@ const DEVICES = {
   iphone: { W: 1290, H: 2796 },
   'iphone-6.5': { W: 1284, H: 2778 },
   ipad: { W: 2064, H: 2752, phone: 0.8 },
+  // App Store, iPhone Duo: 1398x2034 or 2007x2853 — the bigger one, which
+  // App Store Connect scales down.
+  'iphone-duo': { W: 2007, H: 2853, phone: 0.8 },
 };
 
 function layout({ W, H, phone = 0.926 }) {
   const s = W / 1080;
   const w = W * phone, h = w * 390 / 844, bezel = 22 * w / 1000;
   const y = H * 0.4;
-  const big = phone < 0.9 ? 1.2 : 1;
+  const big = phone < 0.9 ? 1.02 : 1;
   return {
     W, H, bezel, reflect: true,
     screen: { x: (W - w) / 2, y, w, h },
