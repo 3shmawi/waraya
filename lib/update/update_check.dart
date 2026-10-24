@@ -98,6 +98,22 @@ enum UpdateRoute {
 
   /// An installed build: the new one has to be downloaded.
   download,
+
+  /// A build from a store: the store updates it, so the button opens the
+  /// game's page there.
+  store,
+}
+
+/// The version the App Store is serving, from its public lookup's answer
+/// (`itunes.apple.com/lookup?bundleId=…`), or null for none.
+String? appStoreVersion(Object? json) {
+  if (json is! Map) return null;
+  final results = json['results'];
+  if (results is! List || results.isEmpty) return null;
+  final first = results.first;
+  if (first is! Map) return null;
+  final version = first['version'];
+  return version is String && parseVersion(version) != null ? version : null;
 }
 
 /// An update this copy of the game does not have.
@@ -108,10 +124,15 @@ class Update {
     required this.route,
     this.running = appVersion,
     this.runningBuild = appBuild,
+    this.page,
   });
 
   final Published published;
   final UpdateRoute route;
+
+  /// Where taking it goes: the store's page, or the release's. Null on the
+  /// web, where taking it is a reload.
+  final Uri? page;
 
   /// The version it was compared against: this copy's.
   final String running;
@@ -168,6 +189,8 @@ class UpdateChecker {
   UpdateChecker({
     required this.source,
     required this.route,
+    this.page,
+    this.storeGate = const [],
     this.running = appVersion,
     this.runningBuild = appBuild,
     this.runningNumber = appBuildNumber,
@@ -177,6 +200,16 @@ class UpdateChecker {
   /// Where `latest.json` is read from. Null checks nothing.
   final Uri? source;
   final UpdateRoute route;
+
+  /// Where taking the update goes. See [Update.page].
+  final Uri? page;
+
+  /// The App Store's own answer to «which version are you serving», tried
+  /// in order until one knows the game. `latest.json` is attached to the
+  /// release the moment it is built, days before Apple has reviewed it; an
+  /// iPhone told then would open the store and find nothing new. So on the
+  /// iPhone the store says when, and `latest.json` says what is in it.
+  final List<Uri> storeGate;
   final String running;
   final String runningBuild;
   final int runningNumber;
@@ -196,6 +229,24 @@ class UpdateChecker {
     'https://github.com/3shmawi/waraya/releases/latest',
   );
 
+  /// The game on each store — the same links as `site/get/index.html`.
+  static final Uri appStorePage = Uri.parse(
+    'https://apps.apple.com/app/id6818521154',
+  );
+  static final Uri playPage = Uri.parse(
+    'https://play.google.com/store/apps/details?id=com.mohager.waraya',
+  );
+
+  /// The App Store's lookup for the game: Egypt's storefront first, where
+  /// it is surely sold, then the default.
+  static final List<Uri> appStoreLookup = [
+    for (final country in ['eg', ''])
+      Uri.https('itunes.apple.com', '/lookup', {
+        'bundleId': 'com.mohager.waraya',
+        if (country.isNotEmpty) 'country': country,
+      }),
+  ];
+
   /// The update, or null for none (or for not knowing).
   Future<Update?> check() async {
     final from = source;
@@ -209,8 +260,33 @@ class UpdateChecker {
           't': '${DateTime.now().millisecondsSinceEpoch ~/ 60000}',
         },
       );
-      final published = Published.fromJson(jsonDecode(await _fetch(fresh)));
+      var published = Published.fromJson(jsonDecode(await _fetch(fresh)));
       if (published == null) return null;
+      if (storeGate.isNotEmpty) {
+        final serving = await _storeVersion();
+        if (serving == null) return null;
+        // Behind the release (still in review): what the store has is the
+        // update, and the release's notes are not its notes.
+        if (compareVersions(serving, published.version) < 0) {
+          published = Published(
+            version: serving,
+            minVersion: published.minVersion,
+          );
+        }
+        final order = compareVersions(published.version, running);
+        final forced =
+            published.minVersion.isNotEmpty &&
+            compareVersions(running, published.minVersion) < 0 &&
+            compareVersions(published.version, published.minVersion) >= 0;
+        if (order <= 0 && !forced) return null;
+        return Update(
+          published: published,
+          route: route,
+          running: running,
+          runningBuild: runningBuild,
+          page: page,
+        );
+      }
       final order = compareVersions(published.version, running);
       // Same version, later build: a rebuild that went out with fixes. Only
       // a build that knows its own number can tell; one made at a desk is 0.
@@ -235,10 +311,23 @@ class UpdateChecker {
         route: route,
         running: running,
         runningBuild: runningBuild,
+        page: page,
       );
     } catch (_) {
       return null;
     }
+  }
+
+  Future<String?> _storeVersion() async {
+    for (final uri in storeGate) {
+      try {
+        final version = appStoreVersion(jsonDecode(await _fetch(uri)));
+        if (version != null) return version;
+      } catch (_) {
+        // The next storefront, or silence.
+      }
+    }
+    return null;
   }
 
   static Future<String> _get(Uri uri) async {

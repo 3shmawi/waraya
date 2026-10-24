@@ -68,6 +68,7 @@ class Words {
   String get newVersion => _en ? 'A new version' : 'فيه نسخة جديدة';
   String get refresh => _en ? 'Refresh' : 'حدّث';
   String get download => _en ? 'Download' : 'نزّلها';
+  String get update => _en ? 'Update' : 'حدّث';
   String get later => _en ? 'Later' : 'بعدين';
   String get updating => _en ? 'Updating…' : 'بيحدّث…';
   String get gotIt => _en ? 'Got it' : 'تمام';

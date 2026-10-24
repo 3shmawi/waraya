@@ -49,9 +49,11 @@ class UpdateCard extends StatelessWidget {
       // seconds on a phone. Said, so the button is not tapped again and again.
       action: taking
           ? w.updating
-          : update.route == UpdateRoute.reload
-          ? w.refresh
-          : w.download,
+          : switch (update.route) {
+              UpdateRoute.reload => w.refresh,
+              UpdateRoute.store => w.update,
+              UpdateRoute.download => w.download,
+            },
       onAction: taking ? () {} : onTake,
       // Forced: no "later" — the only way on is the update.
       onDismiss: update.isForced ? null : onLater,

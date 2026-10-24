@@ -81,9 +81,11 @@ Future<void> main() async {
 
 /// Where this copy hears about a newer one (lib/update/).
 ///
-/// The web reads the file next to the game and offers a reload. An Android
-/// or desktop build reads the newest release's and offers the download. An
-/// iPhone build asks nothing: the App Store and TestFlight update it.
+/// The web reads the file next to the game and offers a reload. A phone
+/// reads the newest release's and opens its store: on an iPhone only once
+/// the App Store itself serves the new version — before 1.1.1 the iPhone
+/// asked nothing, and its players never heard of 1.1.0. A computer reads
+/// the release's and opens the download.
 UpdateChecker? _updateChecker() {
   if (kIsWeb) {
     return UpdateChecker(
@@ -92,10 +94,21 @@ UpdateChecker? _updateChecker() {
     );
   }
   return switch (defaultTargetPlatform) {
-    TargetPlatform.iOS => null,
+    TargetPlatform.iOS => UpdateChecker(
+      source: UpdateChecker.releaseSource,
+      route: UpdateRoute.store,
+      page: UpdateChecker.appStorePage,
+      storeGate: UpdateChecker.appStoreLookup,
+    ),
+    TargetPlatform.android => UpdateChecker(
+      source: UpdateChecker.releaseSource,
+      route: UpdateRoute.store,
+      page: UpdateChecker.playPage,
+    ),
     _ => UpdateChecker(
       source: UpdateChecker.releaseSource,
       route: UpdateRoute.download,
+      page: UpdateChecker.releasePage,
     ),
   };
 }

@@ -224,6 +224,115 @@ void main() {
       );
     });
   });
+
+  group('from a store', () {
+    // The iPhone: latest.json says what is in it, the App Store says when.
+    final release = Uri.parse('https://example.com/latest.json');
+    final eg = Uri.parse('https://store.example/lookup?country=eg');
+    final anywhere = Uri.parse('https://store.example/lookup');
+    String lookup(String? version) => jsonEncode({
+      'resultCount': version == null ? 0 : 1,
+      'results': [
+        if (version != null) {'version': version, 'releaseNotes': 'x'},
+      ],
+    });
+
+    UpdateChecker iphone(
+      Map<Uri, String> answers, {
+      String running = '1.0.0',
+    }) => UpdateChecker(
+      source: release,
+      route: UpdateRoute.store,
+      page: UpdateChecker.appStorePage,
+      storeGate: [eg, anywhere],
+      running: running,
+      fetch: (uri) async {
+        final key = answers.keys.firstWhere(
+          (k) =>
+              k.host == uri.host &&
+                  k.path == uri.path &&
+                  k.query == uri.query ||
+              (k == release && uri.host == release.host),
+          orElse: () => throw StateError('offline'),
+        );
+        return answers[key]!;
+      },
+    );
+
+    test('released but still in review: nothing yet', () async {
+      final update = await iphone({
+        release: file(version: '1.1.0'),
+        eg: lookup('1.0.0'),
+      }).check();
+      expect(update, isNull);
+    });
+
+    test('in the store: offered, with its notes, opening the store', () async {
+      final update = await iphone({
+        release: file(version: '1.1.0'),
+        eg: lookup('1.1.0'),
+      }).check();
+      expect(update, isNotNull);
+      expect(update!.published.version, '1.1.0');
+      expect(update.notesIn(Lang.en), 'new');
+      expect(update.route, UpdateRoute.store);
+      expect(update.page, UpdateChecker.appStorePage);
+    });
+
+    test('the store behind the release: what the store has, without the '
+        'release\'s notes', () async {
+      final update = await iphone({
+        release: file(version: '1.2.0'),
+        eg: lookup('1.1.0'),
+      }).check();
+      expect(update!.published.version, '1.1.0');
+      expect(update.notesIn(Lang.en), isEmpty);
+    });
+
+    test('a storefront that does not know it: the next one', () async {
+      final update = await iphone({
+        release: file(version: '1.1.0'),
+        eg: lookup(null),
+        anywhere: lookup('1.1.0'),
+      }).check();
+      expect(update?.published.version, '1.1.0');
+    });
+
+    test('no store answer is silence', () async {
+      expect(await iphone({release: file(version: '1.1.0')}).check(), isNull);
+    });
+
+    test('a rebuild of the same version is not offered', () async {
+      expect(
+        await iphone({
+          release: file(version: '1.1.0'),
+          eg: lookup('1.1.0'),
+        }, running: '1.1.0').check(),
+        isNull,
+      );
+    });
+
+    test('the lookup is read for its version and nothing else', () {
+      expect(appStoreVersion(jsonDecode(lookup('1.1.1'))), '1.1.1');
+      expect(appStoreVersion(jsonDecode(lookup(null))), isNull);
+      expect(
+        appStoreVersion({
+          'results': [
+            {'version': 'soon'},
+          ],
+        }),
+        isNull,
+      );
+      expect(appStoreVersion('nope'), isNull);
+    });
+
+    test('the iPhone looks in Egypt\'s store first', () {
+      expect(UpdateChecker.appStoreLookup.first.queryParameters, {
+        'bundleId': 'com.mohager.waraya',
+        'country': 'eg',
+      });
+    });
+  });
 }
 
 class _Notes extends CachingAssetBundle {

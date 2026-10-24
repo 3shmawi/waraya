@@ -3,11 +3,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'update_check.dart';
 
 /// An installed build cannot replace itself: it opens the page the new one
-/// is downloaded from, in the browser.
+/// comes from — the store's, for a build from a store, or the release's.
 Future<void> applyUpdate(Update update) async {
   try {
     await launchUrl(
-      UpdateChecker.releasePage,
+      update.page ?? UpdateChecker.releasePage,
       mode: LaunchMode.externalApplication,
     );
   } catch (_) {
