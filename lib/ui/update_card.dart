@@ -37,13 +37,16 @@ class UpdateCard extends StatelessWidget {
     return UpdateCard(
       key: key,
       lang: lang,
-      title: update.isNewVersion
+      title: update.isNewVersion && published.version.isNotEmpty
           ? '${w.newVersion} · ${published.version}'
           : w.newVersion,
       notes: update.isForced
           ? [w.updateRequired, if (notes.isNotEmpty) notes].join('\n')
           : notes.isNotEmpty
           ? notes
+          // From a store that does not say what is in it: nothing made up.
+          : update.fromStore
+          ? ''
           : w.smallChanges,
       // Taking it on the web is a fetch of the whole game before the reload,
       // seconds on a phone. Said, so the button is not tapped again and again.

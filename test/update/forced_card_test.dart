@@ -37,4 +37,25 @@ void main() {
     expect(find.text('Update'), findsOneWidget);
     expect(find.text('Download'), findsNothing);
   });
+
+  testWidgets('from a store that names no version, nothing made up', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      UpdateCard.update(
+        lang: Lang.en,
+        update: Update(
+          published: const Published(version: ''),
+          route: UpdateRoute.store,
+          running: '1.1.1',
+          fromStore: true,
+        ),
+        onTake: () {},
+        onLater: () {},
+      ),
+    );
+    expect(find.text('A new version'), findsOneWidget);
+    expect(find.text('Small fixes.'), findsNothing);
+    expect(find.text('Update'), findsOneWidget);
+  });
 }

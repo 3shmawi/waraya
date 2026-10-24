@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waraya/level/lang.dart';
+import 'package:waraya/update/play_update.dart';
 import 'package:waraya/update/update_check.dart';
 import 'package:waraya/update/whats_new.dart';
 import 'package:waraya/version.dart';
@@ -325,6 +326,80 @@ void main() {
       );
       expect(appStoreVersion('nope'), isNull);
     });
+
+    String release12({String minVersion = ''}) => jsonEncode({
+      'version': '1.2.0',
+      'buildNumber': 14,
+      'minVersion': minVersion,
+      'notes': {'ar': 'جديد', 'en': 'new'},
+    });
+
+    UpdateChecker android(String file, PlayServing? play) => UpdateChecker(
+      source: release,
+      route: UpdateRoute.store,
+      page: UpdateChecker.playPage,
+      play: () async => play,
+      running: '1.1.1',
+      fetch: (_) async => file,
+    );
+
+    test('Android: released but Play has nothing newer yet, nothing', () async {
+      expect(
+        await android(release12(), const PlayServing(newer: false)).check(),
+        isNull,
+      );
+    });
+
+    test('Android: Play serving the release, offered with its notes', () async {
+      final update = await android(
+        release12(),
+        const PlayServing(newer: true, versionCode: 14),
+      ).check();
+      expect(update!.published.version, '1.2.0');
+      expect(update.notesIn(Lang.en), 'new');
+      expect(update.route, UpdateRoute.store);
+      expect(update.page, UpdateChecker.playPage);
+    });
+
+    test('Android: Play newer but behind the release, offered without '
+        'notes', () async {
+      final update = await android(
+        release12(),
+        const PlayServing(newer: true, versionCode: 13),
+      ).check();
+      expect(update, isNotNull);
+      expect(update!.isNewVersion, isTrue);
+      expect(update.published.version, isEmpty);
+      expect(update.notesIn(Lang.en), isEmpty);
+    });
+
+    test('Android: forced only once Play serves the release', () async {
+      final file = release12(minVersion: '1.2.0');
+      expect(
+        (await android(
+          file,
+          const PlayServing(newer: true, versionCode: 14),
+        ).check())!.isForced,
+        isTrue,
+      );
+      expect(
+        (await android(
+          file,
+          const PlayServing(newer: true, versionCode: 13),
+        ).check())!.isForced,
+        isFalse,
+      );
+    });
+
+    test(
+      'Android, not from Play (an APK): the release, and its page',
+      () async {
+        final update = await android(release12(), null).check();
+        expect(update!.published.version, '1.2.0');
+        expect(update.route, UpdateRoute.download);
+        expect(update.page, UpdateChecker.releasePage);
+      },
+    );
 
     test('the iPhone looks in Egypt\'s store first', () {
       expect(UpdateChecker.appStoreLookup.first.queryParameters, {

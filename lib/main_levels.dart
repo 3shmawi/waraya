@@ -26,6 +26,7 @@ import 'ui/settings_page.dart';
 import 'ui/top_bar.dart';
 import 'ui/update_card.dart';
 import 'update/apply_update.dart';
+import 'update/play_update.dart';
 import 'update/update_check.dart';
 import 'update/whats_new.dart';
 import 'ui/ready/game_ready.dart';
@@ -82,10 +83,12 @@ Future<void> main() async {
 /// Where this copy hears about a newer one (lib/update/).
 ///
 /// The web reads the file next to the game and offers a reload. A phone
-/// reads the newest release's and opens its store: on an iPhone only once
-/// the App Store itself serves the new version — before 1.1.1 the iPhone
-/// asked nothing, and its players never heard of 1.1.0. A computer reads
-/// the release's and opens the download.
+/// reads the newest release's and opens its store — only once the store
+/// itself serves the new version: the App Store's lookup on an iPhone,
+/// Play's own answer on Android (a downloaded APK, which Play cannot answer
+/// for, is sent to the release). Before 1.1.1 the iPhone asked nothing, and
+/// its players never heard of 1.1.0. A computer reads the release's and
+/// opens the download.
 UpdateChecker? _updateChecker() {
   if (kIsWeb) {
     return UpdateChecker(
@@ -104,6 +107,7 @@ UpdateChecker? _updateChecker() {
       source: UpdateChecker.releaseSource,
       route: UpdateRoute.store,
       page: UpdateChecker.playPage,
+      play: askPlay,
     ),
     _ => UpdateChecker(
       source: UpdateChecker.releaseSource,

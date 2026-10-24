@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../level/lang.dart';
 import '../version.dart';
+import 'play_update.dart';
 
 /// What `latest.json` says — the newest copy of the game, and what is new
 /// in it.
@@ -125,9 +126,14 @@ class Update {
     this.running = appVersion,
     this.runningBuild = appBuild,
     this.page,
+    this.fromStore = false,
   });
 
   final Published published;
+
+  /// The store said it has a newer build: an update even when which version
+  /// it is is not known (Play names a build by its number only).
+  final bool fromStore;
   final UpdateRoute route;
 
   /// Where taking it goes: the store's page, or the release's. Null on the
@@ -153,7 +159,8 @@ class Update {
   /// Whether the version number moved, or only the web build under it — a
   /// push between versions. The second still deserves a reload, but has no
   /// notes of its own to show.
-  bool get isNewVersion => compareVersions(published.version, running) > 0;
+  bool get isNewVersion =>
+      fromStore || compareVersions(published.version, running) > 0;
 
   /// Whether this copy is older than the oldest one allowed to play: the
   /// update cannot be waved away.
@@ -191,6 +198,7 @@ class UpdateChecker {
     required this.route,
     this.page,
     this.storeGate = const [],
+    this.play,
     this.running = appVersion,
     this.runningBuild = appBuild,
     this.runningNumber = appBuildNumber,
@@ -210,6 +218,12 @@ class UpdateChecker {
   /// iPhone told then would open the store and find nothing new. So on the
   /// iPhone the store says when, and `latest.json` says what is in it.
   final List<Uri> storeGate;
+
+  /// On Android: Play's own answer, the same job as [storeGate] on the
+  /// iPhone ([askPlay]). Null when it cannot say — a copy Play did not
+  /// install — and then this is a downloaded APK, told about the release
+  /// and sent to its page.
+  final Future<PlayServing?> Function()? play;
   final String running;
   final String runningBuild;
   final int runningNumber;
@@ -262,6 +276,16 @@ class UpdateChecker {
       );
       var published = Published.fromJson(jsonDecode(await _fetch(fresh)));
       if (published == null) return null;
+      final asked = play;
+      if (asked != null) {
+        final serving = await asked();
+        if (serving != null) return _fromPlay(published, serving);
+        return _compare(
+          published,
+          route: UpdateRoute.download,
+          page: UpdateChecker.releasePage,
+        );
+      }
       if (storeGate.isNotEmpty) {
         final serving = await _storeVersion();
         if (serving == null) return null;
@@ -287,35 +311,66 @@ class UpdateChecker {
           page: page,
         );
       }
-      final order = compareVersions(published.version, running);
-      // Same version, later build: a rebuild that went out with fixes. Only
-      // a build that knows its own number can tell; one made at a desk is 0.
-      final newer =
-          order > 0 ||
-          (order == 0 &&
-              runningNumber > 0 &&
-              published.buildNumber > runningNumber);
-      // On the web the page itself is what changed, version or not. Only a
-      // build that knows its own commit can tell — a local run does not.
-      final rebuilt =
-          route == UpdateRoute.reload &&
-          runningBuild.isNotEmpty &&
-          published.build.isNotEmpty &&
-          published.build != runningBuild;
-      final forced =
-          published.minVersion.isNotEmpty &&
-          compareVersions(running, published.minVersion) < 0;
-      if (!newer && !rebuilt && !forced) return null;
-      return Update(
-        published: published,
-        route: route,
-        running: running,
-        runningBuild: runningBuild,
-        page: page,
-      );
+      return _compare(published, route: route, page: page);
     } catch (_) {
       return null;
     }
+  }
+
+  /// What Play has, told with the release's notes when it is the release.
+  Update? _fromPlay(Published published, PlayServing serving) {
+    if (!serving.newer) return null;
+    final current =
+        published.buildNumber > 0 &&
+        serving.versionCode >= published.buildNumber;
+    final shown = current
+        ? published
+        // Play is behind the release, or cannot say which build it has:
+        // there is an update, but not one whose notes are known.
+        : const Published(version: '');
+    return Update(
+      published: shown,
+      route: route,
+      running: running,
+      runningBuild: runningBuild,
+      page: page,
+      fromStore: true,
+    );
+  }
+
+  /// The release against this copy: a newer version, a rebuild, or a
+  /// version too old to play.
+  Update? _compare(
+    Published published, {
+    required UpdateRoute route,
+    Uri? page,
+  }) {
+    final order = compareVersions(published.version, running);
+    // Same version, later build: a rebuild that went out with fixes. Only
+    // a build that knows its own number can tell; one made at a desk is 0.
+    final newer =
+        order > 0 ||
+        (order == 0 &&
+            runningNumber > 0 &&
+            published.buildNumber > runningNumber);
+    // On the web the page itself is what changed, version or not. Only a
+    // build that knows its own commit can tell — a local run does not.
+    final rebuilt =
+        route == UpdateRoute.reload &&
+        runningBuild.isNotEmpty &&
+        published.build.isNotEmpty &&
+        published.build != runningBuild;
+    final forced =
+        published.minVersion.isNotEmpty &&
+        compareVersions(running, published.minVersion) < 0;
+    if (!newer && !rebuilt && !forced) return null;
+    return Update(
+      published: published,
+      route: route,
+      running: running,
+      runningBuild: runningBuild,
+      page: page,
+    );
   }
 
   Future<String?> _storeVersion() async {
