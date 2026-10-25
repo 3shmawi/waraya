@@ -49,6 +49,34 @@ void main() {
     });
   });
 
+  group('a dog', () {
+    test('a fresh one is a dog on its ground, sitting and seeing off', () {
+      final doc = EditorDoc.blank();
+      doc.pieces.add(
+        Piece(PieceKind.dog, const Rect.fromLTRB(0, 560, 600, 620)),
+      );
+      final dog = doc.toLevel().dogs.single;
+      expect(dog.area, const Rect.fromLTRB(0, 560, 600, 620));
+      expect(dog.home, 420);
+      expect(dog.backTo, -300);
+      expect(doc.toLevel().requires, contains('dog'));
+    });
+
+    test('moving its ground takes where it sits with it', () {
+      final editor = EditorController(
+        EditorDoc.fromLevel(Levels.bench.firstWhere((l) => l.id == 'the-dog')),
+      );
+      final before = editor.level.dogs.single;
+      final piece = editor.doc.pieces.firstWhere(
+        (p) => p.kind == PieceKind.dog,
+      );
+      editor.edit((doc) => piece.rect = piece.rect.shift(const Offset(100, 0)));
+      final after = editor.level.dogs.single;
+      expect(after.home, before.home + 100);
+      expect(after.backTo, before.backTo + 100);
+    });
+  });
+
   group('putting things in', () {
     test('a new door is never one you can climb', () {
       final doc = EditorDoc.blank();

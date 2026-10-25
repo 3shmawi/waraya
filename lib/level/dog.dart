@@ -84,8 +84,12 @@ class Dog extends PositionComponent {
     bodyHeight,
   );
 
-  double get _left => spec.area.left + bodyWidth / 2;
-  double get _right => spec.area.right - bodyWidth / 2;
+  // A ground narrower than the dog — one being drawn in the editor, a few
+  // letters into its width — has both ends at its middle, not a left end
+  // past its right one.
+  double get _left => min(spec.area.left + bodyWidth / 2, spec.area.center.dx);
+  double get _right =>
+      max(spec.area.right - bodyWidth / 2, spec.area.center.dx);
 
   /// Whether [x] is near enough its stretch for it to notice.
   bool _inSight(double x) =>

@@ -60,6 +60,33 @@ void main() {
 
   group('the rule', () {
     testWithGame<LevelGame>(
+      'a ground narrower than the dog is not a crash: it stays in the middle',
+      // Found filming the lab: typing a dog's width, «9» comes before «900»,
+      // and the game the editor is running ticked a dog whose left end was
+      // past its right one.
+      () => build(
+        Level(
+          id: 'dog-narrow',
+          name: 'dog-narrow',
+          teaches: 'dog-narrow',
+          delaySeconds: 1,
+          spawnX: -400,
+          floorTop: 620,
+          blocks: const [Rect.fromLTRB(-3000, 620, 3000, 2200)],
+          dogs: const [
+            DogSpec(area: Rect.fromLTRB(0, 560, 9, 620), home: 4, backTo: -300),
+          ],
+          goal: const Rect.fromLTRB(2800, 548, 2880, 620),
+        ),
+      ),
+      (game) async {
+        await game.ready();
+        Run(game).hold(2, axis: 1);
+        expect(game.dogs.single.along, closeTo(4.5, 0.01));
+      },
+    );
+
+    testWithGame<LevelGame>(
       'it runs at you and sees you off, back where you came in',
       () => build(flat()),
       (game) async {

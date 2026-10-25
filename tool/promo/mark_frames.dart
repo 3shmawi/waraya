@@ -27,11 +27,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('the ending walk-in, frame by frame', () async {
-    final out = Platform.environment['WARAYA_MARK_OUT'] ??
+    final out =
+        Platform.environment['WARAYA_MARK_OUT'] ??
         '${Directory.systemTemp.path}/waraya-mark';
     final frames = (walkIn * fps).round();
     for (final (name, size, mark) in [
-      ('panel', const Size(600, 400), (double e) => GameMark.panel(entrance: e)),
+      (
+        'panel',
+        const Size(600, 400),
+        (double e) => GameMark.panel(entrance: e),
+      ),
       (
         'tile',
         const Size(400, 400),

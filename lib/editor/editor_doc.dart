@@ -17,7 +17,13 @@ enum PieceKind {
   marker('marker', 70, 72),
 
   /// On the bench (`Level.mirrors`): the slab its glass stands on.
-  mirror('mirror', 60, 12);
+  mirror('mirror', 60, 12),
+
+  /// On the bench (`Level.dogs`): the ground it keeps — its bottom edge is
+  /// the floor it runs on, its ends are where it stops. Where it sits and
+  /// where it sees you off to go with it when it is moved ([Piece.dogHome],
+  /// [Piece.dogBack]).
+  dog('dog', 600, 60);
 
   const PieceKind(this.label, this.width, this.height);
 
@@ -42,6 +48,8 @@ class Piece {
     this.doorId = '',
     this.lightId = '',
     this.linger = 0,
+    this.dogHome = 420,
+    this.dogBack = 300,
   });
 
   /// What a plate or a key points at before it points at anything. Not empty,
@@ -68,6 +76,12 @@ class Piece {
   /// How long a door stays open after its plate is let go.
   double linger;
 
+  /// A dog's: where it sits, from its ground's left end, and how far before
+  /// that left end it sees you off to (`DogSpec.home`, `DogSpec.backTo`).
+  /// Kept from the ground's edge so they move with it.
+  double dogHome;
+  double dogBack;
+
   Piece copy() => Piece(
     kind,
     rect,
@@ -76,6 +90,8 @@ class Piece {
     doorId: doorId,
     lightId: lightId,
     linger: linger,
+    dogHome: dogHome,
+    dogBack: dogBack,
   );
 }
 
@@ -109,7 +125,6 @@ class EditorDoc {
     this.wrongIdeas = const [],
     this.prelude = const [],
     this.leash,
-    this.dogs = const [],
     this.baskets = const [],
     this.lifts = const [],
     this.barberMirrors = const [],
@@ -132,7 +147,6 @@ class EditorDoc {
     wrongIdeas: level.wrongIdeas,
     prelude: level.prelude,
     leash: level.leash,
-    dogs: level.dogs,
     baskets: level.baskets,
     lifts: level.lifts,
     barberMirrors: level.barberMirrors,
@@ -143,6 +157,13 @@ class EditorDoc {
         Piece(PieceKind.light, light.area, lightId: light.id ?? ''),
       for (final rect in level.markers) Piece(PieceKind.marker, rect),
       for (final rect in level.mirrors) Piece(PieceKind.mirror, rect),
+      for (final dog in level.dogs)
+        Piece(
+          PieceKind.dog,
+          dog.area,
+          dogHome: dog.home - dog.area.left,
+          dogBack: dog.area.left - dog.backTo,
+        ),
       for (final plate in level.plates)
         Piece(
           PieceKind.plate,
@@ -201,13 +222,9 @@ class EditorDoc {
   /// Carried through untouched so opening and saving a level never drops it.
   List<Move> prelude;
 
-  /// The leash (`Level.leash`, on trial), carried through the same way. No
+  /// The leash (`Level.leash`, on trial), carried through. No
   /// knob for it yet: a level gets one in its data.
   double? leash;
-
-  /// The dogs (`Level.dogs`, on trial), carried through. No tool to place
-  /// one yet: a level gets them in its data.
-  List<DogSpec> dogs;
 
   /// The baskets (`Level.baskets`, on trial), carried through the same way:
   /// no tool to place one yet.
@@ -244,7 +261,14 @@ class EditorDoc {
       wrongIdeas: wrongIdeas,
       prelude: prelude,
       leash: leash,
-      dogs: dogs,
+      dogs: [
+        for (final p in of(PieceKind.dog))
+          DogSpec(
+            area: p.rect,
+            home: p.rect.left + p.dogHome,
+            backTo: p.rect.left - p.dogBack,
+          ),
+      ],
       baskets: baskets,
       lifts: lifts,
       barberMirrors: barberMirrors,
@@ -289,7 +313,6 @@ class EditorDoc {
     wrongIdeas: [...wrongIdeas],
     prelude: prelude,
     leash: leash,
-    dogs: dogs,
     baskets: baskets,
     lifts: lifts,
     barberMirrors: barberMirrors,

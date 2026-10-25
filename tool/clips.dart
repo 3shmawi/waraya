@@ -13,6 +13,7 @@
 // The runs are the levels' own recorded solutions, the ones the tests replay,
 // so a clip cannot
 // show a solution the game no longer has.
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -21,6 +22,7 @@ import 'package:flame/game.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter/services.dart' show FontLoader;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waraya/audio/sfx.dart';
 import 'package:waraya/input/input.dart';
 import 'package:waraya/lab/lab_settings.dart';
 import 'package:waraya/level/level.dart';
@@ -263,6 +265,26 @@ void main() {
   }
 }
 
+/// Every sound the game made, and when — written next to the frames as
+/// `sounds.json`, so the footage can carry the game's own sound: the
+/// steps, the plate, the dog's bark (`tool/promo/sound.py` lays the files
+/// down at those times). The game only ever asks an [AudioOut] to play; this
+/// one writes the ask down instead.
+class Tape implements AudioOut {
+  double now = 0;
+  final List<Map<String, Object>> played = [];
+
+  @override
+  Future<void> preload() async {}
+
+  @override
+  void play(Sfx sfx, {double volume = 1}) => played.add({
+    't': double.parse(now.toStringAsFixed(4)),
+    'file': sfx.file,
+    'volume': volume,
+  });
+}
+
 /// Plays [clip] and writes one PNG per frame.
 Future<({int frames, bool finished})> render(Clip clip) async {
   final dir = Directory('$outRoot/${clip.name}');
@@ -270,8 +292,10 @@ Future<({int frames, bool finished})> render(Clip clip) async {
   dir.createSync(recursive: true);
 
   final scripted = ScriptedInput();
+  final tape = Tape();
   final game = await initializeGame<LevelGame>(
     () => LevelGame(
+      audio: tape,
       levels: playable,
       look: look,
       startAt: clip.levelIndex,
@@ -296,6 +320,7 @@ Future<({int frames, bool finished})> render(Clip clip) async {
   var ticks = 0;
   Future<void> step(InputIntent intent) async {
     scripted.next = intent;
+    tape.now = ticks * dt;
     game.update(dt);
     if (ticks++ % every == 0) {
       await shoot(game, '${dir.path}/${frame.toString().padLeft(5, '0')}.png');
@@ -332,6 +357,7 @@ Future<({int frames, bool finished})> render(Clip clip) async {
   }
 
   final finished = game.completed || game.levelIndex != clip.levelIndex;
+  File('${dir.path}/sounds.json').writeAsStringSync(jsonEncode(tape.played));
   game.onRemove();
   return (frames: frame, finished: finished);
 }
