@@ -29,7 +29,7 @@ const DAYS = [
     line: 'بس الحمد لله معانا ونيس', sub: 'ظلنا: يتحرك فوق، والكلب يجري وراه' },
   { n: 4, slug: 'dog-4-a-lamp', dir: 'd4', from: 2.5, to: 16,
     line: 'زوّدت لمبة', sub: 'والكلب مبيشوفش ماضيك وهو في النور' },
-  { n: 5, slug: 'dog-5-boxes-to-this', pair: ['d6a', 'd6b'], from: 3.5, to: 15,
+  { n: 5, slug: 'lab-5-boxes-to-this', pair: ['d6a', 'd6b'], from: 3.5, to: 15,
     line: 'من مستطيلات…', sub: 'لده', labels: ['الورشة', 'اللعبة'] },
 ];
 
@@ -82,7 +82,16 @@ function sheet(day) {
     const words = path.join(work, `words-${day.n}.png`);
     await page.screenshot({ path: words, omitBackground: true });
     const trim = ['-ss', String(day.from), '-t', String(day.to - day.from)];
-    const audio = ['-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100'];
+    // The game's own sound, when the footage wrote it down (tool/clips.dart's
+    // sounds.json); a silent track otherwise.
+    const source = path.dirname(frames(work, day.pair ? day.pair[1] : day.dir));
+    let audio = ['-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100'];
+    if (fs.existsSync(path.join(source, 'sounds.json'))) {
+      const wav = path.join(work, `sound-${day.n}.wav`);
+      execFileSync('python3', [path.join(__dirname, 'sound.py'), source, wav,
+        '--from', String(day.from), '--to', String(day.to)]);
+      audio = ['-i', wav];
+    }
     const file = path.join(out, `${day.slug}.mp4`);
     const tail = ['-map', '[v]', '-map', `${day.pair ? 3 : 2}:a`, '-shortest',
       '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-pix_fmt', 'yuv420p',

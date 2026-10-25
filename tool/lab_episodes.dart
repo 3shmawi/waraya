@@ -37,8 +37,8 @@ const _d = LogicalKeyboardKey.keyD;
 // fill: the buttons, the panel the numbers go in, and the floor.
 const _toolbar = Rect.fromLTWH(0, 0, 1280, 720);
 const _panel = Rect.fromLTWH(800, 60, 1120, 630);
-const _floor = Rect.fromLTWH(300, 380, 1250, 703);
-const _gate = Rect.fromLTWH(0, 640, 780, 440);
+const _floor = Rect.fromLTWH(200, 250, 1450, 816);
+const _gate = Rect.fromLTWH(0, 800, 500, 281);
 
 /// The dog of `DogLevels.theDog`, where it is in the level that ships.
 const _dog = DogSpec(
@@ -199,7 +199,14 @@ final episodes = <Episode>[
       await film.click(find.byIcon(Icons.play_arrow), seconds: 0.5);
       film.look(_floor);
       film.say('تتمشّى تحت قدّامه', 'من غير ما تطلع الرفّ خالص');
-      await film.run(DogLevels.theDog.wrongIdeas[2]);
+      await film.run(
+        DogLevels.theDog.wrongIdeas[2],
+        cues: {
+          3.2: () => film.say('رايح جاي… على الفاضي', 'هو شايفني بس مش طايلني'),
+          13.2: () =>
+              film.say('وماضيّا يتمشّى مكاني', 'والكلب يجري وراه… وأنا أعدّي'),
+        },
+      );
       await film.wait(1.4);
       film.say('واتحلّت', 'يعني الرفّ ملوش لازمة… والمرحلة كلها ديكور');
       await film.wait(2.4);
@@ -217,9 +224,11 @@ final episodes = <Episode>[
       film.look(_toolbar);
       await film.click(find.byIcon(Icons.play_arrow), seconds: 0.5);
       film.look(_floor);
-      await film.run(DogLevels.theDog.wrongIdeas[2].take(19).toList());
-      await film.wait(0.6);
-      await film.run(const [Move.right(4)]);
+      await film.run([
+        ...DogLevels.theDog.wrongIdeas[2].take(9),
+        const Move(1),
+        const Move.right(5),
+      ]);
       await film.wait(1);
       film.say('اتقفلت', 'لازم تطلع فوق… وتخلّي ماضيك يتحرك');
       film.look();
