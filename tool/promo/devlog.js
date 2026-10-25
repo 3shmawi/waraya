@@ -21,23 +21,21 @@ const FPS = 30;
 // `from`/`to` trim the footage, in seconds. `pair` is two renders at a
 // phone's shape, the bench over the game.
 const DAYS = [
-  { n: 1, slug: 'dog-1-it-sees-you', dir: 'd1', from: 0, to: 7,
+  { n: 1, slug: 'dog-1-it-sees-you', dir: 'd1', from: 0, to: 8.5,
     line: 'زوّدت كلب للعبة', sub: 'وأول ما شافني… زي أي كلب في الشارع' },
-  { n: 2, slug: 'dog-2-hide-up-there', dir: 'd2', from: 1.5, to: 13,
+  { n: 2, slug: 'dog-2-hide-up-there', dir: 'd2', from: 1, to: 15,
     line: 'طب أطلع فوق وأستخبى؟', sub: 'ماضيّا واقف… والكلب مبيجريش ورا حد واقف' },
-  { n: 3, slug: 'dog-3-a-companion', dir: 'd3', from: 3.5, to: 19,
+  { n: 3, slug: 'dog-3-a-companion', dir: 'd3', from: 2.5, to: 18.7,
     line: 'بس الحمد لله معانا ونيس', sub: 'ظلنا: يتحرك فوق، والكلب يجري وراه' },
-  { n: 4, slug: 'dog-4-a-lamp', dir: 'd4', from: 3.5, to: 14,
+  { n: 4, slug: 'dog-4-a-lamp', dir: 'd4', from: 2.5, to: 16,
     line: 'زوّدت لمبة', sub: 'والكلب مبيشوفش ماضيك وهو في النور' },
-  { n: 5, slug: 'dog-5-the-easy-way', dir: 'd5', from: 1.5, to: 13,
-    line: 'كان فيه طريقة أسهل… قفلتها', sub: 'كنت بتتمشّى قدّامه من تحت، فحطيت لمبة' },
-  { n: 6, slug: 'dog-6-boxes-to-this', pair: ['d6a', 'd6b'], from: 3.5, to: 15,
+  { n: 5, slug: 'dog-5-boxes-to-this', pair: ['d6a', 'd6b'], from: 3.5, to: 15,
     line: 'من مستطيلات…', sub: 'لده', labels: ['الورشة', 'اللعبة'] },
 ];
 
 const frames = (work, dir) => {
   const d = path.join(work, dir);
-  const sub = fs.readdirSync(d).find((f) => fs.statSync(path.join(d, f)).isDirectory());
+  const sub = fs.readdirSync(d).find((f) => f.startsWith('00-'));
   return path.join(d, sub, '%05d.png');
 };
 
@@ -49,7 +47,7 @@ const style = `
        text-shadow: 0 4px 18px rgba(0,0,0,.85), 0 0 3px rgba(0,0,0,.9); line-height: 1.25; }
   .chip { position: absolute; top: 120px; left: 0; right: 0; text-align: center; }
   .chip span { background: #14100A; color: #FFE7B0; border-radius: 999px; padding: 10px 30px; font-size: 36px; }
-  .label { position: absolute; right: 70px; background: rgba(20,16,10,.8); color: #FFE7B0;
+  .label { position: absolute; left: 50%; transform: translateX(-50%); background: rgba(20,16,10,.8); color: #FFE7B0;
            border-radius: 14px; padding: 4px 18px; font-size: 34px; }`;
 
 function sheet(day) {

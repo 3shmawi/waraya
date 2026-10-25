@@ -234,7 +234,7 @@ void main() {
     if (level != null) Clip(number: 0, slug: level, levelId: level),
     ...clips,
   ]) {
-    if (level != null && clip.levelId != level) continue;
+    if (level != null && clip.number != 0) continue;
     if (only != null && only != clip.slug && only != '${clip.number}') continue;
     // Twenty-five minutes a clip: the last level's is twenty seconds long and
     // renders at about two frames a second, which ran out of ten.
