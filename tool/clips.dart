@@ -88,6 +88,20 @@ final ({double width, double height, double scale})? device = () {
   );
 }();
 
+/// `WARAYA_CLIP_LOOK=bench` draws the bench's grey boxes instead of the
+/// game's scenery — for the devlog (`docs/media/devlog.md`), footage of a
+/// thing still being built.
+final LevelLook look = Platform.environment['WARAYA_CLIP_LOOK'] == 'bench'
+    ? LevelLook.greyBox
+    : LevelLook.silhouette;
+
+/// `WARAYA_CLIP_IDEA=2` plays the level's second recorded wrong idea instead
+/// of its solution: the devlog's «I tried this, and it did not work». A clip
+/// of a wrong idea must then *not* finish the level.
+final int? wrongIdea = int.tryParse(
+  Platform.environment['WARAYA_CLIP_IDEA'] ?? '',
+);
+
 /// Keep one frame in this many (`WARAYA_CLIP_EVERY=2` for 30 fps). The
 /// game still steps at [dt]: what is recorded is what the tests play.
 final int every = int.parse(Platform.environment['WARAYA_CLIP_EVERY'] ?? '1');
@@ -124,7 +138,11 @@ class Clip {
 
   String get name => '${number.toString().padLeft(2, '0')}-$slug';
   int get levelIndex => playable.indexWhere((l) => l.id == levelId);
-  List<Move> get script => moves ?? playable[levelIndex].solution;
+  List<Move> get script =>
+      moves ??
+      (wrongIdea == null
+          ? playable[levelIndex].solution
+          : playable[levelIndex].wrongIdeas[wrongIdea! - 1]);
 }
 
 /// Every level a clip can show: the campaign, then the bench.
@@ -210,7 +228,13 @@ void main() {
   });
 
   final only = Platform.environment['WARAYA_CLIP'];
-  for (final clip in clips) {
+  // Any level by its id, for a clip nobody numbered: `WARAYA_CLIP_LEVEL=the-dog`.
+  final level = Platform.environment['WARAYA_CLIP_LEVEL'];
+  for (final clip in [
+    if (level != null) Clip(number: 0, slug: level, levelId: level),
+    ...clips,
+  ]) {
+    if (level != null && clip.levelId != level) continue;
     if (only != null && only != clip.slug && only != '${clip.number}') continue;
     // Twenty-five minutes a clip: the last level's is twenty seconds long and
     // renders at about two frames a second, which ran out of ten.
@@ -225,8 +249,10 @@ void main() {
       // clip of somebody failing the level. Louder here than on the phone.
       expect(
         shot.finished,
-        isTrue,
-        reason: '${clip.levelId} was not finished in ${shot.frames} frames',
+        wrongIdea == null,
+        reason: wrongIdea == null
+            ? '${clip.levelId} was not finished in ${shot.frames} frames'
+            : 'wrong idea $wrongIdea finished ${clip.levelId}',
       );
       // ignore: avoid_print
       print(
@@ -247,7 +273,7 @@ Future<({int frames, bool finished})> render(Clip clip) async {
   final game = await initializeGame<LevelGame>(
     () => LevelGame(
       levels: playable,
-      look: LevelLook.silhouette,
+      look: look,
       startAt: clip.levelIndex,
       inputs: [scripted],
       settings: shadowOpacity == null
