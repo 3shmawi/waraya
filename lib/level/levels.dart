@@ -3973,6 +3973,9 @@ abstract final class Levels {
     theMirrorBringsYouBack,
     yourPastGoesAgain,
     ...MirrorLevels.all,
+    // The street dog, the second weekly drop: still on the roofs, so the
+    // mirror's chapter carries on into it.
+    ...DogLevels.all,
   ];
 
   /// The levels whose intended solution **is** one of the cheap runs
@@ -4531,7 +4534,6 @@ abstract final class Levels {
     thatsYou,
     hangOnYourPast,
     putOutItsLight,
-    ...DogLevels.all,
     ...BasketLevels.all,
     ...LiftLevels.all,
     ...BarberLevels.all,

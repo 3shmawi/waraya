@@ -56,10 +56,10 @@ Your shadow repeats everything you did, seconds later. Plan your past to pass.
 
 مفيش زرار تسجيل ومفيش رجوع بالوقت. التأخير شغال طول الوقت، سواء انت جاهز أو لأ، وده اللي بيخلّي الإحساس أقرب لإنك متطارد من إنه لغز هادي.
 
-خمسة وأربعين مرحلة في تلات فصول:
+خمسين مرحلة في تلات فصول:
 • الأسطح: الزرار، المنصة، العقبة، التضحية، المفتاح اللي ماضيك بيقلبه تاني، النور، وظلين بتأخيرين مختلفين في نفس الوقت
 • بيت السلّم: خمستاشر مرحلة بزرار بيطفي النور
-• والجديد، المراية: ماضيك يوصلها، تلاقي نفسك مكانه — تسع مراحل
+• وفوق السطح تاني: المراية — ماضيك يوصلها، تلاقي نفسك مكانه — والجديد، كلب الشارع: بيجري ورا أي حاجة بتتحرك، وماضيك بيتحرك
 
 وكل جمعة فيه حاجة جديدة.
 
@@ -92,10 +92,10 @@ And your shadow is not a picture. It is a real thing in the world:
 
 There is no record button and no rewind. The delay runs whether you are ready or not, which makes it feel closer to being chased than to a quiet puzzle box.
 
-Forty-five levels in three chapters:
+Fifty levels in three chapters:
 • The rooftops: the plate, the platform, the obstacle, the sacrifice, the switch your past flips back, the light, and two shadows at two different delays at once
 • The stairwell: fifteen levels with a switch that puts the light out
-• And new, the mirror: when your past reaches it, you are where it is — nine levels
+• And back up on the roofs: the mirror — when your past reaches it, you are where it is — and new, the street dog: it runs at anything that moves, and your past moves
 
 And something new every Friday.
 
@@ -157,8 +157,8 @@ en: puzzle,platformer,shadow,time,delay,echo,logic,atmospheric,indie,egypt
 **Promotional text** (≤ 170, can be changed without a new version):
 
 ```
-ar: جديد: المراية. ماضيك يوصلها، تلاقي نفسك مكانه. خمسة وأربعين مرحلة، من غير إعلانات.
-en: New: the mirror. When your past reaches it, you are where it is. Forty-five levels, no ads.
+ar: جديد: كلب الشارع. بيجري ورا أي حاجة بتتحرك… وماضيك بيتحرك. خمسين مرحلة، من غير إعلانات.
+en: New: the street dog. It runs at anything that moves, and your past moves. Fifty levels, no ads.
 ```
 
 **Description:** the same full descriptions as Google Play.

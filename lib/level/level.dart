@@ -309,6 +309,9 @@ class Level {
     // owner's word with its nine levels: a chapter of their own, back on the
     // roof, at the end of the campaign.
     'mirror',
+    // The second, on the owner's word: its five levels after the mirror's,
+    // on the same roofs.
+    'dog',
   };
 
   /// Mechanics whose code is here but which are **still being tried on the
@@ -323,7 +326,6 @@ class Level {
   static const Set<String> labMechanics = <String>{
     'prelude',
     'leash',
-    'dog',
     'baskets',
     'lifts',
     'barber-mirrors',

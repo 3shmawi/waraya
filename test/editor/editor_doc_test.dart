@@ -64,7 +64,9 @@ void main() {
 
     test('moving its ground takes where it sits with it', () {
       final editor = EditorController(
-        EditorDoc.fromLevel(Levels.bench.firstWhere((l) => l.id == 'the-dog')),
+        EditorDoc.fromLevel(
+          Levels.campaign.firstWhere((l) => l.id == 'the-dog'),
+        ),
       );
       final before = editor.level.dogs.single;
       final piece = editor.doc.pieces.firstWhere(

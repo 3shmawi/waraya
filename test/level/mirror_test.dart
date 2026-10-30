@@ -233,7 +233,7 @@ void main() {
       expect(jsonEncode(again.toJson()), jsonEncode(level.toJson()));
     });
 
-    test('the campaign has all nine, together, at its end', () {
+    test('the campaign has all nine, together, after the stairwell', () {
       final mirrors = [
         for (final (i, l) in Levels.campaign.indexed)
           if (l.mirrors.isNotEmpty) i,
@@ -241,7 +241,6 @@ void main() {
       expect(mirrors, hasLength(9));
       expect(mirrors.last - mirrors.first, 8, reason: 'one unbroken run');
       expect(Levels.campaign[mirrors.first].id, level.id);
-      expect(mirrors.last, Levels.campaign.length - 1);
       expect(
         Levels.campaign[mirrors.first - 1].id,
         Levels.allOfItInTheDark.id,

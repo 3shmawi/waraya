@@ -37,6 +37,7 @@ void main() {
         if (level.delays.length > 1) 'delays',
         if (level.solidWhen != ShadowSolidity.always) 'crouched-solid',
         if (level.mirrors.isNotEmpty) 'mirror',
+        if (level.dogs.isNotEmpty) 'dog',
       };
       expect(level.requires, expected, reason: level.id);
       expect(level.toJson()['requires'], expected.toList()..sort());
@@ -55,6 +56,7 @@ void main() {
       'delays': 'two-not-one',
       'light-switch': 'you-hold-the-dark',
       'mirror': 'the-mirror-brings-you-back',
+      'dog': 'the-dog',
     }.entries) {
       expect(
         Levels.campaign.firstWhere((l) => l.requires.contains(mechanic)).id,
@@ -104,6 +106,7 @@ void main() {
       'crouched-solid',
       'light-switch',
       'mirror',
+      'dog',
     });
     expect(levelFromJson(jsonOf(sample, requires: const [])).id, sample.id);
     expect(

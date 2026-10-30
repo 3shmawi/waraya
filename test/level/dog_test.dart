@@ -272,24 +272,22 @@ void main() {
 
     test('a level with a dog says so', () {
       expect(level.requires, contains('dog'));
-      expect(Level.labMechanics, contains('dog'));
-      expect(Level.knownMechanics, isNot(contains('dog')));
     });
 
-    test('the bench reads it; the game refuses it by name', () {
+    test('promoted: the game plays it, and an older build refuses it', () {
+      expect(Level.knownMechanics, contains('dog'));
+      expect(Level.labMechanics, isNot(contains('dog')));
       final json = jsonDecode(jsonEncode(level.toJson()));
+      expect(levelFromJson(json).dogs, level.dogs);
+      // What the name is for: a build from before it would put the level up
+      // with no dog in it — a corridor with a ledge over nothing.
+      final older = Level.knownMechanics.difference({'dog'});
       expect(
-        levelFromJson(json, accepts: Level.benchMechanics).dogs,
-        level.dogs,
-      );
-      expect(
-        () => levelFromJson(json),
+        () => levelFromJson(json, accepts: older),
         throwsA(
-          isA<LevelUnsupportedException>().having(
-            (e) => e.onTheBench,
-            'on the bench',
-            {'dog'},
-          ),
+          isA<LevelUnsupportedException>().having((e) => e.missing, 'missing', {
+            'dog',
+          }),
         ),
       );
     });
@@ -298,12 +296,11 @@ void main() {
       expect(Levels.campaign.first.toJson(), isNot(contains('dogs')));
     });
 
-    test('the gate refuses it as on trial', () async {
+    test('the gate takes it', () async {
       final verdict = await checkLevelJson(
         jsonDecode(jsonEncode(level.toJson())),
       );
-      expect(verdict.accepted, isFalse);
-      expect('${verdict.findings.single}', contains('still on the bench'));
+      expect(verdict.findings, isEmpty);
     });
 
     test('the editor keeps it', () {
@@ -312,12 +309,20 @@ void main() {
       expect(jsonEncode(again.toJson()), jsonEncode(level.toJson()));
     });
 
-    test('no level in the campaign has one', () {
-      expect(Levels.campaign.where((l) => l.dogs.isNotEmpty), isEmpty);
+    test('the campaign has all five, together, after the mirror', () {
+      final dogs = [
+        for (final (i, l) in Levels.campaign.indexed)
+          if (l.dogs.isNotEmpty) i,
+      ];
+      expect(dogs, hasLength(5));
+      expect(dogs.last - dogs.first, 4, reason: 'one unbroken run');
+      expect(Levels.campaign[dogs.first].id, level.id);
+      expect(dogs.last, Levels.campaign.length - 1);
+      expect(Levels.campaign[dogs.first - 1].mirrors, isNotEmpty);
     });
   });
 
-  for (final level in Levels.bench.where((l) => l.dogs.isNotEmpty)) {
+  for (final level in Levels.campaign.where((l) => l.dogs.isNotEmpty)) {
     group(level.id, () {
       testWithGame<LevelGame>('solved', () => build(level), (game) async {
         await game.ready();

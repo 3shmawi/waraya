@@ -1,2 +1,3 @@
-• The game now tells you when an update is out on iPhone, and "Update" opens the store
-• And if you have not seen it yet: the mirror — nine levels up on the roof. When your past reaches the mirror, you are where it is
+New: the street dog — five levels up on the roofs. It runs at anything that moves… and your past moves, so make it the bait.
+• On Android, "Update" opens Google Play's own update inside the game
+• And if you have not seen it yet: the mirror — nine levels. When your past reaches it, you are where it is
