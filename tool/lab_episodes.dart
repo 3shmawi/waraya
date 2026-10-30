@@ -2,7 +2,7 @@
 // docs/media/devlog.md). Each one opens the bench where the last one left
 // it, so the five read as one level being built: the dog's.
 
-import 'package:flutter/material.dart' show Icons;
+import 'package:flutter/material.dart' show DropdownButton, Icons;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waraya/level/dog_levels.dart';
@@ -54,16 +54,25 @@ const _steps = [
   Rect.fromLTRB(-340, 284, 150, 304),
 ];
 
-/// The level as it ships, with the lamp under the ledge taken out: the
-/// level before anybody had found the way round it.
-final Level _beforeTheLamp = () {
-  final json = DogLevels.theDog.toJson()..remove('lights');
-  json['requires'] = [
-    for (final r in json['requires'] as List)
-      if (r != 'lights') r,
-  ];
-  return levelFromJson(json, accepts: Level.benchMechanics);
-}();
+/// «The dog first»'s room before its door and its button
+/// (`DogLevels.theDogFirst`): the floor, the walls, the dog, the way out.
+final Level _secondRoom = Level(
+  id: 'the-dog-first',
+  name: 'الكلب الأول',
+  teaches: 'ماضيك بيعمل الحاجات بالترتيب اللي عملتها بيه.',
+  delaySeconds: 6,
+  spawnX: -200,
+  floorTop: 620,
+  blocks: const [
+    Rect.fromLTRB(-1400, 620, 1400, 2200),
+    Rect.fromLTRB(-800, 140, -760, 620),
+    Rect.fromLTRB(900, 140, 940, 620),
+  ],
+  dogs: const [
+    DogSpec(area: Rect.fromLTRB(0, 560, 500, 620), home: 300, backTo: -190),
+  ],
+  goal: const Rect.fromLTRB(720, 548, 800, 620),
+);
 
 /// Up the steps and along the ledge: the start of the dog's answer.
 const _upAndAlong = [
@@ -190,49 +199,66 @@ final episodes = <Episode>[
   ),
   Episode(
     number: 4,
-    slug: 'lab-4-the-easy-way',
-    start: _beforeTheLamp,
+    slug: 'lab-4-the-dog-first',
+    start: _secondRoom,
     play: (film) async {
-      film.say('اتلعبت بإيد…', 'ولقينا طريقة أسهل');
+      film.say('المرحلة الرابعة', 'نفس الكلب… بس فيه باب');
       await film.wait(2.2);
+      film.say('باب بعد أرض الكلب');
       film.look(_toolbar);
-      await film.click(find.byIcon(Icons.play_arrow), seconds: 0.5);
-      film.look(_floor);
-      film.say('تتمشّى تحت قدّامه', 'من غير ما تطلع الرفّ خالص');
-      await film.run(
-        DogLevels.theDog.wrongIdeas[2],
-        cues: {
-          3.2: () => film.say('رايح جاي… على الفاضي', 'هو شايفني بس مش طايلني'),
-          13.2: () =>
-              film.say('وماضيّا يتمشّى مكاني', 'والكلب يجري وراه… وأنا أعدّي'),
-        },
-      );
-      await film.wait(1.4);
-      film.say('واتحلّت', 'يعني الرفّ ملوش لازمة… والمرحلة كلها ديكور');
-      await film.wait(2.4);
-      film.say('الحل: لمبة', 'ماضيك في النور… الكلب مبيشوفوش');
-      film.look(_toolbar);
-      await film.click(find.byIcon(Icons.edit), seconds: 0.5);
-      await film.click(find.text('+ light'), seconds: 0.45);
+      await film.click(find.text('+ door'), seconds: 0.45);
       film.look(_panel);
-      await film.type('x', '-200');
-      await film.type('y', '310');
-      await film.type('height', '310');
+      await film.type('x', '600');
+      await film.type('y', '140');
+      await film.type('height', '480');
+      film.say('وزرار يفتحه… ورايا', 'بعيد عن عين الكلب');
+      film.look(_toolbar);
+      await film.click(find.text('+ plate'), seconds: 0.45);
+      film.look(_panel);
+      await film.type('x', '-300');
+      await film.type('y', '608');
+      await film.type('width', '60');
+      await film.click(find.byType(DropdownButton<String>), seconds: 0.4);
+      await film.wait(0.3);
+      await film.click(find.text('gate').last, seconds: 0.35);
       film.look();
       await film.wait(0.8);
-      film.say('نجرّب تاني');
+      film.say('أدوس الزرار… وأجري؟');
       film.look(_toolbar);
       await film.click(find.byIcon(Icons.play_arrow), seconds: 0.5);
       film.look(_floor);
-      await film.run([
-        ...DogLevels.theDog.wrongIdeas[2].take(9),
-        const Move(1),
-        const Move.right(5),
-      ]);
+      await film.run(
+        const [Move.left(0.45), Move(1.0), Move.right(4.5)],
+        cues: {1.6: () => film.say('الباب مفتوح… والكلب صاحي')},
+      );
       await film.wait(1);
-      film.say('اتقفلت', 'لازم تطلع فوق… وتخلّي ماضيك يتحرك');
+      film.say('ماضيّا على الزرار', 'بس مفيش حد بيلهي الكلب');
+      await film.wait(2.2);
+      film.say(
+        'ماضيك بيعمل الحاجات بالترتيب',
+        'يبقى الكلب الأول… وبعدين الزرار',
+      );
+      film.look(_toolbar);
+      await film.click(find.byIcon(Icons.edit), seconds: 0.5);
+      await film.click(find.byIcon(Icons.fiber_manual_record), seconds: 0.5);
+      film.look(_floor);
+      await film.run(
+        DogLevels.theDogFirst.solution,
+        cues: {
+          0.4: () => film.say('الأول: أتمشّى قدّامه', 'على الفاضي'),
+          4.0: () => film.say('وبعدين الزرار'),
+          6.0: () => film.say('وأجري', 'ماضيّا بيتمشّى… والكلب وراه'),
+          10.4: () => film.say('وأستنى عند الباب', 'لحد ما ماضيّا يرجع للزرار'),
+        },
+        until: () => film.statusSays('solution kept'),
+      );
+      await film.wait(1.2);
+      film.say('عدّيت', 'والحل اتحفظ');
+      film.look(_panel);
+      await film.wait(2.2);
+      film.say('مرحلة رابعة للكلب', 'فاضل حد يلعبها بإيده');
       film.look();
-      await film.wait(2.4);
+      await film.wait(2.2);
     },
   ),
 ];

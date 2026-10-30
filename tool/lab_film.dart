@@ -290,6 +290,11 @@ class Film {
     }
   }
 
+  /// Whether the lab's own status line — under its buttons — says [text]
+  /// now: «solution kept», «the replay finished…».
+  bool statusSays(String text) =>
+      find.textContaining(text).evaluate().isNotEmpty;
+
   Future<void> done() async {
     await wait(0.5);
     File('$dir/sounds.json').writeAsStringSync(jsonEncode(tape.played));
